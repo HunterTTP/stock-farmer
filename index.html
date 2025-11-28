@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Stock Farmer POC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .no-drag {
+        -webkit-user-drag: none;
+        user-drag: none;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen bg-slate-900 text-slate-100 pt-16 select-none">
+    <nav class="w-full bg-slate-950/80 border-b border-slate-800 fixed top-0 left-0 z-20">
+      <div class="max-w-6xl mx-auto px-4 py-2 flex items-center gap-3">
+        <button id="menu-toggle" class="p-2 rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500" type="button">
+          <span class="sr-only">Open store</span>
+          <div class="space-y-1">
+            <span class="block w-5 h-0.5 bg-slate-200"></span>
+            <span class="block w-5 h-0.5 bg-slate-200"></span>
+            <span class="block w-5 h-0.5 bg-slate-200"></span>
+          </div>
+        </button>
+
+        <div class="text-sm font-semibold text-slate-200 tracking-wide">Stock Farmer</div>
+      </div>
+    </nav>
+
+    <div id="store-panel" class="fixed top-0 left-0 h-full w-72 bg-slate-950 border-r border-slate-800 transform -translate-x-full transition-transform duration-200 z-30">
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-100">Store</h2>
+        <button id="store-close" class="p-1 rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500" type="button">
+          <span class="sr-only">Close store</span>
+          <div class="relative w-4 h-4">
+            <span class="absolute inset-x-0 top-1/2 h-0.5 bg-slate-200 -rotate-45 -translate-y-1/2"></span>
+            <span class="absolute inset-x-0 top-1/2 h-0.5 bg-slate-200 rotate-45 -translate-y-1/2"></span>
+          </div>
+        </button>
+      </div>
+      <div class="px-4 py-3 space-y-4 text-sm">
+        <div>
+          <h3 class="font-semibold text-slate-100 mb-2">Plots</h3>
+          <button id="buy-plot" class="w-full px-3 py-2 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-500" type="button">Buy Plot ($5)</button>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-100 mb-2">Seeds</h3>
+          <div id="seed-store" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center mt-4">
+      <div id="money" class="mb-2 font-semibold text-lg">Money: $0.00</div>
+
+      <div id="farm" class="grid w-full max-w-6xl mx-auto gap-3 px-4" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))"></div>
+    </div>
+
+    <div id="dialog-backdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center">
+      <div id="plant-dialog" class="bg-stone-100 text-slate-900 rounded-xl shadow-2xl px-5 py-4 min-w-[260px]">
+        <h2 class="text-lg font-semibold mb-3">Plant crops</h2>
+
+        <label for="seed-select" class="block text-xs font-semibold text-slate-700 mb-1">Seed</label>
+        <select id="seed-select" class="w-full text-sm border border-slate-300 rounded-md px-2 py-1 mb-3"></select>
+
+        <label for="stock-select" class="block text-xs font-semibold text-slate-700 mb-1">Stock</label>
+        <select id="stock-select" class="w-full text-sm border border-slate-300 rounded-md px-2 py-1"></select>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <button id="cancel-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-slate-200 text-slate-800">Cancel</button>
+          <button id="plant-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-blue-600 text-white">Plant</button>
+        </div>
+      </div>
+
+      <div id="sell-dialog" class="bg-stone-100 text-slate-900 rounded-xl shadow-2xl px-5 py-4 min-w-[260px] hidden">
+        <h2 class="text-lg font-semibold mb-3">Sell crops</h2>
+        <p id="sell-summary" class="text-sm mb-4"></p>
+        <div class="flex justify-end gap-2 mt-4">
+          <button id="sell-cancel-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-slate-200 text-slate-800">Cancel</button>
+          <button id="sell-confirm-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-emerald-600 text-white">Sell</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const seeds = [
+        {
+          id: "WHEAT",
+          name: "Wheat",
+          minMs: 1 * 60000,
+          baseYield: 1,
+          spritePrefix: "images/wheat/wheat-phase-",
+          stages: 4,
+          unlockCost: 0,
+        },
+        {
+          id: "POTATO",
+          name: "Potato",
+          minMs: 5 * 60000,
+          baseYield: 5,
+          spritePrefix: "images/potato/potato-phase-",
+          stages: 4,
+          unlockCost: 25,
+        },
+        {
+          id: "CARROT",
+          name: "Carrots",
+          minMs: 10 * 60000,
+          baseYield: 10,
+          spritePrefix: "images/carrot/carrot-phase-",
+          stages: 4,
+          unlockCost: 75,
+        },
+      ];
+
+      const stocks = [
+        { id: "SPY", label: "S&P 500 (SPY)", basePrice: 500.0 },
+        { id: "AAPL", label: "AAPL", basePrice: 185.0 },
+        { id: "TSLA", label: "TSLA", basePrice: 220.0 },
+        { id: "AMZN", label: "AMZN", basePrice: 140.0 },
+      ];
+
+      const stockState = {};
+      stocks.forEach((s) => (stockState[s.id] = { price: s.basePrice }));
+
+      const unlockedSeeds = new Set(["WHEAT"]);
+      const dirtImage = "images/dirt.jpg";
+
+      let plots = Array.from({ length: 3 }, (_, i) => ({
+        id: i,
+        state: "EMPTY",
+        seedId: null,
+        stockId: null,
+        plantedAt: null,
+        minMs: 0,
+        plantingPrice: 0,
+      }));
+
+      let money = 0;
+      let activePlotId = null;
+      let pendingSellPlotId = null;
+
+      let lastPriceUpdate = 0;
+      const PRICE_UPDATE_INTERVAL_MS = 2000;
+
+      let farmEl,
+        moneyEl,
+        seedSelect,
+        stockSelect,
+        backdropEl,
+        plantBtn,
+        cancelBtn,
+        plantDialogEl,
+        sellDialogEl,
+        sellSummaryEl,
+        sellConfirmBtn,
+        sellCancelBtn,
+        menuToggleBtn,
+        storePanelEl,
+        storeCloseBtn,
+        seedStoreEl;
+
+      const basePlotClasses = "plot aspect-square border border-slate-700 overflow-hidden cursor-pointer transition bg-slate-900";
+
+      function getSeed(id) {
+        return seeds.find((s) => s.id === id);
+      }
+
+      function getStockPrice(id) {
+        return stockState[id].price;
+      }
+
+      function computeTotalForPlot(p) {
+        const seed = getSeed(p.seedId);
+        const base = seed.baseYield;
+        const start = p.plantingPrice;
+        const end = getStockPrice(p.stockId);
+        if (!start || start <= 0) return base;
+        const raw = base * (1 + (end - start) / start);
+        if (raw > base) return Math.ceil(raw * 100) / 100;
+        if (raw < base) return Math.floor(raw * 100) / 100;
+        return Number(base.toFixed(2));
+      }
+
+      function computePctChange(start, end) {
+        if (!start || start <= 0) return 0;
+        return ((end - start) / start) * 100;
+      }
+
+      function getStageIndex(plot, seed, now) {
+        if (!plot.plantedAt || !plot.minMs) return 0;
+        const elapsed = now - plot.plantedAt;
+        const fraction = Math.min(1, elapsed / plot.minMs);
+        let idx = Math.floor(fraction * seed.stages);
+        if (plot.state !== "READY") idx = Math.min(idx, seed.stages - 2);
+        else idx = seed.stages - 1;
+        return idx;
+      }
+
+      function formatTimeRemaining(plot, now) {
+        if (!plot.plantedAt || !plot.minMs) return "";
+        const elapsed = now - plot.plantedAt;
+        if (elapsed >= plot.minMs) return "Ready";
+        const secs = Math.ceil((plot.minMs - elapsed) / 1000);
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return m ? `${m}:${s.toString().padStart(2, "0")}` : `${s}s`;
+      }
+
+      function renderSeedOptions() {
+        seedSelect.innerHTML = "";
+        seeds.forEach((s) => {
+          if (!unlockedSeeds.has(s.id)) return;
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = `${s.name} - $${s.baseYield.toFixed(2)} - ${(s.minMs / 60000).toFixed(0)}m`;
+          seedSelect.appendChild(opt);
+        });
+      }
+
+      function renderSeedStore() {
+        seedStoreEl.innerHTML = "";
+        seeds.forEach((s) => {
+          const row = document.createElement("div");
+          row.className = "flex items-center justify-between gap-2";
+          const info = document.createElement("div");
+          const unlocked = unlockedSeeds.has(s.id);
+          info.className = "text-xs";
+          info.innerHTML = `
+            <div class="font-semibold ${unlocked ? "text-emerald-200" : "text-slate-100"}">${s.name}</div>
+            <div class="text-[10px] text-slate-400">
+              Grow: ${(s.minMs / 60000).toFixed(0)}m · Base: $${s.baseYield.toFixed(2)}${s.unlockCost ? ` · Cost: $${s.unlockCost.toFixed(0)}` : ""}
+            </div>`;
+          row.appendChild(info);
+          const btn = document.createElement("button");
+          if (unlocked) {
+            btn.disabled = true;
+            btn.className = "px-2 py-1 rounded-md bg-slate-800 text-[10px] text-slate-400 cursor-default";
+            btn.textContent = "Unlocked";
+          } else {
+            const canAfford = money >= s.unlockCost;
+            btn.disabled = !canAfford;
+            btn.className = "px-2 py-1 rounded-md text-[10px] " + (canAfford ? "bg-emerald-600 text-white hover:bg-emerald-500" : "bg-slate-800 text-slate-500 cursor-not-allowed");
+            btn.textContent = `Unlock $${s.unlockCost.toFixed(0)}`;
+            btn.onclick = () => {
+              if (money < s.unlockCost) return;
+              money = Number((money - s.unlockCost).toFixed(2));
+              unlockedSeeds.add(s.id);
+              renderSeedOptions();
+              renderSeedStore();
+              render();
+            };
+          }
+          row.appendChild(btn);
+          seedStoreEl.appendChild(row);
+        });
+      }
+
+      function init() {
+        farmEl = document.getElementById("farm");
+        moneyEl = document.getElementById("money");
+        seedSelect = document.getElementById("seed-select");
+        stockSelect = document.getElementById("stock-select");
+        backdropEl = document.getElementById("dialog-backdrop");
+        plantBtn = document.getElementById("plant-btn");
+        cancelBtn = document.getElementById("cancel-btn");
+        plantDialogEl = document.getElementById("plant-dialog");
+        sellDialogEl = document.getElementById("sell-dialog");
+        sellSummaryEl = document.getElementById("sell-summary");
+        sellConfirmBtn = document.getElementById("sell-confirm-btn");
+        sellCancelBtn = document.getElementById("sell-cancel-btn");
+        menuToggleBtn = document.getElementById("menu-toggle");
+        storePanelEl = document.getElementById("store-panel");
+        storeCloseBtn = document.getElementById("store-close");
+        seedStoreEl = document.getElementById("seed-store");
+
+        stocks.forEach((s) => {
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = s.label;
+          stockSelect.appendChild(opt);
+        });
+
+        renderSeedOptions();
+        renderSeedStore();
+
+        plots.forEach((p) => {
+          const btn = document.createElement("button");
+          btn.dataset.id = p.id;
+          btn.className = basePlotClasses;
+          btn.addEventListener("click", handlePlotClick);
+          farmEl.appendChild(btn);
+        });
+
+        plantBtn.onclick = confirmPlant;
+        cancelBtn.onclick = () => {
+          activePlotId = null;
+          closeAllDialogs();
+        };
+
+        sellCancelBtn.onclick = () => {
+          pendingSellPlotId = null;
+          closeAllDialogs();
+        };
+
+        sellConfirmBtn.onclick = () => {
+          if (pendingSellPlotId != null) harvestPlot(pendingSellPlotId);
+          pendingSellPlotId = null;
+          closeAllDialogs();
+          render();
+        };
+
+        document.getElementById("buy-plot").onclick = (e) => {
+          const isFree = e.shiftKey;
+          if (!isFree && money < 5) {
+            alert("Not enough money.");
+            return;
+          }
+          if (!isFree) money = Number((money - 5).toFixed(2));
+          addNewPlot();
+          renderSeedStore();
+          render();
+        };
+
+        menuToggleBtn.onclick = () => {
+          storePanelEl.classList.toggle("-translate-x-full");
+        };
+
+        storeCloseBtn.onclick = () => {
+          storePanelEl.classList.add("-translate-x-full");
+        };
+
+        render();
+        setInterval(render, 500);
+      }
+
+      function handlePlotClick(e) {
+        const id = Number(e.currentTarget.dataset.id);
+        const plot = plots[id];
+        if (plot.state === "EMPTY") {
+          activePlotId = id;
+          openPlantDialog();
+        } else if (plot.state === "READY") {
+          pendingSellPlotId = id;
+          openSellDialog(id);
+        }
+      }
+
+      function addNewPlot() {
+        const id = plots.length;
+        plots.push({
+          id,
+          state: "EMPTY",
+          seedId: null,
+          stockId: null,
+          plantedAt: null,
+          minMs: 0,
+          plantingPrice: 0,
+        });
+        const btn = document.createElement("button");
+        btn.dataset.id = id;
+        btn.className = basePlotClasses;
+        btn.addEventListener("click", handlePlotClick);
+        farmEl.appendChild(btn);
+      }
+
+      function openPlantDialog() {
+        plantDialogEl.classList.remove("hidden");
+        sellDialogEl.classList.add("hidden");
+        backdropEl.classList.remove("hidden");
+        backdropEl.classList.add("flex");
+      }
+
+      function openSellDialog(id) {
+        const p = plots[id];
+        const total = computeTotalForPlot(p);
+        sellSummaryEl.textContent = `Sell this plot for $${total.toFixed(2)}?`;
+        sellDialogEl.classList.remove("hidden");
+        plantDialogEl.classList.add("hidden");
+        backdropEl.classList.remove("hidden");
+        backdropEl.classList.add("flex");
+      }
+
+      function closeAllDialogs() {
+        backdropEl.classList.add("hidden");
+        backdropEl.classList.remove("flex");
+        plantDialogEl.classList.add("hidden");
+        sellDialogEl.classList.add("hidden");
+      }
+
+      function plantImmediate(id, seedId, stockId) {
+        const p = plots[id];
+        const seed = getSeed(seedId);
+        if (!seed || p.state !== "EMPTY") return;
+        p.state = "GROWING";
+        p.seedId = seedId;
+        p.stockId = stockId;
+        p.plantedAt = Date.now();
+        p.minMs = seed.minMs;
+        p.plantingPrice = getStockPrice(stockId);
+      }
+
+      function confirmPlant() {
+        const seedId = seedSelect.value;
+        const stockId = stockSelect.value;
+        if (activePlotId != null) plantImmediate(activePlotId, seedId, stockId);
+        activePlotId = null;
+        closeAllDialogs();
+        render();
+      }
+
+      function harvestPlot(id) {
+        const p = plots[id];
+        if (p.state !== "READY") return;
+        money = Number((money + computeTotalForPlot(p)).toFixed(2));
+        plots[id] = {
+          id,
+          state: "EMPTY",
+          seedId: null,
+          stockId: null,
+          plantedAt: null,
+          minMs: 0,
+          plantingPrice: 0,
+        };
+        renderSeedStore();
+      }
+
+      function randomDelta() {
+        return (Math.random() * 2 - 1) * 1;
+      }
+
+      function render() {
+        const now = Date.now();
+
+        if (now - lastPriceUpdate >= PRICE_UPDATE_INTERVAL_MS) {
+          Object.values(stockState).forEach((s) => {
+            s.price = Math.max(0.01, s.price + randomDelta());
+          });
+          lastPriceUpdate = now;
+        }
+
+        plots.forEach((p) => {
+          if (p.state === "GROWING" && now - p.plantedAt >= p.minMs) p.state = "READY";
+        });
+
+        moneyEl.textContent = `Money: $${money.toFixed(2)}`;
+
+        document.querySelectorAll(".plot").forEach((btn) => {
+          const id = Number(btn.dataset.id);
+          const p = plots[id];
+
+          if (p.state === "EMPTY") {
+            btn.innerHTML = `
+              <div class="relative w-full h-full">
+                <img src="${dirtImage}" class="no-drag w-full h-full object-cover" draggable="false" />
+              </div>`;
+            return;
+          }
+
+          const seed = getSeed(p.seedId);
+          const stageIdx = getStageIndex(p, seed, now);
+          const cropImage = `${seed.spritePrefix}${stageIdx + 1}.png`;
+
+          const start = p.plantingPrice;
+          const end = getStockPrice(p.stockId);
+          const pct = computePctChange(start, end);
+          const pctDisplay = `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+          const total = computeTotalForPlot(p);
+          const timeRemaining = formatTimeRemaining(p, now);
+          const stockId = p.stockId;
+
+          let pctClass = "text-slate-100";
+          if (pct > 0.001) pctClass = "text-emerald-300";
+          else if (pct < -0.001) pctClass = "text-red-300";
+
+          const isReady = p.state === "READY";
+          const shadowClass = isReady ? "drop-shadow-[0_0_6px_rgba(255,215,0,0.9)]" : "";
+
+          btn.innerHTML = `
+  <div class="relative w-full h-full">
+    <img src="${dirtImage}" class="no-drag w-full h-full object-cover" draggable="false" />
+
+    <img
+      src="${cropImage}"
+      class="no-drag absolute inset-[5%] w-[90%] h-[90%] object-cover ${shadowClass}"
+      draggable="false"
+    />
+
+    <div class="absolute top-1 left-1 text-[10px] font-semibold text-slate-100 drop-shadow px-1">
+      ${seed.name}
+    </div>
+
+    <div class="absolute top-1 right-1 text-[10px] font-semibold text-slate-100 drop-shadow px-1">
+      ${timeRemaining}
+    </div>
+
+    <div class="absolute bottom-1 left-1 text-[10px] font-semibold drop-shadow px-1">
+      <span class="text-slate-100">${stockId}</span>
+      <span class="${pctClass}">${pctDisplay}</span>
+    </div>
+
+    <div class="absolute bottom-1 right-1 text-[10px] font-semibold text-slate-100 drop-shadow px-1">
+      Sell: $${total.toFixed(2)}
+    </div>
+  </div>`;
+        });
+      }
+
+      window.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
