@@ -1,514 +1,684 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <title>Stock Farmer POC</title>
+    <meta charset="utf-8" />
+    <title>Stock Farmer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      .no-drag {
-        -webkit-user-drag: none;
-        user-drag: none;
-        pointer-events: none;
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        background-color: #000;
+      }
+      .canvas-wrapper {
+        flex: 1 1 auto;
+        position: relative;
+        overflow: hidden;
+      }
+      #gridCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        background-color: #000;
       }
     </style>
   </head>
-
-  <body class="min-h-screen bg-slate-900 text-slate-100 pt-16 select-none">
-    <nav class="w-full bg-slate-950/80 border-b border-slate-800 fixed top-0 left-0 z-20">
-      <div class="max-w-6xl mx-auto px-4 py-2 flex items-center gap-3">
-        <button id="menu-toggle" class="p-2 rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500" type="button">
-          <span class="sr-only">Open store</span>
-          <div class="space-y-1">
-            <span class="block w-5 h-0.5 bg-slate-200"></span>
-            <span class="block w-5 h-0.5 bg-slate-200"></span>
-            <span class="block w-5 h-0.5 bg-slate-200"></span>
-          </div>
-        </button>
-
-        <div class="text-sm font-semibold text-slate-200 tracking-wide">Stock Farmer</div>
+  <body class="bg-black text-white">
+    <nav class="bg-neutral-900 text-white">
+      <div class="flex items-center px-4 py-2 gap-4">
+        <a class="text-sm font-semibold" href="#">Stock Farmer</a>
+        <div class="ml-auto flex items-center gap-2">
+          <div id="totalDisplay" class="text-xs font-mono px-2 py-1 rounded bg-neutral-800">$0.00</div>
+          <button
+            id="navToggle"
+            class="inline-flex items-center justify-center p-2 rounded-md border border-gray-500 hover:bg-neutral-800 focus:outline-none"
+            type="button"
+            aria-controls="navOffcanvas"
+            aria-expanded="false">
+            <span class="sr-only">Open controls</span>
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </nav>
 
-    <div id="store-panel" class="fixed top-0 left-0 h-full w-72 bg-slate-950 border-r border-slate-800 transform -translate-x-full transition-transform duration-200 z-30">
-      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-slate-100">Store</h2>
-        <button id="store-close" class="p-1 rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500" type="button">
-          <span class="sr-only">Close store</span>
-          <div class="relative w-4 h-4">
-            <span class="absolute inset-x-0 top-1/2 h-0.5 bg-slate-200 -rotate-45 -translate-y-1/2"></span>
-            <span class="absolute inset-x-0 top-1/2 h-0.5 bg-slate-200 rotate-45 -translate-y-1/2"></span>
-          </div>
+    <div id="navOverlay" class="fixed inset-0 bg-black/50 hidden z-30"></div>
+
+    <div id="navOffcanvas" class="fixed inset-y-0 right-0 w-64 bg-neutral-900 text-white shadow-xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-700">
+        <h5 class="text-sm font-semibold" id="navOffcanvasLabel">Controls</h5>
+        <button id="navClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
+          <span class="sr-only">Close</span>
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
         </button>
       </div>
-      <div class="px-4 py-3 space-y-4 text-sm">
+      <div class="flex-1 p-4 text-xs text-neutral-300 space-y-4">
         <div>
-          <h3 class="font-semibold text-slate-100 mb-2">Plots</h3>
-          <button id="buy-plot" class="w-full px-3 py-2 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-500" type="button">Buy Plot ($5)</button>
+          <label for="cropSelect" class="block mb-1 font-medium text-neutral-200">Crop</label>
+          <select id="cropSelect" class="w-full bg-neutral-800 border border-neutral-700 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option value="wheat"></option>
+            <option value="carrot"></option>
+            <option value="potato"></option>
+          </select>
         </div>
+
         <div>
-          <h3 class="font-semibold text-slate-100 mb-2">Seeds</h3>
-          <div id="seed-store" class="space-y-2"></div>
+          <label for="stockSelect" class="block mb-1 font-medium text-neutral-200">Stock</label>
+          <select id="stockSelect" class="w-full bg-neutral-800 border border-neutral-700 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option value="SP500">S&amp;P 500</option>
+            <option value="AMZN">AMZN</option>
+            <option value="TSLA">TSLA</option>
+          </select>
         </div>
+
+        <button class="w-full border border-gray-500 text-xs px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="recenterBtn">Recenter view</button>
       </div>
     </div>
 
-    <div class="flex flex-col items-center mt-4">
-      <div id="money" class="mb-2 font-semibold text-lg">Money: $0.00</div>
-
-      <div id="farm" class="grid w-full max-w-6xl mx-auto gap-3 px-4" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))"></div>
-    </div>
-
-    <div id="dialog-backdrop" class="fixed inset-0 bg-black/50 hidden items-center justify-center">
-      <div id="plant-dialog" class="bg-stone-100 text-slate-900 rounded-xl shadow-2xl px-5 py-4 min-w-[260px]">
-        <h2 class="text-lg font-semibold mb-3">Plant crops</h2>
-
-        <label for="seed-select" class="block text-xs font-semibold text-slate-700 mb-1">Seed</label>
-        <select id="seed-select" class="w-full text-sm border border-slate-300 rounded-md px-2 py-1 mb-3"></select>
-
-        <label for="stock-select" class="block text-xs font-semibold text-slate-700 mb-1">Stock</label>
-        <select id="stock-select" class="w-full text-sm border border-slate-300 rounded-md px-2 py-1"></select>
-
-        <div class="flex justify-end gap-2 mt-4">
-          <button id="cancel-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-slate-200 text-slate-800">Cancel</button>
-          <button id="plant-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-blue-600 text-white">Plant</button>
-        </div>
-      </div>
-
-      <div id="sell-dialog" class="bg-stone-100 text-slate-900 rounded-xl shadow-2xl px-5 py-4 min-w-[260px] hidden">
-        <h2 class="text-lg font-semibold mb-3">Sell crops</h2>
-        <p id="sell-summary" class="text-sm mb-4"></p>
-        <div class="flex justify-end gap-2 mt-4">
-          <button id="sell-cancel-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-slate-200 text-slate-800">Cancel</button>
-          <button id="sell-confirm-btn" type="button" class="px-3 py-1 text-sm rounded-md bg-emerald-600 text-white">Sell</button>
-        </div>
-      </div>
+    <div class="canvas-wrapper">
+      <canvas id="gridCanvas"></canvas>
     </div>
 
     <script>
-      const seeds = [
-        {
-          id: "WHEAT",
-          name: "Wheat",
-          minMs: 1 * 60000,
-          baseYield: 1,
-          spritePrefix: "images/wheat/wheat-phase-",
-          stages: 4,
-          unlockCost: 0,
-        },
-        {
-          id: "POTATO",
-          name: "Potato",
-          minMs: 5 * 60000,
-          baseYield: 5,
-          spritePrefix: "images/potato/potato-phase-",
-          stages: 4,
-          unlockCost: 25,
-        },
-        {
-          id: "CARROT",
-          name: "Carrots",
-          minMs: 10 * 60000,
-          baseYield: 10,
-          spritePrefix: "images/carrot/carrot-phase-",
-          stages: 4,
-          unlockCost: 75,
-        },
-      ];
+      (function () {
+        const canvas = document.getElementById("gridCanvas");
+        const ctx = canvas.getContext("2d");
 
-      const stocks = [
-        { id: "SPY", label: "S&P 500 (SPY)", basePrice: 500.0 },
-        { id: "AAPL", label: "AAPL", basePrice: 185.0 },
-        { id: "TSLA", label: "TSLA", basePrice: 220.0 },
-        { id: "AMZN", label: "AMZN", basePrice: 140.0 },
-      ];
+        const GRID_COLS = 100;
+        const GRID_ROWS = 100;
 
-      const stockState = {};
-      stocks.forEach((s) => (stockState[s.id] = { price: s.basePrice }));
+        let tileSize = 100;
+        const VISIBLE_ROWS_AT_START = 3;
 
-      const unlockedSeeds = new Set(["WHEAT"]);
-      const dirtImage = "images/dirt.jpg";
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 1;
+        let defaultScale = 1;
+        const MIN_SCALE = 0.05;
+        const MAX_SCALE = 3;
 
-      let plots = Array.from({ length: 3 }, (_, i) => ({
-        id: i,
-        state: "EMPTY",
-        seedId: null,
-        stockId: null,
-        plantedAt: null,
-        minMs: 0,
-        plantingPrice: 0,
-      }));
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragOffsetStartX = 0;
+        let dragOffsetStartY = 0;
 
-      let money = 0;
-      let activePlotId = null;
-      let pendingSellPlotId = null;
+        const activePointers = new Map();
+        let isPinching = false;
+        let pinchStartDistance = 0;
+        let pinchStartScale = 1;
+        let pinchCenterX = 0;
+        let pinchCenterY = 0;
 
-      let lastPriceUpdate = 0;
-      const PRICE_UPDATE_INTERVAL_MS = 2000;
+        let tapStart = null;
 
-      let farmEl,
-        moneyEl,
-        seedSelect,
-        stockSelect,
-        backdropEl,
-        plantBtn,
-        cancelBtn,
-        plantDialogEl,
-        sellDialogEl,
-        sellSummaryEl,
-        sellConfirmBtn,
-        sellCancelBtn,
-        menuToggleBtn,
-        storePanelEl,
-        storeCloseBtn,
-        seedStoreEl;
+        let needsRender = true;
+        let firstResizeDone = false;
 
-      const basePlotClasses = "plot aspect-square border border-slate-700 overflow-hidden cursor-pointer transition bg-slate-900";
+        let totalMoney = 0;
+        const totalDisplay = document.getElementById("totalDisplay");
 
-      function getSeed(id) {
-        return seeds.find((s) => s.id === id);
-      }
+        const crops = {
+          wheat: {
+            id: "wheat",
+            name: "Wheat",
+            growMinutes: 1,
+            baseValue: 1,
+            unlocked: true,
+            unlockCost: 0,
+            images: [],
+          },
+          carrot: {
+            id: "carrot",
+            name: "Carrot",
+            growMinutes: 5,
+            baseValue: 5,
+            unlocked: false,
+            unlockCost: 10,
+            images: [],
+          },
+          potato: {
+            id: "potato",
+            name: "Potato",
+            growMinutes: 10,
+            baseValue: 10,
+            unlocked: false,
+            unlockCost: 25,
+            images: [],
+          },
+        };
 
-      function getStockPrice(id) {
-        return stockState[id].price;
-      }
-
-      function computeTotalForPlot(p) {
-        const seed = getSeed(p.seedId);
-        const base = seed.baseYield;
-        const start = p.plantingPrice;
-        const end = getStockPrice(p.stockId);
-        if (!start || start <= 0) return base;
-        const raw = base * (1 + (end - start) / start);
-        if (raw > base) return Math.ceil(raw * 100) / 100;
-        if (raw < base) return Math.floor(raw * 100) / 100;
-        return Number(base.toFixed(2));
-      }
-
-      function computePctChange(start, end) {
-        if (!start || start <= 0) return 0;
-        return ((end - start) / start) * 100;
-      }
-
-      function getStageIndex(plot, seed, now) {
-        if (!plot.plantedAt || !plot.minMs) return 0;
-        const elapsed = now - plot.plantedAt;
-        const fraction = Math.min(1, elapsed / plot.minMs);
-        let idx = Math.floor(fraction * seed.stages);
-        if (plot.state !== "READY") idx = Math.min(idx, seed.stages - 2);
-        else idx = seed.stages - 1;
-        return idx;
-      }
-
-      function formatTimeRemaining(plot, now) {
-        if (!plot.plantedAt || !plot.minMs) return "";
-        const elapsed = now - plot.plantedAt;
-        if (elapsed >= plot.minMs) return "Ready";
-        const secs = Math.ceil((plot.minMs - elapsed) / 1000);
-        const m = Math.floor(secs / 60);
-        const s = secs % 60;
-        return m ? `${m}:${s.toString().padStart(2, "0")}` : `${s}s`;
-      }
-
-      function renderSeedOptions() {
-        seedSelect.innerHTML = "";
-        seeds.forEach((s) => {
-          if (!unlockedSeeds.has(s.id)) return;
-          const opt = document.createElement("option");
-          opt.value = s.id;
-          opt.textContent = `${s.name} - $${s.baseYield.toFixed(2)} - ${(s.minMs / 60000).toFixed(0)}m`;
-          seedSelect.appendChild(opt);
-        });
-      }
-
-      function renderSeedStore() {
-        seedStoreEl.innerHTML = "";
-        seeds.forEach((s) => {
-          const row = document.createElement("div");
-          row.className = "flex items-center justify-between gap-2";
-          const info = document.createElement("div");
-          const unlocked = unlockedSeeds.has(s.id);
-          info.className = "text-xs";
-          info.innerHTML = `
-            <div class="font-semibold ${unlocked ? "text-emerald-200" : "text-slate-100"}">${s.name}</div>
-            <div class="text-[10px] text-slate-400">
-              Grow: ${(s.minMs / 60000).toFixed(0)}m · Base: $${s.baseYield.toFixed(2)}${s.unlockCost ? ` · Cost: $${s.unlockCost.toFixed(0)}` : ""}
-            </div>`;
-          row.appendChild(info);
-          const btn = document.createElement("button");
-          if (unlocked) {
-            btn.disabled = true;
-            btn.className = "px-2 py-1 rounded-md bg-slate-800 text-[10px] text-slate-400 cursor-default";
-            btn.textContent = "Unlocked";
-          } else {
-            const canAfford = money >= s.unlockCost;
-            btn.disabled = !canAfford;
-            btn.className = "px-2 py-1 rounded-md text-[10px] " + (canAfford ? "bg-emerald-600 text-white hover:bg-emerald-500" : "bg-slate-800 text-slate-500 cursor-not-allowed");
-            btn.textContent = `Unlock $${s.unlockCost.toFixed(0)}`;
-            btn.onclick = () => {
-              if (money < s.unlockCost) return;
-              money = Number((money - s.unlockCost).toFixed(2));
-              unlockedSeeds.add(s.id);
-              renderSeedOptions();
-              renderSeedStore();
-              render();
+        Object.values(crops).forEach((c) => {
+          c.growTimeMs = c.growMinutes * 60 * 1000;
+          for (let i = 1; i <= 4; i++) {
+            const img = new Image();
+            img.src = `/images/${c.id}/${c.id}-phase-${i}.png`;
+            img.onload = () => {
+              needsRender = true;
             };
+            c.images.push(img);
           }
-          row.appendChild(btn);
-          seedStoreEl.appendChild(row);
-        });
-      }
-
-      function init() {
-        farmEl = document.getElementById("farm");
-        moneyEl = document.getElementById("money");
-        seedSelect = document.getElementById("seed-select");
-        stockSelect = document.getElementById("stock-select");
-        backdropEl = document.getElementById("dialog-backdrop");
-        plantBtn = document.getElementById("plant-btn");
-        cancelBtn = document.getElementById("cancel-btn");
-        plantDialogEl = document.getElementById("plant-dialog");
-        sellDialogEl = document.getElementById("sell-dialog");
-        sellSummaryEl = document.getElementById("sell-summary");
-        sellConfirmBtn = document.getElementById("sell-confirm-btn");
-        sellCancelBtn = document.getElementById("sell-cancel-btn");
-        menuToggleBtn = document.getElementById("menu-toggle");
-        storePanelEl = document.getElementById("store-panel");
-        storeCloseBtn = document.getElementById("store-close");
-        seedStoreEl = document.getElementById("seed-store");
-
-        stocks.forEach((s) => {
-          const opt = document.createElement("option");
-          opt.value = s.id;
-          opt.textContent = s.label;
-          stockSelect.appendChild(opt);
         });
 
-        renderSeedOptions();
-        renderSeedStore();
-
-        plots.forEach((p) => {
-          const btn = document.createElement("button");
-          btn.dataset.id = p.id;
-          btn.className = basePlotClasses;
-          btn.addEventListener("click", handlePlotClick);
-          farmEl.appendChild(btn);
-        });
-
-        plantBtn.onclick = confirmPlant;
-        cancelBtn.onclick = () => {
-          activePlotId = null;
-          closeAllDialogs();
+        const stocks = {
+          SP500: { symbol: "SP500", name: "S&P 500", price: 100 },
+          AMZN: { symbol: "AMZN", name: "AMZN", price: 100 },
+          TSLA: { symbol: "TSLA", name: "TSLA", price: 100 },
         };
 
-        sellCancelBtn.onclick = () => {
-          pendingSellPlotId = null;
-          closeAllDialogs();
+        let selectedCropKey = "wheat";
+        let previousCropKey = "wheat";
+        let selectedStockKey = "SP500";
+
+        const plots = new Map();
+
+        const dirtImg = new Image();
+        let dirtLoaded = false;
+        dirtImg.src = "/images/dirt.jpg";
+        dirtImg.onload = () => {
+          dirtLoaded = true;
+          needsRender = true;
         };
 
-        sellConfirmBtn.onclick = () => {
-          if (pendingSellPlotId != null) harvestPlot(pendingSellPlotId);
-          pendingSellPlotId = null;
-          closeAllDialogs();
-          render();
+        const grassImg = new Image();
+        let grassLoaded = false;
+        grassImg.src = "/images/grass.jpg";
+        grassImg.onload = () => {
+          grassLoaded = true;
+          needsRender = true;
         };
 
-        document.getElementById("buy-plot").onclick = (e) => {
-          const isFree = e.shiftKey;
-          if (!isFree && money < 5) {
-            alert("Not enough money.");
-            return;
-          }
-          if (!isFree) money = Number((money - 5).toFixed(2));
-          addNewPlot();
-          renderSeedStore();
-          render();
-        };
+        const filled = new Set(["49,49", "49,50", "50,49", "50,50"]);
 
-        menuToggleBtn.onclick = () => {
-          storePanelEl.classList.toggle("-translate-x-full");
-        };
-
-        storeCloseBtn.onclick = () => {
-          storePanelEl.classList.add("-translate-x-full");
-        };
-
-        render();
-        setInterval(render, 500);
-      }
-
-      function handlePlotClick(e) {
-        const id = Number(e.currentTarget.dataset.id);
-        const plot = plots[id];
-        if (plot.state === "EMPTY") {
-          activePlotId = id;
-          openPlantDialog();
-        } else if (plot.state === "READY") {
-          pendingSellPlotId = id;
-          openSellDialog(id);
+        function updateTotalDisplay() {
+          totalDisplay.textContent = "$" + totalMoney.toFixed(2);
         }
-      }
 
-      function addNewPlot() {
-        const id = plots.length;
-        plots.push({
-          id,
-          state: "EMPTY",
-          seedId: null,
-          stockId: null,
-          plantedAt: null,
-          minMs: 0,
-          plantingPrice: 0,
-        });
-        const btn = document.createElement("button");
-        btn.dataset.id = id;
-        btn.className = basePlotClasses;
-        btn.addEventListener("click", handlePlotClick);
-        farmEl.appendChild(btn);
-      }
-
-      function openPlantDialog() {
-        plantDialogEl.classList.remove("hidden");
-        sellDialogEl.classList.add("hidden");
-        backdropEl.classList.remove("hidden");
-        backdropEl.classList.add("flex");
-      }
-
-      function openSellDialog(id) {
-        const p = plots[id];
-        const total = computeTotalForPlot(p);
-        sellSummaryEl.textContent = `Sell this plot for $${total.toFixed(2)}?`;
-        sellDialogEl.classList.remove("hidden");
-        plantDialogEl.classList.add("hidden");
-        backdropEl.classList.remove("hidden");
-        backdropEl.classList.add("flex");
-      }
-
-      function closeAllDialogs() {
-        backdropEl.classList.add("hidden");
-        backdropEl.classList.remove("flex");
-        plantDialogEl.classList.add("hidden");
-        sellDialogEl.classList.add("hidden");
-      }
-
-      function plantImmediate(id, seedId, stockId) {
-        const p = plots[id];
-        const seed = getSeed(seedId);
-        if (!seed || p.state !== "EMPTY") return;
-        p.state = "GROWING";
-        p.seedId = seedId;
-        p.stockId = stockId;
-        p.plantedAt = Date.now();
-        p.minMs = seed.minMs;
-        p.plantingPrice = getStockPrice(stockId);
-      }
-
-      function confirmPlant() {
-        const seedId = seedSelect.value;
-        const stockId = stockSelect.value;
-        if (activePlotId != null) plantImmediate(activePlotId, seedId, stockId);
-        activePlotId = null;
-        closeAllDialogs();
-        render();
-      }
-
-      function harvestPlot(id) {
-        const p = plots[id];
-        if (p.state !== "READY") return;
-        money = Number((money + computeTotalForPlot(p)).toFixed(2));
-        plots[id] = {
-          id,
-          state: "EMPTY",
-          seedId: null,
-          stockId: null,
-          plantedAt: null,
-          minMs: 0,
-          plantingPrice: 0,
-        };
-        renderSeedStore();
-      }
-
-      function randomDelta() {
-        return (Math.random() * 2 - 1) * 1;
-      }
-
-      function render() {
-        const now = Date.now();
-
-        if (now - lastPriceUpdate >= PRICE_UPDATE_INTERVAL_MS) {
-          Object.values(stockState).forEach((s) => {
-            s.price = Math.max(0.01, s.price + randomDelta());
+        function refreshCropOptions() {
+          const cropSelect = document.getElementById("cropSelect");
+          Array.from(cropSelect.options).forEach((opt) => {
+            const c = crops[opt.value];
+            if (!c) return;
+            let label = `${c.name} - ${c.growMinutes}min - $${c.baseValue}`;
+            if (!c.unlocked && c.unlockCost > 0) {
+              label += ` (unlock for $${c.unlockCost})`;
+            }
+            opt.textContent = label;
           });
-          lastPriceUpdate = now;
         }
 
-        plots.forEach((p) => {
-          if (p.state === "GROWING" && now - p.plantedAt >= p.minMs) p.state = "READY";
-        });
+        function centerView() {
+          const rect = canvas.getBoundingClientRect();
+          const worldWidth = GRID_COLS * tileSize;
+          const worldHeight = GRID_ROWS * tileSize;
+          const canvasWidth = rect.width;
+          const canvasHeight = rect.height;
+          const worldCenterX = worldWidth / 2;
+          const worldCenterY = worldHeight / 2;
+          const canvasCenterX = canvasWidth / 2;
+          const canvasCenterY = canvasHeight / 2;
 
-        moneyEl.textContent = `Money: $${money.toFixed(2)}`;
+          offsetX = canvasCenterX - worldCenterX * scale;
+          offsetY = canvasCenterY - worldCenterY * scale;
 
-        document.querySelectorAll(".plot").forEach((btn) => {
-          const id = Number(btn.dataset.id);
-          const p = plots[id];
+          needsRender = true;
+        }
 
-          if (p.state === "EMPTY") {
-            btn.innerHTML = `
-              <div class="relative w-full h-full">
-                <img src="${dirtImage}" class="no-drag w-full h-full object-cover" draggable="false" />
-              </div>`;
+        function resizeCanvas() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          const scaleFromHeight = rect.height / (VISIBLE_ROWS_AT_START * tileSize);
+          const scaleFromWidth = rect.width / (VISIBLE_ROWS_AT_START * tileSize);
+          const initialScale = Math.min(scaleFromHeight, scaleFromWidth);
+
+          if (!firstResizeDone) {
+            scale = initialScale;
+            defaultScale = initialScale;
+            firstResizeDone = true;
+          }
+
+          centerView();
+        }
+
+        function clampScale(s) {
+          return Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
+        }
+
+        function zoomAt(factor, cx, cy) {
+          const newScale = clampScale(scale * factor);
+          const k = newScale / scale;
+          offsetX = cx - (cx - offsetX) * k;
+          offsetY = cy - (cy - offsetY) * k;
+          scale = newScale;
+          needsRender = true;
+        }
+
+        function render() {
+          if (!needsRender) return;
+          needsRender = false;
+
+          const width = canvas.clientWidth;
+          const height = canvas.clientHeight;
+
+          ctx.clearRect(0, 0, width, height);
+
+          if (!dirtLoaded || !grassLoaded) return;
+
+          const worldLeft = -offsetX / scale;
+          const worldRight = (width - offsetX) / scale;
+          const worldTop = -offsetY / scale;
+          const worldBottom = (height - offsetY) / scale;
+
+          const startCol = Math.max(0, Math.floor(worldLeft / tileSize));
+          const endCol = Math.min(GRID_COLS, Math.ceil(worldRight / tileSize));
+          const startRow = Math.max(0, Math.floor(worldTop / tileSize));
+          const endRow = Math.min(GRID_ROWS, Math.ceil(worldBottom / tileSize));
+
+          const tileScreenSize = tileSize * scale;
+          const now = Date.now();
+
+          for (let row = startRow; row < endRow; row++) {
+            for (let col = startCol; col < endCol; col++) {
+              const key = row + "," + col;
+              const x = offsetX + col * tileSize * scale;
+              const y = offsetY + row * tileSize * scale;
+
+              const isDirt = filled.has(key);
+              if (isDirt) {
+                ctx.drawImage(dirtImg, x, y, tileScreenSize, tileScreenSize);
+              } else {
+                ctx.drawImage(grassImg, x, y, tileScreenSize, tileScreenSize);
+              }
+
+              const plot = plots.get(key);
+              if (!plot) continue;
+
+              const crop = crops[plot.cropKey];
+              if (!crop || !crop.images.length) continue;
+
+              const elapsed = now - plot.plantedAt;
+              const progress = Math.min(1, elapsed / crop.growTimeMs);
+              const isReady = progress >= 1;
+
+              let phaseIndex;
+              if (isReady) {
+                phaseIndex = 3;
+              } else {
+                phaseIndex = Math.min(2, Math.floor(progress * 3));
+              }
+
+              const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
+
+              if (isReady) {
+                ctx.filter = "drop-shadow(0px 0px 6px rgba(255,215,0,0.9))";
+              }
+
+              ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
+
+              if (isReady) {
+                ctx.filter = "none";
+              }
+
+              const stock = stocks[plot.stockKey];
+              if (!stock) continue;
+
+              const pctChange = (stock.price - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
+              const value = Math.max(0, crop.baseValue * (1 + pctChange));
+
+              const pad = 3 * scale;
+              const infoHeight = 32 * scale;
+              ctx.fillStyle = "rgba(0,0,0,0.65)";
+              ctx.fillRect(x, y, tileScreenSize, infoHeight);
+
+              ctx.textBaseline = "top";
+              ctx.font = `${9 * scale}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+
+              const pctText = `${pctChange >= 0 ? "+" : ""}${(pctChange * 100).toFixed(1)}%`;
+              const labelText = `${plot.stockKey} ${pctText}`;
+              const baseX = x + pad;
+              const baseY = y + pad;
+
+              ctx.fillStyle = "white";
+              ctx.fillText(labelText, baseX, baseY);
+
+              if (pctChange > 0) {
+                const arrow = "▲";
+                const labelWidth = ctx.measureText(labelText + " ").width;
+                ctx.fillStyle = "#22c55e";
+                ctx.fillText(arrow, baseX + labelWidth, baseY);
+              } else if (pctChange < 0) {
+                const arrow = "▼";
+                const labelWidth = ctx.measureText(labelText + " ").width;
+                ctx.fillStyle = "#ef4444";
+                ctx.fillText(arrow, baseX + labelWidth, baseY);
+              }
+
+              const valueText = "$" + value.toFixed(2);
+              ctx.fillStyle = "white";
+              ctx.fillText(valueText, x + pad, y + pad + 10 * scale);
+
+              if (!isReady) {
+                const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
+                const secs = Math.ceil(remainingMs / 1000);
+                const mins = Math.floor(secs / 60);
+                const secPart = secs % 60;
+                const timerText = mins + ":" + secPart.toString().padStart(2, "0");
+                ctx.fillText(timerText, x + pad, y + pad + 20 * scale);
+              } else {
+                ctx.fillText("Ready", x + pad, y + pad + 20 * scale);
+              }
+            }
+          }
+
+          ctx.strokeStyle = "rgba(30,30,30,0.9)";
+          ctx.lineWidth = Math.max(0.5, scale * 0.4);
+
+          ctx.beginPath();
+
+          for (let col = startCol; col <= endCol; col++) {
+            const x = offsetX + col * tileSize * scale;
+            ctx.moveTo(x, offsetY + startRow * tileSize * scale);
+            ctx.lineTo(x, offsetY + endRow * tileSize * scale);
+          }
+
+          for (let row = startRow; row <= endRow; row++) {
+            const y = offsetY + row * tileSize * scale;
+            ctx.moveTo(offsetX + startCol * tileSize * scale, y);
+            ctx.lineTo(offsetX + endCol * tileSize * scale, y);
+          }
+
+          ctx.stroke();
+        }
+
+        function loop() {
+          render();
+          requestAnimationFrame(loop);
+        }
+
+        function updatePointer(e) {
+          activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
+
+        function getTwoPointers() {
+          const vals = Array.from(activePointers.values());
+          return vals.length >= 2 ? [vals[0], vals[1]] : null;
+        }
+
+        function worldFromClient(clientX, clientY) {
+          const rect = canvas.getBoundingClientRect();
+          const x = clientX - rect.left;
+          const y = clientY - rect.top;
+          const worldX = (x - offsetX) / scale;
+          const worldY = (y - offsetY) / scale;
+          return { worldX, worldY };
+        }
+
+        function tileFromClient(clientX, clientY) {
+          const { worldX, worldY } = worldFromClient(clientX, clientY);
+          const col = Math.floor(worldX / tileSize);
+          const row = Math.floor(worldY / tileSize);
+          if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return null;
+          return { row, col, key: row + "," + col };
+        }
+
+        function harvestPlot(key) {
+          const plot = plots.get(key);
+          if (!plot) return;
+          const crop = crops[plot.cropKey];
+          const stock = stocks[plot.stockKey];
+          if (!crop || !stock) return;
+          const pctChange = (stock.price - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
+          const value = Math.max(0, crop.baseValue * (1 + pctChange));
+          totalMoney += value;
+          updateTotalDisplay();
+          plots.delete(key);
+          needsRender = true;
+        }
+
+        function handleTap(clientX, clientY) {
+          const tile = tileFromClient(clientX, clientY);
+          if (!tile) return;
+          const { key } = tile;
+
+          if (!filled.has(key)) {
+            if (totalMoney >= 5) {
+              totalMoney -= 5;
+              updateTotalDisplay();
+              filled.add(key);
+              needsRender = true;
+            }
             return;
           }
 
-          const seed = getSeed(p.seedId);
-          const stageIdx = getStageIndex(p, seed, now);
-          const cropImage = `${seed.spritePrefix}${stageIdx + 1}.png`;
+          const existingPlot = plots.get(key);
+          if (existingPlot) {
+            const crop = crops[existingPlot.cropKey];
+            if (!crop) return;
+            const elapsed = Date.now() - existingPlot.plantedAt;
+            if (elapsed >= crop.growTimeMs) {
+              harvestPlot(key);
+            }
+            return;
+          }
 
-          const start = p.plantingPrice;
-          const end = getStockPrice(p.stockId);
-          const pct = computePctChange(start, end);
-          const pctDisplay = `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
-          const total = computeTotalForPlot(p);
-          const timeRemaining = formatTimeRemaining(p, now);
-          const stockId = p.stockId;
+          const cropKey = selectedCropKey;
+          const stockKey = selectedStockKey;
+          const crop = crops[cropKey];
+          const stock = stocks[stockKey];
+          if (!crop || !stock || !crop.unlocked) return;
 
-          let pctClass = "text-slate-100";
-          if (pct > 0.001) pctClass = "text-emerald-300";
-          else if (pct < -0.001) pctClass = "text-red-300";
+          plots.set(key, {
+            cropKey,
+            stockKey,
+            plantedAt: Date.now(),
+            stockPriceAtPlant: stock.price,
+          });
 
-          const isReady = p.state === "READY";
-          const shadowClass = isReady ? "drop-shadow-[0_0_6px_rgba(255,215,0,0.9)]" : "";
+          needsRender = true;
+        }
 
-          btn.innerHTML = `
-  <div class="relative w-full h-full">
-    <img src="${dirtImage}" class="no-drag w-full h-full object-cover" draggable="false" />
+        function onPointerDown(e) {
+          canvas.setPointerCapture(e.pointerId);
+          updatePointer(e);
 
-    <img
-      src="${cropImage}"
-      class="no-drag absolute inset-[5%] w-[90%] h-[90%] object-cover ${shadowClass}"
-      draggable="false"
-    />
+          if (activePointers.size === 2) {
+            isDragging = false;
+            isPinching = true;
 
-    <div class="absolute top-1 left-1 text-[10px] font-semibold text-slate-100 drop-shadow px-1">
-      ${seed.name}
-    </div>
+            const [p1, p2] = getTwoPointers();
+            pinchStartDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            pinchStartScale = scale;
+            pinchCenterX = (p1.x + p2.x) / 2;
+            pinchCenterY = (p1.y + p2.y) / 2;
+            tapStart = null;
+          } else if (activePointers.size === 1) {
+            isPinching = false;
+            isDragging = true;
 
-    <div class="absolute top-1 right-1 text-[10px] font-semibold text-slate-100 drop-shadow px-1">
-      ${timeRemaining}
-    </div>
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragOffsetStartX = offsetX;
+            dragOffsetStartY = offsetY;
 
-    <div class="absolute bottom-1 left-1 text-[10px] font-semibold drop-shadow px-1">
-      <span class="text-slate-100">${stockId}</span>
-      <span class="${pctClass}">${pctDisplay}</span>
-    </div>
+            tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now() };
+          }
+        }
 
-    <div class="absolute bottom-1 right-1 text-[10px] font-semibold text-slate-100 drop-shadow px-1">
-      Sell: $${total.toFixed(2)}
-    </div>
-  </div>`;
+        function onPointerMove(e) {
+          updatePointer(e);
+
+          if (isPinching && activePointers.size === 2) {
+            e.preventDefault();
+            const [p1, p2] = getTwoPointers();
+            const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+            if (pinchStartDistance > 0) {
+              const newScale = clampScale(pinchStartScale * (d / pinchStartDistance));
+              const k = newScale / scale;
+
+              offsetX = pinchCenterX - (pinchCenterX - offsetX) * k;
+              offsetY = pinchCenterY - (pinchCenterY - offsetY) * k;
+              scale = newScale;
+              needsRender = true;
+            }
+          } else if (isDragging) {
+            e.preventDefault();
+            offsetX = dragOffsetStartX + (e.clientX - dragStartX);
+            offsetY = dragOffsetStartY + (e.clientY - dragStartY);
+            needsRender = true;
+
+            if (tapStart) {
+              const dx = e.clientX - tapStart.x;
+              const dy = e.clientY - tapStart.y;
+              if (dx * dx + dy * dy > 25) {
+                tapStart = null;
+              }
+            }
+          }
+        }
+
+        function onPointerUp(e) {
+          activePointers.delete(e.pointerId);
+          canvas.releasePointerCapture(e.pointerId);
+          if (activePointers.size < 2) isPinching = false;
+          if (activePointers.size === 0) isDragging = false;
+
+          if (tapStart && tapStart.id === e.pointerId) {
+            const dt = performance.now() - tapStart.time;
+            const dx = e.clientX - tapStart.x;
+            const dy = e.clientY - tapStart.y;
+            if (dt < 300 && dx * dx + dy * dy <= 25) {
+              handleTap(e.clientX, e.clientY);
+            }
+          }
+          tapStart = null;
+        }
+
+        function onWheel(e) {
+          e.preventDefault();
+
+          const rect = canvas.getBoundingClientRect();
+          const cx = rect.width / 2;
+          const cy = rect.height / 2;
+
+          const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+          zoomAt(factor, cx, cy);
+        }
+
+        canvas.addEventListener("pointerdown", onPointerDown);
+        canvas.addEventListener("pointermove", onPointerMove);
+        canvas.addEventListener("pointerup", onPointerUp);
+        canvas.addEventListener("pointercancel", onPointerUp);
+        canvas.addEventListener("pointerleave", onPointerUp);
+        canvas.addEventListener("wheel", onWheel, { passive: false });
+
+        window.addEventListener("resize", () => {
+          resizeCanvas();
+          needsRender = true;
         });
-      }
 
-      window.addEventListener("DOMContentLoaded", init);
+        const navToggle = document.getElementById("navToggle");
+        const navOffcanvas = document.getElementById("navOffcanvas");
+        const navOverlay = document.getElementById("navOverlay");
+        const navClose = document.getElementById("navClose");
+        const recenterBtn = document.getElementById("recenterBtn");
+        const cropSelect = document.getElementById("cropSelect");
+        const stockSelect = document.getElementById("stockSelect");
+
+        function openOffcanvas() {
+          navOffcanvas.classList.remove("translate-x-full");
+          navOverlay.classList.remove("hidden");
+          navToggle.setAttribute("aria-expanded", "true");
+        }
+
+        function closeOffcanvas() {
+          navOffcanvas.classList.add("translate-x-full");
+          navOverlay.classList.add("hidden");
+          navToggle.setAttribute("aria-expanded", "false");
+        }
+
+        navToggle.addEventListener("click", () => {
+          const isOpen = navToggle.getAttribute("aria-expanded") === "true";
+          if (isOpen) {
+            closeOffcanvas();
+          } else {
+            openOffcanvas();
+          }
+        });
+
+        navClose.addEventListener("click", closeOffcanvas);
+        navOverlay.addEventListener("click", closeOffcanvas);
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            closeOffcanvas();
+          }
+        });
+
+        if (recenterBtn) {
+          recenterBtn.addEventListener("click", () => {
+            centerView();
+            closeOffcanvas();
+          });
+        }
+
+        cropSelect.value = "wheat";
+        refreshCropOptions();
+
+        cropSelect.addEventListener("change", (e) => {
+          const key = e.target.value;
+          const crop = crops[key];
+          if (!crop) return;
+
+          if (!crop.unlocked) {
+            if (totalMoney >= crop.unlockCost) {
+              totalMoney -= crop.unlockCost;
+              crop.unlocked = true;
+              updateTotalDisplay();
+              refreshCropOptions();
+            } else {
+              e.target.value = previousCropKey;
+              selectedCropKey = previousCropKey;
+              return;
+            }
+          }
+
+          selectedCropKey = key;
+          previousCropKey = key;
+        });
+
+        stockSelect.addEventListener("change", (e) => {
+          selectedStockKey = e.target.value;
+        });
+
+        setInterval(() => {
+          Object.values(stocks).forEach((s) => {
+            const factor = 1 + (Math.random() - 0.5) * 0.01;
+            s.price = Math.max(1, s.price * factor);
+          });
+          needsRender = true;
+        }, 1000);
+
+        updateTotalDisplay();
+        resizeCanvas();
+        loop();
+      })();
     </script>
   </body>
 </html>
