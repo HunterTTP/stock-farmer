@@ -159,17 +159,17 @@
           },
         };
 
-        Object.values(crops).forEach((c) => {
-          c.growTimeMs = c.growMinutes * 60 * 1000;
-          for (let i = 1; i <= 4; i++) {
+        function loadCropImages(crop) {
+          crop.growTimeMs = crop.growMinutes * 60 * 1000;
+          crop.images = Array.from({ length: 4 }, (_, i) => {
             const img = new Image();
-            img.src = `/images/${c.id}/${c.id}-phase-${i}.png`;
-            img.onload = () => {
-              needsRender = true;
-            };
-            c.images.push(img);
-          }
-        });
+            img.src = `images/${crop.id}/${crop.id}-phase-${i + 1}.png`;
+            img.onload = () => (needsRender = true);
+            return img;
+          });
+        }
+
+        Object.values(crops).forEach(loadCropImages);
 
         const stocks = {
           SP500: { symbol: "SP500", name: "S&P 500", price: 100 },
@@ -185,7 +185,7 @@
 
         const dirtImg = new Image();
         let dirtLoaded = false;
-        dirtImg.src = "/images/dirt.jpg";
+        dirtImg.src = "images/dirt.jpg";
         dirtImg.onload = () => {
           dirtLoaded = true;
           needsRender = true;
@@ -193,7 +193,7 @@
 
         const grassImg = new Image();
         let grassLoaded = false;
-        grassImg.src = "/images/grass.jpg";
+        grassImg.src = "images/grass.jpg";
         grassImg.onload = () => {
           grassLoaded = true;
           needsRender = true;
