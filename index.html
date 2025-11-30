@@ -178,6 +178,24 @@
         const currentSelectionEl = document.getElementById("currentSelection");
 
         const crops = {
+          grass: {
+            id: "grass",
+            name: "Grass",
+            growMinutes: 0,
+            baseValue: 0,
+            unlocked: true,
+            unlockCost: 0,
+            images: [],
+          },
+          farmland: {
+            id: "farmland",
+            name: "Farmland",
+            growMinutes: 0,
+            baseValue: 0,
+            unlocked: true,
+            unlockCost: 0,
+            images: [],
+          },
           wheat: {
             id: "wheat",
             name: "Wheat",
@@ -194,6 +212,7 @@
             baseValue: 5,
             unlocked: false,
             unlockCost: 10,
+            placeCost: 2.5,
             images: [],
           },
           potato: {
@@ -203,6 +222,7 @@
             baseValue: 10,
             unlocked: false,
             unlockCost: 25,
+            placeCost: 5,
             images: [],
           },
         };
@@ -217,7 +237,9 @@
           });
         }
 
-        Object.values(crops).forEach(loadCropImages);
+        Object.values(crops)
+          .filter((c) => c.id !== "grass" && c.id !== "farmland")
+          .forEach(loadCropImages);
 
         const stocks = {
           SP500: { symbol: "SP500", name: "S&P 500", price: 100 },
@@ -231,6 +253,7 @@
 
         const plots = new Map();
         const harvestAnimations = [];
+        const costAnimations = [];
 
         const defaultFilled = ["49,49", "49,50", "50,49", "50,50"];
         const filled = new Set(defaultFilled);
@@ -313,6 +336,12 @@
 
         loadState();
 
+        if (!localStorage.getItem(SAVE_KEY)) {
+          selectedCropKey = "wheat";
+          previousCropKey = "wheat";
+          selectedStockKey = "SP500";
+        }
+
         const dirtImg = new Image();
         let dirtLoaded = false;
         dirtImg.src = "images/dirt.jpg";
@@ -339,7 +368,49 @@
           const crop = crops[selectedCropKey];
           const stock = stocks[selectedStockKey];
 
-          if (!crop || !stock) {
+          if (!crop) {
+            currentSelectionEl.innerHTML = "";
+            currentSelectionEl.classList.add("opacity-0");
+            return;
+          }
+
+          if (crop.id === "grass") {
+            const cropBubble =
+              '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
+              crop.name +
+              "</span>";
+
+            currentSelectionEl.innerHTML =
+              '<span class="hidden sm:inline">Currently planting ' +
+              cropBubble +
+              "</span>" +
+              '<span class="inline sm:hidden">' +
+              crop.name +
+              "</span>";
+
+            currentSelectionEl.classList.remove("opacity-0");
+            return;
+          }
+
+          if (crop.id === "farmland") {
+            const cropBubble =
+              '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
+              crop.name +
+              "</span>";
+
+            currentSelectionEl.innerHTML =
+              '<span class="hidden sm:inline">Currently placing ' +
+              cropBubble +
+              "</span>" +
+              '<span class="inline sm:hidden">' +
+              crop.name +
+              "</span>";
+
+            currentSelectionEl.classList.remove("opacity-0");
+            return;
+          }
+
+          if (!stock) {
             currentSelectionEl.innerHTML = "";
             currentSelectionEl.classList.add("opacity-0");
             return;
@@ -432,8 +503,81 @@
           needsRender = true;
         }
 
+        function renderFloatingValue(
+          anim,
+          nowPerf,
+          startRow,
+          endRow,
+          startCol,
+          endCol
+        ) {
+          const visibleDuration = 1000;
+          const fadeDuration = 500;
+          const totalDuration = visibleDuration + fadeDuration;
+
+          const elapsed = nowPerf - anim.start;
+          if (elapsed >= totalDuration) {
+            return true;
+          }
+
+          const [rowStr, colStr] = anim.key.split(",");
+          const row = parseInt(rowStr, 10);
+          const col = parseInt(colStr, 10);
+          if (Number.isNaN(row) || Number.isNaN(col)) {
+            return false;
+          }
+
+          if (
+            row < startRow ||
+            row >= endRow ||
+            col < startCol ||
+            col >= endCol
+          ) {
+            return false;
+          }
+
+          const cellX = offsetX + col * tileSize * scale;
+          const cellY = offsetY + row * tileSize * scale;
+          const cx = cellX + (tileSize * scale) / 2;
+          const cy = cellY + (tileSize * scale) / 2;
+
+          let alpha;
+          if (elapsed <= visibleDuration) {
+            alpha = 1;
+          } else {
+            const fadeT = (elapsed - visibleDuration) / fadeDuration;
+            alpha = 1 - Math.min(1, Math.max(0, fadeT));
+          }
+
+          const value = anim.value;
+          const isPositiveOrZero = value >= 0;
+          const absValue = Math.abs(value);
+          const prefix = isPositiveOrZero ? "+$" : "-$";
+
+          const cellScreenSize = tileSize * scale;
+          const fontSize = cellScreenSize * 0.22;
+
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = `700 ${fontSize}px system-ui`;
+
+          ctx.shadowColor = "rgba(0,0,0,0.3)";
+          ctx.shadowBlur = cellScreenSize * 0.05;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = cellScreenSize * 0.015;
+
+          ctx.fillStyle = isPositiveOrZero ? "#22c55e" : "#ef4444";
+          ctx.fillText(prefix + absValue.toFixed(2), cx, cy);
+          ctx.restore();
+
+          return false;
+        }
+
         function render() {
-          const hasAnimations = harvestAnimations.length > 0;
+          const hasAnimations =
+            harvestAnimations.length > 0 || costAnimations.length > 0;
           if (!needsRender && !hasAnimations) return;
           needsRender = false;
 
@@ -592,48 +736,34 @@
           }
 
           for (let i = harvestAnimations.length - 1; i >= 0; i--) {
-            const anim = harvestAnimations[i];
-            const duration = 1700;
-            const t = (nowPerf - anim.start) / duration;
-            if (t >= 1) {
+            const done = renderFloatingValue(
+              harvestAnimations[i],
+              nowPerf,
+              startRow,
+              endRow,
+              startCol,
+              endCol
+            );
+            if (done) {
               harvestAnimations.splice(i, 1);
-              continue;
             }
-
-            const [rowStr, colStr] = anim.key.split(",");
-            const row = parseInt(rowStr, 10);
-            const col = parseInt(colStr, 10);
-            if (
-              Number.isNaN(row) ||
-              Number.isNaN(col) ||
-              row < startRow ||
-              row >= endRow ||
-              col < startCol ||
-              col >= endCol
-            ) {
-              continue;
-            }
-
-            const cellX = offsetX + col * tileSize * scale;
-            const cellY = offsetY + row * tileSize * scale;
-            const cx = cellX + (tileSize * scale) / 2;
-            const cy = cellY + (tileSize * scale) / 2;
-
-            const alpha = 1 - t;
-            const cellScreenSize = tileSize * scale;
-            const fontSize = cellScreenSize * 0.25;
-
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.font = `700 ${fontSize}px system-ui`;
-            ctx.fillStyle = "#22c55e";
-            ctx.fillText("+$" + anim.value.toFixed(2), cx, cy);
-            ctx.restore();
           }
 
-          if (harvestAnimations.length) {
+          for (let i = costAnimations.length - 1; i >= 0; i--) {
+            const done = renderFloatingValue(
+              costAnimations[i],
+              nowPerf,
+              startRow,
+              endRow,
+              startCol,
+              endCol
+            );
+            if (done) {
+              costAnimations.splice(i, 1);
+            }
+          }
+
+          if (harvestAnimations.length || costAnimations.length) {
             needsRender = true;
           }
 
@@ -720,17 +850,6 @@
           if (!tile) return;
           const { key } = tile;
 
-          if (!filled.has(key)) {
-            if (totalMoney >= 5) {
-              totalMoney -= 5;
-              updateTotalDisplay();
-              filled.add(key);
-              needsRender = true;
-              saveState();
-            }
-            return;
-          }
-
           const existingPlot = plots.get(key);
           if (existingPlot) {
             const crop = crops[existingPlot.cropKey];
@@ -742,11 +861,48 @@
             return;
           }
 
+          if (selectedCropKey === "grass") {
+            filled.delete(key);
+            needsRender = true;
+            saveState();
+            return;
+          }
+
+          if (selectedCropKey === "farmland") {
+            if (plots.has(key)) return;
+            if (filled.has(key)) return;
+
+            filled.add(key);
+            needsRender = true;
+            saveState();
+            return;
+          }
+
+          if (!filled.has(key)) {
+            return;
+          }
+
           const cropKey = selectedCropKey;
           const stockKey = selectedStockKey;
           const crop = crops[cropKey];
           const stock = stocks[stockKey];
           if (!crop || !stock || !crop.unlocked) return;
+
+          const plantCost =
+            typeof crop.placeCost === "number" ? crop.placeCost : 0;
+
+          if (plantCost > 0) {
+            if (totalMoney < plantCost) return;
+
+            totalMoney -= plantCost;
+            updateTotalDisplay();
+
+            costAnimations.push({
+              key,
+              value: -plantCost,
+              start: performance.now(),
+            });
+          }
 
           plots.set(key, {
             cropKey,
@@ -959,7 +1115,13 @@
             card.className = baseClass;
 
             const img = document.createElement("img");
-            img.src = `images/${crop.id}/${crop.id}-phase-4.png`;
+            if (crop.id === "grass") {
+              img.src = "images/grass.jpg";
+            } else if (crop.id === "farmland") {
+              img.src = "images/dirt.jpg";
+            } else {
+              img.src = `images/${crop.id}/${crop.id}-phase-4.png`;
+            }
             img.alt = crop.name;
             img.className = "absolute inset-0 w-full h-full object-cover";
             card.appendChild(img);
@@ -968,17 +1130,33 @@
             overlay.className =
               "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
 
-            overlay.innerHTML =
-              `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
-              `<div class="text-neutral-300">Grow time: ${crop.growMinutes} min</div>` +
-              `<div class="text-neutral-200">Sell price: $${crop.baseValue.toFixed(
-                2
-              )}</div>`;
+            if (crop.id === "grass") {
+              overlay.innerHTML =
+                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
+                `<div class="text-neutral-200">Cost: Free</div>`;
+            } else if (crop.id === "farmland") {
+              overlay.innerHTML =
+                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
+                `<div class="text-neutral-200">Cost: Free</div>`;
+            } else {
+              const plantCost =
+                typeof crop.placeCost === "number" ? crop.placeCost : 0;
+              const costText =
+                plantCost > 0 ? `$${plantCost.toFixed(2)}` : "Free";
 
-            if (!crop.unlocked && crop.unlockCost > 0) {
-              overlay.innerHTML += `<div class="text-[9px] text-amber-300 mt-1">Unlock for: $${crop.unlockCost.toFixed(
-                2
-              )}</div>`;
+              overlay.innerHTML =
+                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
+                `<div class="text-neutral-200">Cost: ${costText}</div>` +
+                `<div class="text-neutral-300">Grow time: ${crop.growMinutes} min</div>` +
+                `<div class="text-neutral-200">Sell price: $${crop.baseValue.toFixed(
+                  2
+                )}</div>`;
+
+              if (!crop.unlocked && crop.unlockCost > 0) {
+                overlay.innerHTML += `<div class="text-[9px] text-amber-300 mt-1">Unlock for: $${crop.unlockCost.toFixed(
+                  2
+                )}</div>`;
+              }
             }
 
             card.appendChild(overlay);
