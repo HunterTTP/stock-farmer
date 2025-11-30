@@ -111,6 +111,17 @@
           <div id="stockGrid" class="grid grid-cols-3 gap-2"></div>
         </div>
 
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-neutral-200">Show stock stats</span>
+          <button
+            id="toggleStatsBtn"
+            class="px-2 py-1 rounded border border-neutral-600 text-[11px] bg-neutral-800"
+            type="button"
+          >
+            On
+          </button>
+        </div>
+
         <button
           class="w-full border border-gray-500 text-xs px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center"
           id="recenterBtn"
@@ -161,6 +172,8 @@
         let firstResizeDone = false;
 
         let totalMoney = 0;
+        let showStats = true;
+
         const totalDisplay = document.getElementById("totalDisplay");
         const currentSelectionEl = document.getElementById("currentSelection");
 
@@ -217,6 +230,7 @@
         let selectedStockKey = "SP500";
 
         const plots = new Map();
+        const harvestAnimations = [];
 
         const defaultFilled = ["49,49", "49,50", "50,49", "50,50"];
         const filled = new Set(defaultFilled);
@@ -231,6 +245,7 @@
             selectedCropKey,
             previousCropKey,
             selectedStockKey,
+            showStats,
             cropsUnlocked: Object.fromEntries(
               Object.entries(crops).map(([id, c]) => [id, c.unlocked])
             ),
@@ -284,6 +299,10 @@
 
             if (data.selectedStockKey && stocks[data.selectedStockKey]) {
               selectedStockKey = data.selectedStockKey;
+            }
+
+            if (typeof data.showStats === "boolean") {
+              showStats = data.showStats;
             }
 
             needsRender = true;
@@ -414,7 +433,8 @@
         }
 
         function render() {
-          if (!needsRender) return;
+          const hasAnimations = harvestAnimations.length > 0;
+          if (!needsRender && !hasAnimations) return;
           needsRender = false;
 
           const width = canvas.clientWidth;
@@ -437,6 +457,7 @@
           const tileScreenSize = tileSize * scale;
           const isZoomedOut = tileScreenSize < 72;
           const now = Date.now();
+          const nowPerf = performance.now();
 
           for (let row = startRow; row < endRow; row++) {
             for (let col = startCol; col < endCol; col++) {
@@ -463,57 +484,78 @@
               const progress = Math.min(1, elapsed / crop.growTimeMs);
               const isReady = progress >= 1;
 
-              let phaseIndex;
-              if (isReady) {
-                phaseIndex = 3;
-              } else {
-                phaseIndex = Math.min(2, Math.floor(progress * 3));
+              if (isReady && plot.lockedStockPrice == null) {
+                plot.lockedStockPrice = stock.price;
+                saveState();
               }
+
+              let phaseIndex;
+              if (isReady) phaseIndex = 3;
+              else phaseIndex = Math.min(2, Math.floor(progress * 3));
 
               const img =
                 crop.images[phaseIndex] || crop.images[crop.images.length - 1];
 
+              const effectivePrice =
+                isReady && plot.lockedStockPrice != null
+                  ? plot.lockedStockPrice
+                  : stock.price;
+
               const pctChange =
-                (stock.price - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
+                (effectivePrice - plot.stockPriceAtPlant) /
+                plot.stockPriceAtPlant;
+
               const value = Math.max(0, crop.baseValue * (1 + pctChange));
+              const pctText = `${pctChange >= 0 ? "+" : ""}${(
+                pctChange * 100
+              ).toFixed(1)}%`;
+              const valueText = "$" + value.toFixed(2);
+
+              const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
+              const secs = Math.ceil(remainingMs / 1000);
+              const mins = Math.floor(secs / 60);
+              const secPart = secs % 60;
+              const timerText =
+                mins + ":" + secPart.toString().padStart(2, "0");
+
+              let arrow = "";
+              if (pctChange > 0) arrow = "▲";
+              else if (pctChange < 0) arrow = "▼";
+
+              let stockColor = "white";
+              if (pctChange > 0) stockColor = "#22c55e";
+              else if (pctChange < 0) stockColor = "#ef4444";
 
               if (isZoomedOut) {
-                const bgColor = isReady
-                  ? "rgba(60,45,0,0.35)"
-                  : "rgba(0,0,0,0.35)";
-                ctx.fillStyle = bgColor;
-                ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
-
-                if (pctChange !== 0) {
-                  const tintColor =
-                    pctChange > 0
-                      ? "rgba(16,255,80,0.45)"
-                      : "rgba(255,32,32,0.45)";
-                  ctx.fillStyle = tintColor;
-                  ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
-                }
-
                 ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
 
-                if (!isReady) {
-                  const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
-                  const secs = Math.ceil(remainingMs / 1000);
-                  const mins = Math.floor(secs / 60);
-                  const secPart = secs % 60;
-                  const timerText =
-                    mins + ":" + secPart.toString().padStart(2, "0");
-
-                  const cx = x + tileScreenSize / 2;
-                  const cy = y + tileScreenSize / 2;
+                if (showStats && !isReady) {
+                  ctx.fillStyle = "rgba(0,0,0,0.7)";
+                  ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
 
                   ctx.save();
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.font = `${
-                    tileScreenSize * 0.38
-                  }px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                  ctx.textAlign = "left";
+                  ctx.textBaseline = "top";
+
+                  const pad = tileScreenSize * 0.08;
+                  let lineY = y + pad;
+                  const baseX = x + pad;
+
+                  ctx.font = `${tileScreenSize * 0.22}px system-ui`;
+                  ctx.fillStyle = stockColor;
+                  ctx.fillText(`${plot.stockKey} ${arrow}`, baseX, lineY);
+                  lineY += tileScreenSize * 0.24;
+
+                  ctx.font = `${tileScreenSize * 0.2}px system-ui`;
                   ctx.fillStyle = "white";
-                  ctx.fillText(timerText, cx, cy);
+                  ctx.fillText(pctText, baseX, lineY);
+                  lineY += tileScreenSize * 0.2;
+
+                  ctx.fillText(valueText, baseX, lineY);
+                  lineY += tileScreenSize * 0.2;
+
+                  ctx.fillText(timerText, baseX, lineY);
+
                   ctx.restore();
                 }
 
@@ -525,56 +567,74 @@
               const pad = 3 * scale;
               const infoHeight = 32 * scale;
 
-              const hudColor = isReady
-                ? "rgba(60,45,0,0.65)"
-                : "rgba(0,0,0,0.65)";
+              if (showStats && !isReady) {
+                ctx.fillStyle = "rgba(0,0,0,0.65)";
+                ctx.fillRect(x, y, tileScreenSize, infoHeight);
 
-              ctx.fillStyle = hudColor;
-              ctx.fillRect(x, y, tileScreenSize, infoHeight);
+                ctx.textBaseline = "top";
+                ctx.font = `${9 * scale}px system-ui`;
 
-              ctx.textBaseline = "top";
-              ctx.font = `${
-                9 * scale
-              }px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                const baseX = x + pad;
+                const baseY = y + pad;
 
-              const pctText = `${pctChange >= 0 ? "+" : ""}${(
-                pctChange * 100
-              ).toFixed(1)}%`;
-              const labelText = `${plot.stockKey} ${pctText}`;
-              const baseX = x + pad;
-              const baseY = y + pad;
+                const tickerText = `${plot.stockKey} ${arrow}`;
+                ctx.fillStyle = stockColor;
+                ctx.fillText(tickerText, baseX, baseY);
 
-              ctx.fillStyle = "white";
-              ctx.fillText(labelText, baseX, baseY);
+                const tickerWidth = ctx.measureText(tickerText + " ").width;
+                ctx.fillStyle = "white";
+                ctx.fillText(pctText, baseX + tickerWidth, baseY);
 
-              if (pctChange > 0) {
-                const upArrow = "▲";
-                const labelWidth = ctx.measureText(labelText + " ").width;
-                ctx.fillStyle = "#22c55e";
-                ctx.fillText(upArrow, baseX + labelWidth, baseY);
-              } else if (pctChange < 0) {
-                const downArrow = "▼";
-                const labelWidth = ctx.measureText(labelText + " ").width;
-                ctx.fillStyle = "#ef4444";
-                ctx.fillText(downArrow, baseX + labelWidth, baseY);
-              }
-
-              const valueText = "$" + value.toFixed(2);
-              ctx.fillStyle = "white";
-              ctx.fillText(valueText, x + pad, y + pad + 10 * scale);
-
-              if (!isReady) {
-                const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
-                const secs = Math.ceil(remainingMs / 1000);
-                const mins = Math.floor(secs / 60);
-                const secPart = secs % 60;
-                const timerText =
-                  mins + ":" + secPart.toString().padStart(2, "0");
-                ctx.fillText(timerText, x + pad, y + pad + 20 * scale);
-              } else {
-                ctx.fillText("Ready", x + pad, y + pad + 20 * scale);
+                ctx.fillText(valueText, baseX, baseY + 10 * scale);
+                ctx.fillText(timerText, baseX, baseY + 20 * scale);
               }
             }
+          }
+
+          for (let i = harvestAnimations.length - 1; i >= 0; i--) {
+            const anim = harvestAnimations[i];
+            const duration = 1700;
+            const t = (nowPerf - anim.start) / duration;
+            if (t >= 1) {
+              harvestAnimations.splice(i, 1);
+              continue;
+            }
+
+            const [rowStr, colStr] = anim.key.split(",");
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            if (
+              Number.isNaN(row) ||
+              Number.isNaN(col) ||
+              row < startRow ||
+              row >= endRow ||
+              col < startCol ||
+              col >= endCol
+            ) {
+              continue;
+            }
+
+            const cellX = offsetX + col * tileSize * scale;
+            const cellY = offsetY + row * tileSize * scale;
+            const cx = cellX + (tileSize * scale) / 2;
+            const cy = cellY + (tileSize * scale) / 2;
+
+            const alpha = 1 - t;
+            const cellScreenSize = tileSize * scale;
+            const fontSize = cellScreenSize * 0.25;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `700 ${fontSize}px system-ui`;
+            ctx.fillStyle = "#22c55e";
+            ctx.fillText("+$" + anim.value.toFixed(2), cx, cy);
+            ctx.restore();
+          }
+
+          if (harvestAnimations.length) {
+            needsRender = true;
           }
 
           ctx.strokeStyle = "rgba(30,30,30,0.9)";
@@ -635,9 +695,19 @@
           const crop = crops[plot.cropKey];
           const stock = stocks[plot.stockKey];
           if (!crop || !stock) return;
+
+          const effectivePrice =
+            plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
           const pctChange =
-            (stock.price - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
+            (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
           const value = Math.max(0, crop.baseValue * (1 + pctChange));
+
+          harvestAnimations.push({
+            key,
+            value,
+            start: performance.now(),
+          });
+
           totalMoney += value;
           updateTotalDisplay();
           plots.delete(key);
@@ -683,6 +753,7 @@
             stockKey,
             plantedAt: Date.now(),
             stockPriceAtPlant: stock.price,
+            lockedStockPrice: null,
           });
 
           needsRender = true;
@@ -803,6 +874,7 @@
         const recenterBtn = document.getElementById("recenterBtn");
         const cropGrid = document.getElementById("cropGrid");
         const stockGrid = document.getElementById("stockGrid");
+        const toggleStatsBtn = document.getElementById("toggleStatsBtn");
 
         function openOffcanvas() {
           navOffcanvas.classList.remove("translate-x-full");
@@ -822,6 +894,21 @@
           else closeOffcanvas();
         }
 
+        function updateStatsToggleUI() {
+          if (!toggleStatsBtn) return;
+          toggleStatsBtn.textContent = showStats ? "On" : "Off";
+          if (showStats) {
+            toggleStatsBtn.classList.remove(
+              "bg-neutral-900",
+              "text-neutral-400"
+            );
+            toggleStatsBtn.classList.add("bg-emerald-600", "text-white");
+          } else {
+            toggleStatsBtn.classList.remove("bg-emerald-600", "text-white");
+            toggleStatsBtn.classList.add("bg-neutral-900", "text-neutral-400");
+          }
+        }
+
         if (navToggle) {
           navToggle.addEventListener("click", toggleOffcanvas);
         }
@@ -839,6 +926,15 @@
           recenterBtn.addEventListener("click", () => {
             centerView();
             closeOffcanvas();
+          });
+        }
+
+        if (toggleStatsBtn) {
+          toggleStatsBtn.addEventListener("click", () => {
+            showStats = !showStats;
+            updateStatsToggleUI();
+            needsRender = true;
+            saveState();
           });
         }
 
@@ -950,6 +1046,7 @@
         renderStockOptions();
         updateCurrentSelectionLabel();
         resizeCanvas();
+        updateStatsToggleUI();
         loop();
       })();
     </script>
