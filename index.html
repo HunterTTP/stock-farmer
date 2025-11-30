@@ -311,6 +311,12 @@
 
         const SAVE_KEY = "stockFarmerState";
 
+        function createRandomStageBreakpoints() {
+          const a = Math.random() * 0.6 + 0.1;
+          const b = Math.random() * 0.2 + 0.75;
+          return [Math.min(a, b - 0.05), b];
+        }
+
         function saveState() {
           const data = {
             totalMoney,
@@ -751,9 +757,14 @@
                 saveState();
               }
 
-              let phaseIndex;
-              if (isReady) phaseIndex = 3;
-              else phaseIndex = Math.min(2, Math.floor(progress * 3));
+              let phaseIndex = 0;
+              if (isReady) {
+                phaseIndex = 3;
+              } else {
+                const breakpoints = Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
+                if (progress >= breakpoints[1]) phaseIndex = 2;
+                else if (progress >= breakpoints[0]) phaseIndex = 1;
+              }
 
               const img =
                 crop.images[phaseIndex] || crop.images[crop.images.length - 1];
@@ -1062,6 +1073,7 @@
             plantedAt: Date.now(),
             stockPriceAtPlant: stock.price,
             lockedStockPrice: null,
+            stageBreakpoints: createRandomStageBreakpoints(),
           });
 
           crop.placed += 1;
