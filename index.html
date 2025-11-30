@@ -420,6 +420,7 @@
           const endRow = Math.min(GRID_ROWS, Math.ceil(worldBottom / tileSize));
 
           const tileScreenSize = tileSize * scale;
+          const isZoomedOut = tileScreenSize < 42;
           const now = Date.now();
 
           for (let row = startRow; row < endRow; row++) {
@@ -439,7 +440,9 @@
               if (!plot) continue;
 
               const crop = crops[plot.cropKey];
-              if (!crop || !crop.images.length) continue;
+              const stock = stocks[plot.stockKey];
+              if (!crop || !stock) continue;
+              if (!crop.images.length) continue;
 
               const elapsed = now - plot.plantedAt;
               const progress = Math.min(1, elapsed / crop.growTimeMs);
@@ -455,22 +458,45 @@
               const img =
                 crop.images[phaseIndex] || crop.images[crop.images.length - 1];
 
-              if (isReady) {
+              if (isReady)
                 ctx.filter = "drop-shadow(0px 0px 6px rgba(255,215,0,0.9))";
-              }
-
               ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
-
-              if (isReady) {
-                ctx.filter = "none";
-              }
-
-              const stock = stocks[plot.stockKey];
-              if (!stock) continue;
+              if (isReady) ctx.filter = "none";
 
               const pctChange =
                 (stock.price - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
               const value = Math.max(0, crop.baseValue * (1 + pctChange));
+
+              if (isZoomedOut) {
+                ctx.fillStyle = "rgba(0,0,0,0.55)";
+                ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
+
+                if (pctChange !== 0) {
+                  const arrow = pctChange > 0 ? "▲" : "▼";
+
+                  if (isReady)
+                    ctx.filter =
+                      "drop-shadow(0px 0px 8px rgba(255,215,0,0.95))";
+
+                  ctx.save();
+                  ctx.textAlign = "center";
+                  ctx.textBaseline = "middle";
+                  ctx.font = `${
+                    tileScreenSize * 0.9
+                  }px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                  ctx.fillStyle = pctChange > 0 ? "#22c55e" : "#ef4444";
+                  ctx.fillText(
+                    arrow,
+                    x + tileScreenSize / 2,
+                    y + tileScreenSize / 2
+                  );
+                  ctx.restore();
+
+                  if (isReady) ctx.filter = "none";
+                }
+
+                continue;
+              }
 
               const pad = 3 * scale;
               const infoHeight = 32 * scale;
@@ -493,15 +519,15 @@
               ctx.fillText(labelText, baseX, baseY);
 
               if (pctChange > 0) {
-                const arrow = "▲";
+                const upArrow = "▲";
                 const labelWidth = ctx.measureText(labelText + " ").width;
                 ctx.fillStyle = "#22c55e";
-                ctx.fillText(arrow, baseX + labelWidth, baseY);
+                ctx.fillText(upArrow, baseX + labelWidth, baseY);
               } else if (pctChange < 0) {
-                const arrow = "▼";
+                const downArrow = "▼";
                 const labelWidth = ctx.measureText(labelText + " ").width;
                 ctx.fillStyle = "#ef4444";
-                ctx.fillText(arrow, baseX + labelWidth, baseY);
+                ctx.fillText(downArrow, baseX + labelWidth, baseY);
               }
 
               const valueText = "$" + value.toFixed(2);
