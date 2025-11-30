@@ -177,6 +177,8 @@
 
         let needsRender = true;
         let firstResizeDone = false;
+        let savedScaleFromState = null;
+        let scaleChanged = false;
 
         let totalMoney = 0;
         let showStats = true;
@@ -267,7 +269,7 @@
             name: "2x2",
             size: 2,
             unlocked: false,
-            unlockCost: 5000,
+            unlockCost: 1000,
           },
           square3: {
             id: "square3",
@@ -309,6 +311,7 @@
             selectedStockKey,
             selectedToolKey,
             showStats,
+            scale,
             cropsUnlocked: Object.fromEntries(
               Object.entries(crops).map(([id, c]) => [id, c.unlocked])
             ),
@@ -379,6 +382,10 @@
 
             if (typeof data.showStats === "boolean") {
               showStats = data.showStats;
+            }
+
+            if (typeof data.scale === "number") {
+              savedScaleFromState = data.scale;
             }
 
             needsRender = true;
@@ -536,8 +543,12 @@
           const initialScale = Math.min(scaleFromHeight, scaleFromWidth);
 
           if (!firstResizeDone) {
-            scale = initialScale;
-            defaultScale = initialScale;
+            const targetScale =
+              savedScaleFromState != null
+                ? clampScale(savedScaleFromState)
+                : initialScale;
+            scale = targetScale;
+            defaultScale = targetScale;
             firstResizeDone = true;
           }
 
@@ -554,7 +565,10 @@
           offsetX = cx - (cx - offsetX) * k;
           offsetY = cy - (cy - offsetY) * k;
           scale = newScale;
+          scaleChanged = true;
           needsRender = true;
+          saveState();
+          scaleChanged = false;
         }
 
         function renderFloatingValue(
@@ -713,8 +727,7 @@
               const secs = Math.ceil(remainingMs / 1000);
               const mins = Math.floor(secs / 60);
               const secPart = secs % 60;
-              const timerText =
-                mins + ":" + secPart.toString().padStart(2, "0");
+              const timerText = mins + ":" + secPart.toString().padStart(2, "0");
 
               let arrow = "";
               if (pctChange > 0) arrow = "▲";
@@ -744,13 +757,13 @@
                   ctx.fillText(`${plot.stockKey} ${arrow}`, baseX, lineY);
                   lineY += tileScreenSize * 0.24;
 
-                  ctx.font = `${tileScreenSize * 0.2}px system-ui`;
+                  ctx.font = `${tileScreenSize * 0.20}px system-ui`;
                   ctx.fillStyle = "white";
                   ctx.fillText(pctText, baseX, lineY);
-                  lineY += tileScreenSize * 0.2;
+                  lineY += tileScreenSize * 0.20;
 
                   ctx.fillText(valueText, baseX, lineY);
-                  lineY += tileScreenSize * 0.2;
+                  lineY += tileScreenSize * 0.20;
 
                   ctx.fillText(timerText, baseX, lineY);
 
@@ -881,9 +894,12 @@
           if (!crop || !stock) return;
 
           const effectivePrice =
-            plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
+            plot.lockedStockPrice != null
+              ? plot.lockedStockPrice
+              : stock.price;
           const pctChange =
-            (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
+            (effectivePrice - plot.stockPriceAtPlant) /
+            plot.stockPriceAtPlant;
           const value = Math.max(0, crop.baseValue * (1 + pctChange));
 
           harvestAnimations.push({
@@ -1034,6 +1050,7 @@
               offsetX = pinchCenterX - (pinchCenterX - offsetX) * k;
               offsetY = pinchCenterY - (pinchCenterY - offsetY) * k;
               scale = newScale;
+              scaleChanged = true;
               needsRender = true;
             }
           } else if (isDragging) {
@@ -1067,6 +1084,11 @@
             }
           }
           tapStart = null;
+
+          if (scaleChanged && activePointers.size === 0) {
+            saveState();
+            scaleChanged = false;
+          }
         }
 
         function onWheel(e) {
@@ -1198,7 +1220,7 @@
 
             const overlay = document.createElement("div");
             overlay.className =
-              "relative z-10 h-full flex flex-col justify	end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
+              "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
 
             if (crop.id === "grass") {
               overlay.innerHTML =
