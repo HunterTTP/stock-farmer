@@ -100,7 +100,9 @@
           </svg>
         </button>
       </div>
-      <div class="flex-1 p-4 text-xs text-neutral-300 space-y-4">
+      <div
+        class="flex-1 p-4 text-xs text-neutral-300 space-y-4 overflow-y-auto"
+      >
         <div>
           <p class="mb-2 font-medium text-neutral-200">Crop</p>
           <div id="cropGrid" class="grid grid-cols-2 gap-2"></div>
@@ -109,6 +111,11 @@
         <div>
           <p class="mb-2 font-medium text-neutral-200">Stock</p>
           <div id="stockGrid" class="grid grid-cols-3 gap-2"></div>
+        </div>
+
+        <div>
+          <p class="mb-2 font-medium text-neutral-200">Tool</p>
+          <div id="toolGrid" class="grid grid-cols-4 gap-2"></div>
         </div>
 
         <div class="flex items-center justify-between text-[11px]">
@@ -247,9 +254,41 @@
           TSLA: { symbol: "TSLA", name: "TSLA", price: 100 },
         };
 
+        const tools = {
+          single: {
+            id: "single",
+            name: "1x1",
+            size: 1,
+            unlocked: true,
+            unlockCost: 0,
+          },
+          square2: {
+            id: "square2",
+            name: "2x2",
+            size: 2,
+            unlocked: false,
+            unlockCost: 5000,
+          },
+          square3: {
+            id: "square3",
+            name: "3x3",
+            size: 3,
+            unlocked: false,
+            unlockCost: 25000,
+          },
+          square5: {
+            id: "square5",
+            name: "5x5",
+            size: 5,
+            unlocked: false,
+            unlockCost: 100000,
+          },
+        };
+
         let selectedCropKey = "wheat";
         let previousCropKey = "wheat";
         let selectedStockKey = "SP500";
+        let selectedToolKey = "single";
 
         const plots = new Map();
         const harvestAnimations = [];
@@ -268,9 +307,13 @@
             selectedCropKey,
             previousCropKey,
             selectedStockKey,
+            selectedToolKey,
             showStats,
             cropsUnlocked: Object.fromEntries(
               Object.entries(crops).map(([id, c]) => [id, c.unlocked])
+            ),
+            toolsUnlocked: Object.fromEntries(
+              Object.entries(tools).map(([id, t]) => [id, t.unlocked])
             ),
           };
           try {
@@ -315,6 +358,12 @@
               });
             }
 
+            if (data.toolsUnlocked) {
+              Object.entries(data.toolsUnlocked).forEach(([id, unlocked]) => {
+                if (tools[id]) tools[id].unlocked = !!unlocked;
+              });
+            }
+
             if (data.selectedCropKey && crops[data.selectedCropKey]) {
               selectedCropKey = data.selectedCropKey;
               previousCropKey = data.previousCropKey || selectedCropKey;
@@ -322,6 +371,10 @@
 
             if (data.selectedStockKey && stocks[data.selectedStockKey]) {
               selectedStockKey = data.selectedStockKey;
+            }
+
+            if (data.selectedToolKey && tools[data.selectedToolKey]) {
+              selectedToolKey = data.selectedToolKey;
             }
 
             if (typeof data.showStats === "boolean") {
@@ -340,6 +393,7 @@
           selectedCropKey = "wheat";
           previousCropKey = "wheat";
           selectedStockKey = "SP500";
+          selectedToolKey = "single";
         }
 
         const dirtImg = new Image();
@@ -845,11 +899,10 @@
           saveState();
         }
 
-        function handleTap(clientX, clientY) {
-          const tile = tileFromClient(clientX, clientY);
-          if (!tile) return;
-          const { key } = tile;
-
+        function handleTileAction(row, col) {
+          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS)
+            return;
+          const key = row + "," + col;
           const existingPlot = plots.get(key);
           if (existingPlot) {
             const crop = crops[existingPlot.cropKey];
@@ -871,7 +924,6 @@
           if (selectedCropKey === "farmland") {
             if (plots.has(key)) return;
             if (filled.has(key)) return;
-
             filled.add(key);
             needsRender = true;
             saveState();
@@ -914,6 +966,23 @@
 
           needsRender = true;
           saveState();
+        }
+
+        function handleTap(clientX, clientY) {
+          const tile = tileFromClient(clientX, clientY);
+          if (!tile) return;
+          const tool = tools[selectedToolKey] || tools.single;
+          const size = tool.size || 1;
+          const baseRow = tile.row;
+          const baseCol = tile.col;
+
+          for (let dr = 0; dr < size; dr++) {
+            for (let dc = 0; dc < size; dc++) {
+              const row = baseRow + dr;
+              const col = baseCol + dc;
+              handleTileAction(row, col);
+            }
+          }
         }
 
         function onPointerDown(e) {
@@ -1030,6 +1099,7 @@
         const recenterBtn = document.getElementById("recenterBtn");
         const cropGrid = document.getElementById("cropGrid");
         const stockGrid = document.getElementById("stockGrid");
+        const toolGrid = document.getElementById("toolGrid");
         const toggleStatsBtn = document.getElementById("toggleStatsBtn");
 
         function openOffcanvas() {
@@ -1128,7 +1198,7 @@
 
             const overlay = document.createElement("div");
             overlay.className =
-              "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
+              "relative z-10 h-full flex flex-col justify	end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
 
             if (crop.id === "grass") {
               overlay.innerHTML =
@@ -1211,6 +1281,56 @@
           });
         }
 
+        function renderToolOptions() {
+          if (!toolGrid) return;
+          toolGrid.innerHTML = "";
+          Object.values(tools).forEach((tool) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            let cls =
+              "w-full aspect-square rounded-md border flex flex-col items-center justify-center text-[11px] font-semibold tracking-wide";
+            if (tool.id === selectedToolKey) {
+              cls += " border-emerald-500 bg-emerald-500/10";
+            } else {
+              cls += " border-neutral-700 bg-neutral-900 hover:bg-neutral-800";
+            }
+            if (!tool.unlocked) {
+              cls += " opacity-50";
+            }
+            btn.className = cls;
+
+            const label = document.createElement("div");
+            label.textContent = tool.name;
+            btn.appendChild(label);
+
+            if (!tool.unlocked && tool.unlockCost > 0) {
+              const cost = document.createElement("div");
+              cost.className = "text-[9px] font-normal text-amber-300 mt-1";
+              cost.textContent = `$${tool.unlockCost.toLocaleString()}`;
+              btn.appendChild(cost);
+            }
+
+            btn.addEventListener("click", () => {
+              if (!tool.unlocked) {
+                if (tool.unlockCost > 0 && totalMoney >= tool.unlockCost) {
+                  totalMoney -= tool.unlockCost;
+                  tool.unlocked = true;
+                  selectedToolKey = tool.id;
+                  updateTotalDisplay();
+                  renderToolOptions();
+                  saveState();
+                }
+                return;
+              }
+              selectedToolKey = tool.id;
+              renderToolOptions();
+              saveState();
+            });
+
+            toolGrid.appendChild(btn);
+          });
+        }
+
         setInterval(() => {
           Object.values(stocks).forEach((s) => {
             const factor = 1 + (Math.random() - 0.5) * 0.01;
@@ -1222,6 +1342,7 @@
         updateTotalDisplay();
         renderCropOptions();
         renderStockOptions();
+        renderToolOptions();
         updateCurrentSelectionLabel();
         resizeCanvas();
         updateStatsToggleUI();
