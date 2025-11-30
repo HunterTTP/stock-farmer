@@ -186,7 +186,7 @@
             images: [],
             limit: 4,
             placed: 0,
-            limitIncreaseCost: 100,
+            limitIncreaseCost: 25,
           },
           wheat: {
             id: "wheat",
@@ -417,11 +417,11 @@
 
         recalcPlacedCounts();
 
-        const dirtImg = new Image();
-        let dirtLoaded = false;
-        dirtImg.src = "images/dirt.jpg";
-        dirtImg.onload = () => {
-          dirtLoaded = true;
+        const farmlandImg = new Image();
+        let farmlandLoaded = false;
+        farmlandImg.src = "images/farmland.jpg";
+        farmlandImg.onload = () => {
+          farmlandLoaded = true;
           needsRender = true;
         };
 
@@ -620,7 +620,7 @@
 
           ctx.clearRect(0, 0, width, height);
 
-          if (!dirtLoaded || !grassLoaded) return;
+          if (!farmlandLoaded || !grassLoaded) return;
 
           const worldLeft = -offsetX / scale;
           const worldRight = (width - offsetX) / scale;
@@ -643,9 +643,9 @@
               const x = offsetX + col * tileSize * scale;
               const y = offsetY + row * tileSize * scale;
 
-              const isDirt = filled.has(key);
-              if (isDirt) {
-                ctx.drawImage(dirtImg, x, y, tileScreenSize, tileScreenSize);
+              const isFarmland = filled.has(key);
+              if (isFarmland) {
+                ctx.drawImage(farmlandImg, x, y, tileScreenSize, tileScreenSize);
               } else {
                 ctx.drawImage(grassImg, x, y, tileScreenSize, tileScreenSize);
               }
@@ -1289,7 +1289,7 @@
             if (crop.id === "grass") {
               img.src = "images/grass.jpg";
             } else if (crop.id === "farmland") {
-              img.src = "images/dirt.jpg";
+              img.src = "images/farmland.jpg";
             } else {
               img.src = `images/${crop.id}/${crop.id}-phase-4.png`;
             }
