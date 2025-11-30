@@ -420,7 +420,7 @@
           const endRow = Math.min(GRID_ROWS, Math.ceil(worldBottom / tileSize));
 
           const tileScreenSize = tileSize * scale;
-          const isZoomedOut = tileScreenSize < 42;
+          const isZoomedOut = tileScreenSize < 72;
           const now = Date.now();
 
           for (let row = startRow; row < endRow; row++) {
@@ -458,22 +458,36 @@
               const img =
                 crop.images[phaseIndex] || crop.images[crop.images.length - 1];
 
-              ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
-
               const pctChange =
                 (stock.price - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
               const value = Math.max(0, crop.baseValue * (1 + pctChange));
 
               if (isZoomedOut) {
                 const bgColor = isReady
-                  ? "rgba(60,45,0,0.55)"
-                  : "rgba(0,0,0,0.55)";
-
+                  ? "rgba(60,45,0,0.35)"
+                  : "rgba(0,0,0,0.35)";
                 ctx.fillStyle = bgColor;
                 ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
 
                 if (pctChange !== 0) {
-                  const arrow = pctChange > 0 ? "▲" : "▼";
+                  const tintColor =
+                    pctChange > 0
+                      ? "rgba(16,255,80,0.45)"
+                      : "rgba(255,32,32,0.45)";
+                  ctx.fillStyle = tintColor;
+                  ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
+                }
+
+                ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
+
+                if (!isReady) {
+                  const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
+                  const secs = Math.ceil(remainingMs / 1000);
+                  const mins = Math.floor(secs / 60);
+                  const secPart = secs % 60;
+                  const timerText =
+                    mins + ":" + secPart.toString().padStart(2, "0");
+
                   const cx = x + tileScreenSize / 2;
                   const cy = y + tileScreenSize / 2;
 
@@ -481,15 +495,17 @@
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
                   ctx.font = `${
-                    tileScreenSize * 0.9
+                    tileScreenSize * 0.38
                   }px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-                  ctx.fillStyle = pctChange > 0 ? "#22c55e" : "#ef4444";
-                  ctx.fillText(arrow, cx, cy);
+                  ctx.fillStyle = "white";
+                  ctx.fillText(timerText, cx, cy);
                   ctx.restore();
                 }
 
                 continue;
               }
+
+              ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
 
               const pad = 3 * scale;
               const infoHeight = 32 * scale;
