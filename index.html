@@ -42,6 +42,17 @@
         display: block;
         touch-action: none;
         background-color: #000;
+        user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #cropStockStockLabel {
+        display: block;
+        width: 100%;
+        text-align: center;
+        line-height: 1.1;
       }
     </style>
   </head>
@@ -133,7 +144,7 @@
                 <img id="cropStockImage" class="w-full h-full object-cover" alt="Crop" />
               </div>
               <div id="cropStockStockWrapper" class="w-10 h-10 rounded border border-neutral-700 bg-neutral-800 flex items-center justify-center text-[11px] font-semibold text-white">
-                <span id="cropStockStockLabel" class="truncate"></span>
+                <span id="cropStockStockLabel"></span>
               </div>
             </button>
             <button
@@ -296,7 +307,7 @@
             name: "2x2",
             size: 2,
             unlocked: false,
-            unlockCost: 1000,
+            unlockCost: 1,
           },
           square3: {
             id: "square3",
@@ -1285,6 +1296,7 @@
           const baseCol = tile.col;
           const baseAction = hoeSelected ? null : determineActionForTile(baseRow, baseCol);
           let failure = null;
+          let hadSuccess = false;
 
           for (let dr = 0; dr < size; dr++) {
             for (let dc = 0; dc < size; dc++) {
@@ -1292,15 +1304,19 @@
               const col = baseCol + dc;
               const actionForCell = hoeSelected ? determineActionForTile(row, col) : baseAction;
               const result = handleTileAction(row, col, actionForCell);
-              if (!result.success && !failure && actionForCell && actionForCell.reason) {
-                failure = { reason: actionForCell.reason, x: clientX, y: clientY };
-              } else if (!result.success && !failure && result.reason) {
-                failure = { reason: result.reason, x: clientX, y: clientY };
+              if (result.success) {
+                hadSuccess = true;
+                continue;
               }
+
+              const reason = (actionForCell && actionForCell.reason) || result.reason;
+              if (!reason || failure) continue;
+
+              failure = { reason, x: clientX, y: clientY };
             }
           }
 
-          if (failure) {
+          if (!hadSuccess && failure) {
             showActionError(failure.reason, failure.x, failure.y);
           }
         }
@@ -1580,6 +1596,11 @@
           }
           const stockText = stock ? stock.symbol : "";
           if (cropStockStockLabel) cropStockStockLabel.textContent = stockText;
+          if (cropStockStockLabel) {
+            const len = stockText.length || 1;
+            const fontSize = len > 6 ? 8 : len > 4 ? 9 : 11;
+            cropStockStockLabel.style.fontSize = fontSize + "px";
+          }
           if (cropStockStockWrapper) {
             const hideStock = crop && (crop.id === "grass" || crop.id === "farmland");
             cropStockStockWrapper.classList.toggle("hidden", hideStock);
