@@ -170,123 +170,33 @@
       </div>
     </div>
 
-    <script>
-      (function () {
+        <script>
+      (() => {
+        "use strict";
+
         const canvas = document.getElementById("gridCanvas");
+        if (!canvas) return;
         const ctx = canvas.getContext("2d");
 
-        const GRID_COLS = 100;
-        const GRID_ROWS = 100;
-
-        let tileSize = 100;
-        const VISIBLE_ROWS_AT_START = 3;
-
-        let offsetX = 0;
-        let offsetY = 0;
-        let scale = 1;
-        let defaultScale = 1;
-        const MIN_SCALE = 0.05;
-        const MAX_SCALE = 3;
-
-        let isDragging = false;
-        let dragStartX = 0;
-        let dragStartY = 0;
-        let dragOffsetStartX = 0;
-        let dragOffsetStartY = 0;
-
-        const activePointers = new Map();
-        let isPinching = false;
-        let pinchStartDistance = 0;
-        let pinchStartScale = 1;
-        let pinchCenterX = 0;
-        let pinchCenterY = 0;
-
-        let tapStart = null;
-        let hoverTile = null;
-
-        let needsRender = true;
-        let firstResizeDone = false;
-        let savedScaleFromState = null;
-        let scaleChanged = false;
-
-        let totalMoney = 0;
-        let showStats = true;
-
-        const totalDisplay = document.getElementById("totalDisplay");
-
-        const crops = {
-          grass: {
-            id: "grass",
-            name: "Grass",
-            growMinutes: 0,
-            baseValue: 0,
-            unlocked: true,
-            unlockCost: 0,
-            images: [],
-            limit: -1,
-            placed: 0,
-          },
-          farmland: {
-            id: "farmland",
-            name: "Farmland",
-            growMinutes: 0,
-            baseValue: 0,
-            unlocked: true,
-            unlockCost: 0,
-            images: [],
-            limit: -1,
-            placed: 0,
-          },
-          wheat: {
-            id: "wheat",
-            name: "Wheat",
-            growMinutes: 1,
-            baseValue: 1,
-            unlocked: true,
-            unlockCost: 0,
-            images: [],
-            limit: -1,
-            placed: 0,
-          },
-          carrot: {
-            id: "carrot",
-            name: "Carrot",
-            growMinutes: 2.5,
-            baseValue: 5,
-            unlocked: false,
-            unlockCost: 100,
-            placeCost: 2.5,
-            images: [],
-            limit: -1,
-            placed: 0,
-          },
-          potato: {
-            id: "potato",
-            name: "Potato",
-            growMinutes: 5,
-            baseValue: 10,
-            unlocked: false,
-            unlockCost: 1000,
-            placeCost: 5,
-            images: [],
-            limit: -1,
-            placed: 0,
-          },
+        const config = {
+          gridCols: 100,
+          gridRows: 100,
+          baseTileSize: 100,
+          visibleRowsAtStart: 3,
+          minScale: 0.05,
+          maxScale: 3,
+          hoeDestroyWindowMs: 350,
+          saveKey: "stockFarmerState",
+          defaultFilled: ["49,49", "49,50", "50,49", "50,50"],
         };
 
-        function loadCropImages(crop) {
-          crop.growTimeMs = crop.growMinutes * 60 * 1000;
-          crop.images = Array.from({ length: 4 }, (_, i) => {
-            const img = new Image();
-            img.src = `images/${crop.id}/${crop.id}-phase-${i + 1}.png`;
-            img.onload = () => (needsRender = true);
-            return img;
-          });
-        }
-
-        Object.values(crops)
-          .filter((c) => c.id !== "grass" && c.id !== "farmland")
-          .forEach(loadCropImages);
+        const crops = {
+          grass: { id: "grass", name: "Grass", growMinutes: 0, baseValue: 0, unlocked: true, unlockCost: 0, images: [], limit: -1, placed: 0 },
+          farmland: { id: "farmland", name: "Farmland", growMinutes: 0, baseValue: 0, unlocked: true, unlockCost: 0, images: [], limit: -1, placed: 0 },
+          wheat: { id: "wheat", name: "Wheat", growMinutes: 1, baseValue: 1, unlocked: true, unlockCost: 0, images: [], limit: -1, placed: 0 },
+          carrot: { id: "carrot", name: "Carrot", growMinutes: 2.5, baseValue: 5, unlocked: false, unlockCost: 100, placeCost: 2.5, images: [], limit: -1, placed: 0 },
+          potato: { id: "potato", name: "Potato", growMinutes: 5, baseValue: 10, unlocked: false, unlockCost: 1000, placeCost: 5, images: [], limit: -1, placed: 0 },
+        };
 
         const stocks = {
           SP500: { symbol: "SP500", name: "S&P 500", price: 100 },
@@ -295,57 +205,254 @@
         };
 
         const sizes = {
-          single: {
-            id: "single",
-            name: "1x1",
-            size: 1,
-            unlocked: true,
-            unlockCost: 0,
-          },
-          square2: {
-            id: "square2",
-            name: "2x2",
-            size: 2,
-            unlocked: false,
-            unlockCost: 1,
-          },
-          square3: {
-            id: "square3",
-            name: "3x3",
-            size: 3,
-            unlocked: false,
-            unlockCost: 25000,
-          },
-          square5: {
-            id: "square5",
-            name: "5x5",
-            size: 5,
-            unlocked: false,
-            unlockCost: 100000,
-          },
+          single: { id: "single", name: "1x1", size: 1, unlocked: true, unlockCost: 0 },
+          square2: { id: "square2", name: "2x2", size: 2, unlocked: false, unlockCost: 1000 },
+          square3: { id: "square3", name: "3x3", size: 3, unlocked: false, unlockCost: 25000 },
+          square5: { id: "square5", name: "5x5", size: 5, unlocked: false, unlockCost: 100000 },
         };
 
-        let selectedCropKey = "wheat";
-        let previousCropKey = "wheat";
-        let selectedStockKey = "SP500";
-        let selectedSizeKey = "single";
-        let hoeSelected = false;
-        let hoeHoldTimeoutId = null;
-        let hoeHoldTriggered = false;
-        let pendingHoeDestroyKeys = [];
-        const HOE_DESTROY_WINDOW_MS = 350;
+        const state = {
+          tileSize: config.baseTileSize,
+          offsetX: 0,
+          offsetY: 0,
+          scale: 1,
+          defaultScale: 1,
+          dragStart: { x: 0, y: 0 },
+          dragOffsetStart: { x: 0, y: 0 },
+          isDragging: false,
+          activePointers: new Map(),
+          isPinching: false,
+          pinchStartDistance: 0,
+          pinchStartScale: 1,
+          pinchCenter: { x: 0, y: 0 },
+          tapStart: null,
+          hoverTile: null,
+          needsRender: true,
+          firstResizeDone: false,
+          savedScaleFromState: null,
+          scaleDirty: false,
+          totalMoney: 0,
+          showStats: true,
+          selectedCropKey: "wheat",
+          previousCropKey: "wheat",
+          selectedStockKey: "SP500",
+          selectedSizeKey: "single",
+          hoeSelected: false,
+          hoeHoldTimeoutId: null,
+          hoeHoldTriggered: false,
+          pendingHoeDestroyKeys: [],
+        };
 
-        const plots = new Map();
-        const harvestAnimations = [];
-        const costAnimations = [];
+        const world = {
+          plots: new Map(),
+          filled: new Set(config.defaultFilled),
+          harvestAnimations: [],
+          costAnimations: [],
+        };
 
-        const defaultFilled = ["49,49", "49,50", "50,49", "50,50"];
-        const filled = new Set(defaultFilled);
+        const assets = {
+          farmland: { img: new Image(), loaded: false },
+          grass: { img: new Image(), loaded: false },
+        };
 
-        const SAVE_KEY = "stockFarmerState";
+        assets.farmland.img.src = "images/farmland.jpg";
+        assets.farmland.img.onload = () => {
+          assets.farmland.loaded = true;
+          state.needsRender = true;
+        };
+
+        assets.grass.img.src = "images/grass.jpg";
+        assets.grass.img.onload = () => {
+          assets.grass.loaded = true;
+          state.needsRender = true;
+        };
+
+        Object.values(crops)
+          .filter((c) => c.id !== "grass" && c.id !== "farmland")
+          .forEach((crop) => {
+            crop.growTimeMs = crop.growMinutes * 60 * 1000;
+            crop.images = Array.from({ length: 4 }, (_, i) => {
+              const img = new Image();
+              img.src = `images/${crop.id}/${crop.id}-phase-${i + 1}.png`;
+              img.onload = () => (state.needsRender = true);
+              return img;
+            });
+          });
+
+        const dom = {
+          totalDisplay: document.getElementById("totalDisplay"),
+          navToggle: document.getElementById("navToggle"),
+          navOffcanvas: document.getElementById("navOffcanvas"),
+          navOverlay: document.getElementById("navOverlay"),
+          navClose: document.getElementById("navClose"),
+          recenterBtn: document.getElementById("recenterBtn"),
+          cropGrid: document.getElementById("cropGrid"),
+          stockGrid: document.getElementById("stockGrid"),
+          hoeButton: document.getElementById("hoeButton"),
+          cropStockButton: document.getElementById("cropStockButton"),
+          cropStockImage: document.getElementById("cropStockImage"),
+          cropStockStockLabel: document.getElementById("cropStockStockLabel"),
+          cropStockStockWrapper: document.getElementById("cropStockStockWrapper"),
+          sizeButton: document.getElementById("sizeButton"),
+          sizeButtonLabel: document.getElementById("sizeButtonLabel"),
+          sizeMenu: document.getElementById("sizeMenu"),
+          resetFarmBtn: document.getElementById("resetFarmBtn"),
+          toggleStatsBtn: document.getElementById("toggleStatsBtn"),
+          confirmModal: document.getElementById("confirmModal"),
+          confirmMessage: document.getElementById("confirmMessage"),
+          confirmCancel: document.getElementById("confirmCancel"),
+          confirmConfirm: document.getElementById("confirmConfirm"),
+          confirmClose: document.getElementById("confirmClose"),
+          confirmTitle: document.getElementById("confirmTitle"),
+        };
+
+        let pendingConfirmAction = null;
+        let sizeMenuVisible = false;
+
+        loadState();
+        if (!localStorage.getItem(config.saveKey)) {
+          applyDefaultSelection();
+        }
+        recalcPlacedCounts();
+        bindUI();
+        refreshAllUI();
+        resizeCanvas();
+        loop();
+        setInterval(updateStockPrices, 1000);
+
+        function applyDefaultSelection() {
+          state.selectedCropKey = "wheat";
+          state.previousCropKey = "wheat";
+          state.selectedStockKey = "SP500";
+          state.selectedSizeKey = "single";
+          state.hoeSelected = false;
+        }
+
+        function bindUI() {
+          canvas.addEventListener("pointerdown", onPointerDown);
+          canvas.addEventListener("pointermove", onPointerMove);
+          canvas.addEventListener("pointerup", onPointerUp);
+          canvas.addEventListener("pointercancel", onPointerUp);
+          canvas.addEventListener("pointerleave", onPointerUp);
+          canvas.addEventListener("wheel", onWheel, { passive: false });
+
+          window.addEventListener("resize", () => {
+            resizeCanvas();
+            state.needsRender = true;
+          });
+
+          if (dom.navToggle) dom.navToggle.addEventListener("click", toggleOffcanvas);
+          if (dom.navClose) dom.navClose.addEventListener("click", closeOffcanvas);
+          if (dom.navOverlay) dom.navOverlay.addEventListener("click", closeOffcanvas);
+
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              closeConfirmModal();
+              closeOffcanvas();
+            }
+          });
+
+          if (dom.recenterBtn) {
+            dom.recenterBtn.addEventListener("click", () => {
+              centerView();
+              closeOffcanvas();
+            });
+          }
+
+          if (dom.confirmCancel) dom.confirmCancel.addEventListener("click", closeConfirmModal);
+          if (dom.confirmClose) dom.confirmClose.addEventListener("click", closeConfirmModal);
+          if (dom.confirmConfirm) {
+            dom.confirmConfirm.addEventListener("click", () => {
+              if (pendingConfirmAction) pendingConfirmAction();
+              closeConfirmModal();
+            });
+          }
+          if (dom.confirmModal) {
+            dom.confirmModal.addEventListener("click", (e) => {
+              if (e.target === dom.confirmModal) closeConfirmModal();
+            });
+          }
+
+          if (dom.toggleStatsBtn) {
+            dom.toggleStatsBtn.addEventListener("click", () => {
+              state.showStats = !state.showStats;
+              updateStatsToggleUI();
+              state.needsRender = true;
+              saveState();
+            });
+          }
+
+          if (dom.resetFarmBtn) {
+            dom.resetFarmBtn.addEventListener("click", () => {
+              openConfirmModal("Reset your farm and start fresh? This clears all progress.", resetFarm, "Reset Farm");
+            });
+          }
+
+          if (dom.hoeButton) {
+            dom.hoeButton.addEventListener("click", () => {
+              state.hoeSelected = !state.hoeSelected;
+              updateModeButtonsUI();
+              state.needsRender = true;
+              saveState();
+            });
+          }
+
+          if (dom.cropStockButton) {
+            dom.cropStockButton.addEventListener("click", () => {
+              state.hoeSelected = false;
+              if (!state.selectedCropKey) {
+                const firstUnlocked = Object.values(crops).find((c) => c && c.unlocked);
+                if (firstUnlocked) {
+                  state.selectedCropKey = firstUnlocked.id;
+                  state.previousCropKey = firstUnlocked.id;
+                }
+              }
+              updateModeButtonsUI();
+              state.needsRender = true;
+              saveState();
+            });
+          }
+
+          if (dom.sizeButton) {
+            dom.sizeButton.addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (sizeMenuVisible) {
+                closeSizeMenu();
+              } else {
+                renderSizeMenu();
+                dom.sizeMenu?.classList.remove("hidden");
+                sizeMenuVisible = true;
+              }
+            });
+          }
+
+          document.addEventListener("click", (e) => {
+            if (!sizeMenuVisible) return;
+            if (dom.sizeMenu && (dom.sizeMenu.contains(e.target) || (dom.sizeButton && dom.sizeButton.contains(e.target)))) return;
+            closeSizeMenu();
+          });
+
+          document.addEventListener("pointerleave", () => {
+            if (state.hoeHoldTimeoutId) {
+              clearTimeout(state.hoeHoldTimeoutId);
+              state.hoeHoldTimeoutId = null;
+              state.pendingHoeDestroyKeys = [];
+            }
+          });
+        }
+
+        function refreshAllUI() {
+          onMoneyChanged();
+          renderStockOptions();
+          updateCropStockButtonUI();
+          updateSizeButtonUI();
+          renderSizeMenu();
+          updateModeButtonsUI();
+          updateStatsToggleUI();
+        }
 
         function currentSizeOption() {
-          return sizes[selectedSizeKey] || sizes.single;
+          return sizes[state.selectedSizeKey] || sizes.single;
         }
 
         function cropImageSrc(cropId) {
@@ -361,24 +468,40 @@
           return [Math.min(a, b - 0.05), b];
         }
 
+        function formatCurrency(amount, allowCents = true) {
+          const rounded = Math.round(amount * 100) / 100;
+          const hasCents = allowCents && Math.abs(rounded - Math.round(rounded)) > 0.0001;
+          if (hasCents) return "$" + rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          return "$" + Math.round(rounded).toLocaleString();
+        }
+
+        function updateTotalDisplay() {
+          if (dom.totalDisplay) dom.totalDisplay.textContent = formatCurrency(state.totalMoney, true);
+        }
+
+        function onMoneyChanged() {
+          updateTotalDisplay();
+          renderCropOptions();
+          renderSizeMenu();
+        }
         function saveState() {
           const data = {
-            totalMoney,
-            filled: Array.from(filled),
-            plots: Array.from(plots.entries()),
-            selectedCropKey,
-            previousCropKey,
-            selectedStockKey,
-            selectedSizeKey,
-            hoeSelected,
-            showStats,
-            scale,
+            totalMoney: state.totalMoney,
+            filled: Array.from(world.filled),
+            plots: Array.from(world.plots.entries()),
+            selectedCropKey: state.selectedCropKey,
+            previousCropKey: state.previousCropKey,
+            selectedStockKey: state.selectedStockKey,
+            selectedSizeKey: state.selectedSizeKey,
+            hoeSelected: state.hoeSelected,
+            showStats: state.showStats,
+            scale: state.scale,
             cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
             sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
             cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
           };
           try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            localStorage.setItem(config.saveKey, JSON.stringify(data));
           } catch (err) {
             console.error("Failed to save state", err);
           }
@@ -387,29 +510,25 @@
         function loadState() {
           let raw;
           try {
-            raw = localStorage.getItem(SAVE_KEY);
+            raw = localStorage.getItem(config.saveKey);
           } catch (err) {
             console.error("Failed to read state", err);
             return;
           }
           if (!raw) return;
-
           try {
             const data = JSON.parse(raw);
-
-            if (typeof data.totalMoney === "number") {
-              totalMoney = data.totalMoney;
-            }
+            if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
 
             if (Array.isArray(data.filled)) {
-              filled.clear();
-              data.filled.forEach((k) => filled.add(k));
+              world.filled.clear();
+              data.filled.forEach((k) => world.filled.add(k));
             }
 
             if (Array.isArray(data.plots)) {
-              plots.clear();
+              world.plots.clear();
               data.plots.forEach(([key, value]) => {
-                plots.set(key, value);
+                world.plots.set(key, value);
               });
             }
 
@@ -428,51 +547,29 @@
 
             if (data.cropLimits) {
               Object.entries(data.cropLimits).forEach(([id, limit]) => {
-                if (crops[id] && typeof limit === "number") {
-                  crops[id].limit = limit;
-                }
+                if (crops[id] && typeof limit === "number") crops[id].limit = limit;
               });
             }
 
             if (Object.prototype.hasOwnProperty.call(data, "selectedCropKey")) {
-              if (data.selectedCropKey && crops[data.selectedCropKey]) {
-                selectedCropKey = data.selectedCropKey;
-              } else if (data.selectedCropKey === null) {
-                selectedCropKey = null;
-              }
+              if (data.selectedCropKey && crops[data.selectedCropKey]) state.selectedCropKey = data.selectedCropKey;
+              else if (data.selectedCropKey === null) state.selectedCropKey = null;
             }
 
-            if (data.previousCropKey && crops[data.previousCropKey]) {
-              previousCropKey = data.previousCropKey;
+            if (data.previousCropKey && crops[data.previousCropKey]) state.previousCropKey = data.previousCropKey;
+            if (data.selectedStockKey && stocks[data.selectedStockKey]) state.selectedStockKey = data.selectedStockKey;
+            if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
+            else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
+
+            if (typeof data.showStats === "boolean") state.showStats = data.showStats;
+            if (typeof data.hoeSelected === "boolean") state.hoeSelected = data.hoeSelected;
+            if (typeof data.scale === "number") state.savedScaleFromState = data.scale;
+
+            if (!state.hoeSelected && state.selectedCropKey && crops[state.selectedCropKey]) {
+              state.previousCropKey = state.selectedCropKey;
             }
 
-            if (data.selectedStockKey && stocks[data.selectedStockKey]) {
-              selectedStockKey = data.selectedStockKey;
-            }
-
-            if (data.selectedSizeKey && sizes[data.selectedSizeKey]) {
-              selectedSizeKey = data.selectedSizeKey;
-            } else if (data.selectedToolKey && sizes[data.selectedToolKey]) {
-              selectedSizeKey = data.selectedToolKey;
-            }
-
-            if (typeof data.showStats === "boolean") {
-              showStats = data.showStats;
-            }
-
-            if (typeof data.hoeSelected === "boolean") {
-              hoeSelected = data.hoeSelected;
-            }
-
-            if (typeof data.scale === "number") {
-              savedScaleFromState = data.scale;
-            }
-
-            if (!hoeSelected && selectedCropKey && crops[selectedCropKey]) {
-              previousCropKey = selectedCropKey;
-            }
-
-            needsRender = true;
+            state.needsRender = true;
           } catch (err) {
             console.error("State load failed", err);
           }
@@ -482,147 +579,83 @@
           Object.values(crops).forEach((c) => {
             c.placed = 0;
           });
-
-          const farmlandCrop = crops.farmland;
-          if (farmlandCrop) {
-            farmlandCrop.placed = filled.size;
+          if (crops.farmland) {
+            crops.farmland.placed = world.filled.size;
           }
-
-          plots.forEach((plot) => {
+          world.plots.forEach((plot) => {
             const crop = crops[plot.cropKey];
-            if (crop) {
-              crop.placed += 1;
-            }
+            if (crop) crop.placed += 1;
           });
-        }
-
-        loadState();
-
-        if (!localStorage.getItem(SAVE_KEY)) {
-          selectedCropKey = "wheat";
-          previousCropKey = "wheat";
-          selectedStockKey = "SP500";
-          selectedSizeKey = "single";
-          hoeSelected = false;
-        }
-
-        recalcPlacedCounts();
-
-        const farmlandImg = new Image();
-        let farmlandLoaded = false;
-        farmlandImg.src = "images/farmland.jpg";
-        farmlandImg.onload = () => {
-          farmlandLoaded = true;
-          needsRender = true;
-        };
-
-        const grassImg = new Image();
-        let grassLoaded = false;
-        grassImg.src = "images/grass.jpg";
-        grassImg.onload = () => {
-          grassLoaded = true;
-          needsRender = true;
-        };
-
-        function updateTotalDisplay() {
-          if (totalDisplay) totalDisplay.textContent = formatCurrency(totalMoney, true);
-        }
-
-        function formatCurrency(amount, allowCents = true) {
-          const rounded = Math.round(amount * 100) / 100;
-          const hasCents = allowCents && Math.abs(rounded - Math.round(rounded)) > 0.0001;
-          if (hasCents) {
-            return "$" + rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          }
-          return "$" + Math.round(rounded).toLocaleString();
-        }
-
-        function onMoneyChanged() {
-          updateTotalDisplay();
-          renderCropOptions();
-          renderSizeOptions();
         }
 
         function centerView() {
           const rect = canvas.getBoundingClientRect();
-          const worldWidth = GRID_COLS * tileSize;
-          const worldHeight = GRID_ROWS * tileSize;
+          const worldWidth = config.gridCols * state.tileSize;
+          const worldHeight = config.gridRows * state.tileSize;
           const canvasWidth = rect.width;
           const canvasHeight = rect.height;
           const worldCenterX = worldWidth / 2;
           const worldCenterY = worldHeight / 2;
           const canvasCenterX = canvasWidth / 2;
           const canvasCenterY = canvasHeight / 2;
-
-          offsetX = canvasCenterX - worldCenterX * scale;
-          offsetY = canvasCenterY - worldCenterY * scale;
-
-          needsRender = true;
+          state.offsetX = canvasCenterX - worldCenterX * state.scale;
+          state.offsetY = canvasCenterY - worldCenterY * state.scale;
+          state.needsRender = true;
         }
 
         function resizeCanvas() {
           const rect = canvas.getBoundingClientRect();
           const dpr = window.devicePixelRatio || 1;
-
           canvas.width = rect.width * dpr;
           canvas.height = rect.height * dpr;
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-          const scaleFromHeight = rect.height / (VISIBLE_ROWS_AT_START * tileSize);
-          const scaleFromWidth = rect.width / (VISIBLE_ROWS_AT_START * tileSize);
+          const scaleFromHeight = rect.height / (config.visibleRowsAtStart * state.tileSize);
+          const scaleFromWidth = rect.width / (config.visibleRowsAtStart * state.tileSize);
           const initialScale = Math.min(scaleFromHeight, scaleFromWidth);
 
-          if (!firstResizeDone) {
-            const targetScale = savedScaleFromState != null ? clampScale(savedScaleFromState) : initialScale;
-            scale = targetScale;
-            defaultScale = targetScale;
-            firstResizeDone = true;
+          if (!state.firstResizeDone) {
+            const targetScale = state.savedScaleFromState != null ? clampScale(state.savedScaleFromState) : initialScale;
+            state.scale = targetScale;
+            state.defaultScale = targetScale;
+            state.firstResizeDone = true;
           }
-
           centerView();
         }
 
         function clampScale(s) {
-          return Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
+          return Math.min(config.maxScale, Math.max(config.minScale, s));
         }
 
         function zoomAt(factor, cx, cy) {
-          const newScale = clampScale(scale * factor);
-          const k = newScale / scale;
-          offsetX = cx - (cx - offsetX) * k;
-          offsetY = cy - (cy - offsetY) * k;
-          scale = newScale;
-          scaleChanged = true;
-          needsRender = true;
+          const newScale = clampScale(state.scale * factor);
+          const k = newScale / state.scale;
+          state.offsetX = cx - (cx - state.offsetX) * k;
+          state.offsetY = cy - (cy - state.offsetY) * k;
+          state.scale = newScale;
+          state.scaleDirty = true;
+          state.needsRender = true;
           saveState();
-          scaleChanged = false;
+          state.scaleDirty = false;
         }
 
         function renderFloatingValue(anim, nowPerf, startRow, endRow, startCol, endCol) {
           const visibleDuration = 1000;
           const fadeDuration = 500;
           const totalDuration = visibleDuration + fadeDuration;
-
           const elapsed = nowPerf - anim.start;
-          if (elapsed >= totalDuration) {
-            return true;
-          }
+          if (elapsed >= totalDuration) return true;
 
           const [rowStr, colStr] = anim.key.split(",");
           const row = parseInt(rowStr, 10);
           const col = parseInt(colStr, 10);
-          if (Number.isNaN(row) || Number.isNaN(col)) {
-            return false;
-          }
+          if (Number.isNaN(row) || Number.isNaN(col)) return false;
+          if (row < startRow || row >= endRow || col < startCol || col >= endCol) return false;
 
-          if (row < startRow || row >= endRow || col < startCol || col >= endCol) {
-            return false;
-          }
-
-          const cellX = offsetX + col * tileSize * scale;
-          const cellY = offsetY + row * tileSize * scale;
-          const cx = cellX + (tileSize * scale) / 2;
-          const cy = cellY + (tileSize * scale) / 2;
+          const cellX = state.offsetX + col * state.tileSize * state.scale;
+          const cellY = state.offsetY + row * state.tileSize * state.scale;
+          const cx = cellX + (state.tileSize * state.scale) / 2;
+          const cy = cellY + (state.tileSize * state.scale) / 2;
 
           let alpha;
           if (elapsed <= visibleDuration) {
@@ -636,8 +669,7 @@
           const isPositiveOrZero = value >= 0;
           const absValue = Math.abs(value);
           const prefix = isPositiveOrZero ? "+$" : "-$";
-
-          const cellScreenSize = tileSize * scale;
+          const cellScreenSize = state.tileSize * state.scale;
           const fontSize = cellScreenSize * 0.22;
 
           ctx.save();
@@ -645,42 +677,37 @@
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.font = `700 ${fontSize}px system-ui`;
-
           ctx.shadowColor = "rgba(0,0,0,0.3)";
           ctx.shadowBlur = cellScreenSize * 0.05;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = cellScreenSize * 0.015;
-
           ctx.fillStyle = isPositiveOrZero ? "#22c55e" : "#ef4444";
           ctx.fillText(prefix + absValue.toFixed(2), cx, cy);
           ctx.restore();
-
           return false;
         }
 
         function render() {
-          const hasAnimations = harvestAnimations.length > 0 || costAnimations.length > 0;
-          if (!needsRender && !hasAnimations) return;
-          needsRender = false;
+          const hasAnimations = world.harvestAnimations.length > 0 || world.costAnimations.length > 0;
+          if (!state.needsRender && !hasAnimations) return;
+          state.needsRender = false;
 
           const width = canvas.clientWidth;
           const height = canvas.clientHeight;
-
           ctx.clearRect(0, 0, width, height);
+          if (!assets.farmland.loaded || !assets.grass.loaded) return;
 
-          if (!farmlandLoaded || !grassLoaded) return;
+          const worldLeft = -state.offsetX / state.scale;
+          const worldRight = (width - state.offsetX) / state.scale;
+          const worldTop = -state.offsetY / state.scale;
+          const worldBottom = (height - state.offsetY) / state.scale;
 
-          const worldLeft = -offsetX / scale;
-          const worldRight = (width - offsetX) / scale;
-          const worldTop = -offsetY / scale;
-          const worldBottom = (height - offsetY) / scale;
+          const startCol = Math.max(0, Math.floor(worldLeft / state.tileSize));
+          const endCol = Math.min(config.gridCols, Math.ceil(worldRight / state.tileSize));
+          const startRow = Math.max(0, Math.floor(worldTop / state.tileSize));
+          const endRow = Math.min(config.gridRows, Math.ceil(worldBottom / state.tileSize));
 
-          const startCol = Math.max(0, Math.floor(worldLeft / tileSize));
-          const endCol = Math.min(GRID_COLS, Math.ceil(worldRight / tileSize));
-          const startRow = Math.max(0, Math.floor(worldTop / tileSize));
-          const endRow = Math.min(GRID_ROWS, Math.ceil(worldBottom / tileSize));
-
-          const tileScreenSize = tileSize * scale;
+          const tileScreenSize = state.tileSize * state.scale;
           const isZoomedOut = tileScreenSize < 72;
           const now = Date.now();
           const nowPerf = performance.now();
@@ -688,48 +715,35 @@
           for (let row = startRow; row < endRow; row++) {
             for (let col = startCol; col < endCol; col++) {
               const key = row + "," + col;
-              const x = offsetX + col * tileSize * scale;
-              const y = offsetY + row * tileSize * scale;
+              const x = state.offsetX + col * state.tileSize * state.scale;
+              const y = state.offsetY + row * state.tileSize * state.scale;
 
-              const isFarmland = filled.has(key);
-              if (isFarmland) {
-                ctx.drawImage(farmlandImg, x, y, tileScreenSize, tileScreenSize);
-              } else {
-                ctx.drawImage(grassImg, x, y, tileScreenSize, tileScreenSize);
-              }
+              if (world.filled.has(key)) ctx.drawImage(assets.farmland.img, x, y, tileScreenSize, tileScreenSize);
+              else ctx.drawImage(assets.grass.img, x, y, tileScreenSize, tileScreenSize);
 
-              const plot = plots.get(key);
+              const plot = world.plots.get(key);
               if (!plot) continue;
-
               const crop = crops[plot.cropKey];
               const stock = stocks[plot.stockKey];
-              if (!crop || !stock) continue;
-              if (!crop.images.length) continue;
+              if (!crop || !stock || !crop.images.length) continue;
 
               const elapsed = now - plot.plantedAt;
               const progress = Math.min(1, elapsed / crop.growTimeMs);
               const isReady = progress >= 1;
-
               if (isReady && plot.lockedStockPrice == null) {
                 plot.lockedStockPrice = stock.price;
                 saveState();
               }
 
+              const breakpoints = Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
               let phaseIndex = 0;
-              if (isReady) {
-                phaseIndex = 3;
-              } else {
-                const breakpoints = Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
-                if (progress >= breakpoints[1]) phaseIndex = 2;
-                else if (progress >= breakpoints[0]) phaseIndex = 1;
-              }
+              if (isReady) phaseIndex = 3;
+              else if (progress >= breakpoints[1]) phaseIndex = 2;
+              else if (progress >= breakpoints[0]) phaseIndex = 1;
 
               const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
-
               const effectivePrice = isReady && plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
-
               const pctChange = (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
-
               const value = Math.max(0, crop.baseValue * (1 + pctChange));
               const pctText = `${pctChange >= 0 ? "+" : ""}${(pctChange * 100).toFixed(1)}%`;
               const valueText = "$" + value.toFixed(2);
@@ -741,130 +755,102 @@
               const timerText = mins + ":" + secPart.toString().padStart(2, "0");
 
               let arrow = "";
-              if (pctChange > 0) arrow = "▲";
-              else if (pctChange < 0) arrow = "▼";
+              if (pctChange > 0) arrow = "^";
+              else if (pctChange < 0) arrow = "v";
 
               let stockColor = "white";
               if (pctChange > 0) stockColor = "#22c55e";
               else if (pctChange < 0) stockColor = "#ef4444";
 
-              if (isZoomedOut) {
-                ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
+              ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
 
-                if (showStats && !isReady) {
+              if (isZoomedOut) {
+                if (state.showStats && !isReady) {
                   ctx.fillStyle = "rgba(0,0,0,0.7)";
                   ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
 
                   ctx.save();
                   ctx.textAlign = "left";
                   ctx.textBaseline = "top";
-
                   const pad = tileScreenSize * 0.08;
                   let lineY = y + pad;
                   const baseX = x + pad;
-
                   ctx.font = `${tileScreenSize * 0.22}px system-ui`;
                   ctx.fillStyle = stockColor;
                   ctx.fillText(`${plot.stockKey} ${arrow}`, baseX, lineY);
                   lineY += tileScreenSize * 0.24;
-
                   ctx.font = `${tileScreenSize * 0.2}px system-ui`;
                   ctx.fillStyle = "white";
                   ctx.fillText(pctText, baseX, lineY);
                   lineY += tileScreenSize * 0.2;
-
                   ctx.fillText(valueText, baseX, lineY);
                   lineY += tileScreenSize * 0.2;
-
                   ctx.fillText(timerText, baseX, lineY);
-
                   ctx.restore();
                 }
-
                 continue;
               }
 
-              ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
-
-              const pad = 3 * scale;
-              const infoHeight = 32 * scale;
-
-              if (showStats && !isReady) {
+              const pad = 3 * state.scale;
+              const infoHeight = 32 * state.scale;
+              if (state.showStats && !isReady) {
                 ctx.fillStyle = "rgba(0,0,0,0.65)";
                 ctx.fillRect(x, y, tileScreenSize, infoHeight);
-
                 ctx.textBaseline = "top";
-                ctx.font = `${9 * scale}px system-ui`;
-
+                ctx.font = `${9 * state.scale}px system-ui`;
                 const baseX = x + pad;
                 const baseY = y + pad;
-
                 const tickerText = `${plot.stockKey} ${arrow}`;
                 ctx.fillStyle = stockColor;
                 ctx.fillText(tickerText, baseX, baseY);
-
                 const tickerWidth = ctx.measureText(tickerText + " ").width;
                 ctx.fillStyle = "white";
                 ctx.fillText(pctText, baseX + tickerWidth, baseY);
-
-                ctx.fillText(valueText, baseX, baseY + 10 * scale);
-                ctx.fillText(timerText, baseX, baseY + 20 * scale);
+                ctx.fillText(valueText, baseX, baseY + 10 * state.scale);
+                ctx.fillText(timerText, baseX, baseY + 20 * state.scale);
               }
             }
           }
 
-          for (let i = harvestAnimations.length - 1; i >= 0; i--) {
-            const done = renderFloatingValue(harvestAnimations[i], nowPerf, startRow, endRow, startCol, endCol);
-            if (done) {
-              harvestAnimations.splice(i, 1);
-            }
+          for (let i = world.harvestAnimations.length - 1; i >= 0; i--) {
+            const done = renderFloatingValue(world.harvestAnimations[i], nowPerf, startRow, endRow, startCol, endCol);
+            if (done) world.harvestAnimations.splice(i, 1);
           }
-
-          for (let i = costAnimations.length - 1; i >= 0; i--) {
-            const done = renderFloatingValue(costAnimations[i], nowPerf, startRow, endRow, startCol, endCol);
-            if (done) {
-              costAnimations.splice(i, 1);
-            }
+          for (let i = world.costAnimations.length - 1; i >= 0; i--) {
+            const done = renderFloatingValue(world.costAnimations[i], nowPerf, startRow, endRow, startCol, endCol);
+            if (done) world.costAnimations.splice(i, 1);
           }
-
-          if (harvestAnimations.length || costAnimations.length) {
-            needsRender = true;
-          }
+          if (world.harvestAnimations.length || world.costAnimations.length) state.needsRender = true;
 
           ctx.strokeStyle = "rgba(30,30,30,0.9)";
-          ctx.lineWidth = Math.max(0.5, scale * 0.4);
-
+          ctx.lineWidth = Math.max(0.5, state.scale * 0.4);
           ctx.beginPath();
-
           for (let col = startCol; col <= endCol; col++) {
-            const x = offsetX + col * tileSize * scale;
-            ctx.moveTo(x, offsetY + startRow * tileSize * scale);
-            ctx.lineTo(x, offsetY + endRow * tileSize * scale);
+            const x = state.offsetX + col * state.tileSize * state.scale;
+            ctx.moveTo(x, state.offsetY + startRow * state.tileSize * state.scale);
+            ctx.lineTo(x, state.offsetY + endRow * state.tileSize * state.scale);
           }
-
           for (let row = startRow; row <= endRow; row++) {
-            const y = offsetY + row * tileSize * scale;
-            ctx.moveTo(offsetX + startCol * tileSize * scale, y);
-            ctx.lineTo(offsetX + endCol * tileSize * scale, y);
+            const y = state.offsetY + row * state.tileSize * state.scale;
+            ctx.moveTo(state.offsetX + startCol * state.tileSize * state.scale, y);
+            ctx.lineTo(state.offsetX + endCol * state.tileSize * state.scale, y);
           }
-
           ctx.stroke();
 
-          if (hoverTile) {
+          if (state.hoverTile) {
             const sizeOption = currentSizeOption();
             const size = Math.max(1, sizeOption.size || 1);
-            const preview = computeHoverPreview(hoverTile.row, hoverTile.col, size, now);
+            const preview = computeHoverPreview(state.hoverTile.row, state.hoverTile.col, size, now);
             const allowedColor = "rgba(34,197,94,0.75)";
             const blockedColor = "rgba(239,68,68,0.75)";
-            ctx.lineWidth = Math.max(1.2, scale * 0.9);
-
+            ctx.lineWidth = Math.max(1.2, state.scale * 0.9);
             for (const cell of preview) {
               const { row, col, allowed } = cell;
               if (row < startRow || row >= endRow || col < startCol || col >= endCol) continue;
-              const x = offsetX + col * tileSize * scale;
-              const y = offsetY + row * tileSize * scale;
+              const x = state.offsetX + col * state.tileSize * state.scale;
+              const y = state.offsetY + row * state.tileSize * state.scale;
               ctx.strokeStyle = allowed ? allowedColor : blockedColor;
-              ctx.strokeRect(x, y, tileSize * scale, tileSize * scale);
+              ctx.strokeRect(x, y, state.tileSize * state.scale, state.tileSize * state.scale);
             }
           }
         }
@@ -875,11 +861,11 @@
         }
 
         function updatePointer(e) {
-          activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         }
 
         function getTwoPointers() {
-          const vals = Array.from(activePointers.values());
+          const vals = Array.from(state.activePointers.values());
           return vals.length >= 2 ? [vals[0], vals[1]] : null;
         }
 
@@ -887,150 +873,109 @@
           const rect = canvas.getBoundingClientRect();
           const x = clientX - rect.left;
           const y = clientY - rect.top;
-          const worldX = (x - offsetX) / scale;
-          const worldY = (y - offsetY) / scale;
+          const worldX = (x - state.offsetX) / state.scale;
+          const worldY = (y - state.offsetY) / state.scale;
           return { worldX, worldY };
         }
 
         function tileFromClient(clientX, clientY) {
           const { worldX, worldY } = worldFromClient(clientX, clientY);
-          const col = Math.floor(worldX / tileSize);
-          const row = Math.floor(worldY / tileSize);
-          if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return null;
+          const col = Math.floor(worldX / state.tileSize);
+          const row = Math.floor(worldY / state.tileSize);
+          if (row < 0 || row >= config.gridRows || col < 0 || col >= config.gridCols) return null;
           return { row, col, key: row + "," + col };
         }
 
         function setHoverTile(tile) {
-          const same = hoverTile && tile && hoverTile.row === tile.row && hoverTile.col === tile.col;
+          const same = state.hoverTile && tile && state.hoverTile.row === tile.row && state.hoverTile.col === tile.col;
           if (same) return;
-          if (!hoverTile && !tile) return;
-          hoverTile = tile;
-          needsRender = true;
+          if (!state.hoverTile && !tile) return;
+          state.hoverTile = tile;
+          state.needsRender = true;
         }
 
         function updateHoverFromEvent(e) {
-          if (isDragging || isPinching) {
+          if (state.isDragging || state.isPinching) {
             setHoverTile(null);
             return;
           }
           const tile = tileFromClient(e.clientX, e.clientY);
           setHoverTile(tile ? { row: tile.row, col: tile.col } : null);
         }
-
         function determineActionForTile(row, col, nowMs = Date.now()) {
-          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) {
-            return { type: "none", reason: "Out of bounds" };
-          }
-
+          if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { type: "none", reason: "Out of bounds" };
           const key = row + "," + col;
-          const existingPlot = plots.get(key);
-          if (hoeSelected) {
+          const existingPlot = world.plots.get(key);
+          if (state.hoeSelected) {
             if (existingPlot) {
               const crop = crops[existingPlot.cropKey];
-              if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) {
-                return { type: "harvest" };
-              }
+              if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) return { type: "harvest" };
               return { type: "none", reason: "Not ready to harvest" };
             }
             return { type: "none", reason: "Nothing to harvest" };
           }
 
-          if (existingPlot) {
-            return { type: "none", reason: "Already planted" };
-          }
-
-          const cropSelection = selectedCropKey ? crops[selectedCropKey] : null;
+          if (existingPlot) return { type: "none", reason: "Already planted" };
+          const cropSelection = state.selectedCropKey ? crops[state.selectedCropKey] : null;
           if (!cropSelection) return { type: "none", reason: "Select a crop" };
-
-          if (cropSelection.id === "grass") {
-            return { type: "removeFarmland" };
-          }
-
+          if (cropSelection.id === "grass") return { type: "removeFarmland" };
           if (cropSelection.id === "farmland") {
             const farmlandCrop = crops.farmland;
             if (!farmlandCrop) return { type: "none", reason: "Missing farmland crop" };
-            if (plots.has(key) || filled.has(key)) return { type: "none", reason: "Tile occupied" };
+            if (world.plots.has(key) || world.filled.has(key)) return { type: "none", reason: "Tile occupied" };
             const cost = farmlandCrop.placed < 4 ? 0 : 25;
-            if (cost > 0 && totalMoney < cost) return { type: "none", reason: `Not enough money` };
+            if (cost > 0 && state.totalMoney < cost) return { type: "none", reason: "Not enough money" };
             return { type: "placeFarmland" };
           }
 
           const crop = cropSelection;
-          const stock = stocks[selectedStockKey];
+          const stock = stocks[state.selectedStockKey];
           if (!crop || !crop.unlocked) return { type: "none", reason: "Crop locked" };
           if (!stock) return { type: "none", reason: "Select a stock" };
-          if (!filled.has(key)) return { type: "none", reason: "Need farmland first" };
-          if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) {
-            return { type: "none", reason: "Crop limit reached" };
-          }
-
+          if (!world.filled.has(key)) return { type: "none", reason: "Need farmland first" };
+          if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) return { type: "none", reason: "Crop limit reached" };
           const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
-          if (plantCost > 0 && totalMoney < plantCost) {
-            return { type: "none", reason: `Not enough money` };
-          }
-
-          return {
-            type: "plantCrop",
-            cropKey: cropSelection.id,
-            stockKey: selectedStockKey,
-          };
+          if (plantCost > 0 && state.totalMoney < plantCost) return { type: "none", reason: "Not enough money" };
+          return { type: "plantCrop", cropKey: cropSelection.id, stockKey: state.selectedStockKey };
         }
 
         function computeHoverPreview(baseRow, baseCol, size, nowMs) {
           const results = [];
-
-          const baseAction = hoeSelected ? null : determineActionForTile(baseRow, baseCol, nowMs);
-
+          const baseAction = state.hoeSelected ? null : determineActionForTile(baseRow, baseCol, nowMs);
           const placed = {};
           Object.values(crops).forEach((c) => {
             placed[c.id] = typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
           });
-
-          const state = {
-            money: totalMoney,
-            placed,
-            filledAdds: new Set(),
-            filledRemovals: new Set(),
-            plotsRemoved: new Set(),
-          };
-
+          const previewState = { money: state.totalMoney, placed, filledAdds: new Set(), filledRemovals: new Set(), plotsRemoved: new Set() };
           const getFilled = (key) => {
-            if (state.filledAdds.has(key)) return true;
-            if (state.filledRemovals.has(key)) return false;
-            return filled.has(key);
+            if (previewState.filledAdds.has(key)) return true;
+            if (previewState.filledRemovals.has(key)) return false;
+            return world.filled.has(key);
           };
-
           const getPlot = (key) => {
-            if (state.plotsRemoved.has(key)) return null;
-            return plots.get(key) || null;
+            if (previewState.plotsRemoved.has(key)) return null;
+            return world.plots.get(key) || null;
           };
-
           for (let dr = 0; dr < size; dr++) {
             for (let dc = 0; dc < size; dc++) {
               const row = baseRow + dr;
               const col = baseCol + dc;
               const key = row + "," + col;
               let allowed = false;
-
-              if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) {
+              if (row < 0 || row >= config.gridRows || col < 0 || col >= config.gridCols) {
                 results.push({ row, col, allowed });
                 continue;
               }
-
-              const actionForCell = hoeSelected ? determineActionForTile(row, col, nowMs) : baseAction;
-
-              allowed = simulateTileActionForPreview(actionForCell, key, state, nowMs, getFilled, getPlot);
-
+              const actionForCell = state.hoeSelected ? determineActionForTile(row, col, nowMs) : baseAction;
+              allowed = simulateTileActionForPreview(actionForCell, key, previewState, nowMs, getFilled, getPlot);
               results.push({ row, col, allowed });
             }
           }
-
           return results;
         }
 
-        function simulateTileActionForPreview(action, key, state, nowMs, getFilled, getPlot) {
+        function simulateTileActionForPreview(action, key, previewState, nowMs, getFilled, getPlot) {
           if (!action || action.type === "none") return false;
-
           switch (action.type) {
             case "harvest": {
               const existingPlot = getPlot(key);
@@ -1039,54 +984,42 @@
               if (!existingPlot || !plotCrop || !plotStock) return false;
               const ready = nowMs - existingPlot.plantedAt >= plotCrop.growTimeMs;
               if (!ready) return false;
-
               const effectivePrice = existingPlot.lockedStockPrice != null ? existingPlot.lockedStockPrice : plotStock.price;
               const pctChange = (effectivePrice - existingPlot.stockPriceAtPlant) / existingPlot.stockPriceAtPlant;
               const value = Math.max(0, plotCrop.baseValue * (1 + pctChange));
-
-              state.money += value;
-              if (typeof state.placed[plotCrop.id] === "number" && state.placed[plotCrop.id] > 0) {
-                state.placed[plotCrop.id] -= 1;
-              }
-              state.plotsRemoved.add(key);
+              previewState.money += value;
+              if (typeof previewState.placed[plotCrop.id] === "number" && previewState.placed[plotCrop.id] > 0) previewState.placed[plotCrop.id] -= 1;
+              previewState.plotsRemoved.add(key);
               return true;
             }
             case "removeFarmland": {
               if (getFilled(key)) {
-                state.filledRemovals.add(key);
-                if (typeof state.placed.farmland === "number" && state.placed.farmland > 0) {
-                  state.placed.farmland -= 1;
-                }
+                previewState.filledRemovals.add(key);
+                if (typeof previewState.placed.farmland === "number" && previewState.placed.farmland > 0) previewState.placed.farmland -= 1;
                 return true;
               }
               return false;
             }
             case "placeFarmland": {
               if (getFilled(key) || getPlot(key)) return false;
-              const farmlandPlaced = typeof state.placed.farmland === "number" ? state.placed.farmland : 0;
+              const farmlandPlaced = typeof previewState.placed.farmland === "number" ? previewState.placed.farmland : 0;
               const farmlandCost = farmlandPlaced < 4 ? 0 : 25;
-              if (state.money < farmlandCost) return false;
-              state.money -= farmlandCost;
-              state.filledAdds.add(key);
-              state.placed.farmland = farmlandPlaced + 1;
+              if (previewState.money < farmlandCost) return false;
+              previewState.money -= farmlandCost;
+              previewState.filledAdds.add(key);
+              previewState.placed.farmland = farmlandPlaced + 1;
               return true;
             }
             case "plantCrop": {
               const crop = crops[action.cropKey];
               const stock = stocks[action.stockKey];
               if (!crop || !stock || !crop.unlocked) return false;
-              if (getPlot(key)) return false;
-              if (!getFilled(key)) return false;
-
-              if (typeof crop.limit === "number" && crop.limit >= 0 && state.placed[crop.id] >= crop.limit) {
-                return false;
-              }
-
+              if (getPlot(key) || !getFilled(key)) return false;
+              if (typeof crop.limit === "number" && crop.limit >= 0 && previewState.placed[crop.id] >= crop.limit) return false;
               const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
-              if (state.money < plantCost) return false;
-
-              state.money -= plantCost;
-              state.placed[crop.id] += 1;
+              if (previewState.money < plantCost) return false;
+              previewState.money -= plantCost;
+              previewState.placed[crop.id] += 1;
               return true;
             }
             default:
@@ -1095,42 +1028,30 @@
         }
 
         function harvestPlot(key) {
-          const plot = plots.get(key);
+          const plot = world.plots.get(key);
           if (!plot) return;
           const crop = crops[plot.cropKey];
           const stock = stocks[plot.stockKey];
           if (!crop || !stock) return;
-
           const effectivePrice = plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
           const pctChange = (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
           const value = Math.max(0, crop.baseValue * (1 + pctChange));
-
-          harvestAnimations.push({
-            key,
-            value,
-            start: performance.now(),
-          });
-
-          if (typeof crop.placed === "number" && crop.placed > 0) {
-            crop.placed -= 1;
-          }
-
-          totalMoney += value;
+          world.harvestAnimations.push({ key, value, start: performance.now() });
+          if (typeof crop.placed === "number" && crop.placed > 0) crop.placed -= 1;
+          state.totalMoney += value;
           onMoneyChanged();
-          plots.delete(key);
-          needsRender = true;
+          world.plots.delete(key);
+          state.needsRender = true;
           saveState();
         }
 
         function destroyPlot(key) {
-          const plot = plots.get(key);
+          const plot = world.plots.get(key);
           if (!plot) return;
           const crop = crops[plot.cropKey];
-          if (crop && typeof crop.placed === "number" && crop.placed > 0) {
-            crop.placed -= 1;
-          }
-          plots.delete(key);
-          needsRender = true;
+          if (crop && typeof crop.placed === "number" && crop.placed > 0) crop.placed -= 1;
+          world.plots.delete(key);
+          state.needsRender = true;
           saveState();
         }
 
@@ -1143,27 +1064,25 @@
             for (let dc = 0; dc < size; dc++) {
               const row = baseRow + dr;
               const col = baseCol + dc;
-              if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) continue;
+              if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) continue;
               const key = row + "," + col;
-              const plot = plots.get(key);
+              const plot = world.plots.get(key);
               const crop = plot ? crops[plot.cropKey] : null;
-              if (plot && crop && now - plot.plantedAt < crop.growTimeMs) {
-                targets.push(key);
-              }
+              if (plot && crop && now - plot.plantedAt < crop.growTimeMs) targets.push(key);
             }
           }
           return targets;
         }
 
         function handleTileAction(row, col, action) {
-          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) return { success: false };
+          if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { success: false };
           const key = row + "," + col;
           const resolvedAction = action || determineActionForTile(row, col);
           if (!resolvedAction || resolvedAction.type === "none") return { success: false, reason: resolvedAction ? resolvedAction.reason : undefined };
 
           switch (resolvedAction.type) {
             case "harvest": {
-              const existingPlot = plots.get(key);
+              const existingPlot = world.plots.get(key);
               if (!existingPlot) return { success: false, reason: "Nothing to harvest" };
               const crop = crops[existingPlot.cropKey];
               if (!crop) return { success: false, reason: "Unknown crop" };
@@ -1175,37 +1094,28 @@
               return { success: false, reason: "Not ready to harvest" };
             }
             case "confirmDestroy": {
-              const existingPlot = plots.get(key);
+              const existingPlot = world.plots.get(key);
               if (!existingPlot) return { success: false, reason: "Nothing to remove" };
               openConfirmModal(
                 "Are you sure you want to destroy this crop? No money will be earned.",
-                () => {
-                  destroyPlot(key);
-                },
+                () => destroyPlot(key),
                 "Destroy Crop"
               );
-              lastHoeDestroyAttempt = { key: null, time: 0 };
               return { success: true };
             }
             case "removeFarmland": {
-              const hadFarmland = filled.delete(key);
+              const hadFarmland = world.filled.delete(key);
               if (hadFarmland && crops.farmland) {
                 const f = crops.farmland;
                 const previousPlaced = f.placed || 0;
-                if (typeof f.placed === "number" && f.placed > 0) {
-                  f.placed -= 1;
-                }
+                if (typeof f.placed === "number" && f.placed > 0) f.placed -= 1;
                 if (previousPlaced > 4) {
-                  totalMoney += 25;
+                  state.totalMoney += 25;
                   onMoneyChanged();
-                  costAnimations.push({
-                    key,
-                    value: 25,
-                    start: performance.now(),
-                  });
+                  world.costAnimations.push({ key, value: 25, start: performance.now() });
                 }
               }
-              needsRender = true;
+              state.needsRender = true;
               renderCropOptions();
               saveState();
               return { success: hadFarmland, reason: hadFarmland ? undefined : "No farmland here" };
@@ -1213,61 +1123,39 @@
             case "placeFarmland": {
               const farmlandCrop = crops.farmland;
               if (!farmlandCrop) return { success: false, reason: "Missing farmland crop" };
-              if (plots.has(key)) return { success: false, reason: "Tile occupied" };
-              if (filled.has(key)) return { success: false, reason: "Tile occupied" };
-
+              if (world.plots.has(key) || world.filled.has(key)) return { success: false, reason: "Tile occupied" };
               const cost = farmlandCrop.placed < 4 ? 0 : 25;
               if (cost > 0) {
-                if (totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)} to place` };
-                totalMoney -= cost;
+                if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)} to place` };
+                state.totalMoney -= cost;
                 onMoneyChanged();
-                costAnimations.push({
-                  key,
-                  value: -cost,
-                  start: performance.now(),
-                });
+                world.costAnimations.push({ key, value: -cost, start: performance.now() });
               }
-
-              filled.add(key);
+              world.filled.add(key);
               farmlandCrop.placed += 1;
-              needsRender = true;
+              state.needsRender = true;
               renderCropOptions();
               saveState();
               return { success: true };
             }
             case "plantCrop": {
-              const cropKey = resolvedAction && resolvedAction.cropKey ? resolvedAction.cropKey : selectedCropKey;
-              const stockKey = resolvedAction && resolvedAction.stockKey ? resolvedAction.stockKey : selectedStockKey;
+              const cropKey = resolvedAction && resolvedAction.cropKey ? resolvedAction.cropKey : state.selectedCropKey;
+              const stockKey = resolvedAction && resolvedAction.stockKey ? resolvedAction.stockKey : state.selectedStockKey;
               const crop = crops[cropKey];
               const stock = stocks[stockKey];
               if (!crop || !crop.unlocked) return { success: false, reason: "Crop locked" };
               if (!stock) return { success: false, reason: "Select a stock" };
-
-              if (plots.has(key)) return { success: false, reason: "Tile already planted" };
-              if (!filled.has(key)) {
-                return { success: false, reason: "Need farmland first" };
-              }
-
-              if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) {
-                return { success: false, reason: "Crop limit reached" };
-              }
-
+              if (world.plots.has(key)) return { success: false, reason: "Tile already planted" };
+              if (!world.filled.has(key)) return { success: false, reason: "Need farmland first" };
+              if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) return { success: false, reason: "Crop limit reached" };
               const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
-
               if (plantCost > 0) {
-                if (totalMoney < plantCost) return { success: false, reason: `Need ${formatCurrency(plantCost)} to plant ${crop.name}` };
-
-                totalMoney -= plantCost;
+                if (state.totalMoney < plantCost) return { success: false, reason: `Need ${formatCurrency(plantCost)} to plant ${crop.name}` };
+                state.totalMoney -= plantCost;
                 onMoneyChanged();
-
-                costAnimations.push({
-                  key,
-                  value: -plantCost,
-                  start: performance.now(),
-                });
+                world.costAnimations.push({ key, value: -plantCost, start: performance.now() });
               }
-
-              plots.set(key, {
+              world.plots.set(key, {
                 cropKey,
                 stockKey,
                 plantedAt: Date.now(),
@@ -1275,10 +1163,8 @@
                 lockedStockPrice: null,
                 stageBreakpoints: createRandomStageBreakpoints(),
               });
-
               crop.placed += 1;
-
-              needsRender = true;
+              state.needsRender = true;
               saveState();
               return { success: true };
             }
@@ -1294,82 +1180,62 @@
           const size = sizeOption.size || 1;
           const baseRow = tile.row;
           const baseCol = tile.col;
-          const baseAction = hoeSelected ? null : determineActionForTile(baseRow, baseCol);
+          const baseAction = state.hoeSelected ? null : determineActionForTile(baseRow, baseCol);
           let failure = null;
           let hadSuccess = false;
-
           for (let dr = 0; dr < size; dr++) {
             for (let dc = 0; dc < size; dc++) {
               const row = baseRow + dr;
               const col = baseCol + dc;
-              const actionForCell = hoeSelected ? determineActionForTile(row, col) : baseAction;
+              const actionForCell = state.hoeSelected ? determineActionForTile(row, col) : baseAction;
               const result = handleTileAction(row, col, actionForCell);
               if (result.success) {
                 hadSuccess = true;
                 continue;
               }
-
               const reason = (actionForCell && actionForCell.reason) || result.reason;
               if (!reason || failure) continue;
-
               failure = { reason, x: clientX, y: clientY };
             }
           }
-
-          if (!hadSuccess && failure) {
-            showActionError(failure.reason, failure.x, failure.y);
-          }
+          if (!hadSuccess && failure) showActionError(failure.reason, failure.x, failure.y);
         }
-
         function onPointerDown(e) {
           canvas.setPointerCapture(e.pointerId);
           updatePointer(e);
-
-          if (activePointers.size === 2) {
-            isDragging = false;
-            isPinching = true;
-
+          if (state.activePointers.size === 2) {
+            state.isDragging = false;
+            state.isPinching = true;
             const [p1, p2] = getTwoPointers();
-            pinchStartDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            pinchStartScale = scale;
-            pinchCenterX = (p1.x + p2.x) / 2;
-            pinchCenterY = (p1.y + p2.y) / 2;
-            tapStart = null;
-          } else if (activePointers.size === 1) {
-            isPinching = false;
-            isDragging = true;
-
-            dragStartX = e.clientX;
-            dragStartY = e.clientY;
-            dragOffsetStartX = offsetX;
-            dragOffsetStartY = offsetY;
-
-            tapStart = {
-              id: e.pointerId,
-              x: e.clientX,
-              y: e.clientY,
-              time: performance.now(),
-            };
-
-            if (hoeSelected) {
+            state.pinchStartDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            state.pinchStartScale = state.scale;
+            state.pinchCenter = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+            state.tapStart = null;
+          } else if (state.activePointers.size === 1) {
+            state.isPinching = false;
+            state.isDragging = true;
+            state.dragStart = { x: e.clientX, y: e.clientY };
+            state.dragOffsetStart = { x: state.offsetX, y: state.offsetY };
+            state.tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now() };
+            if (state.hoeSelected) {
               const tile = tileFromClient(e.clientX, e.clientY);
               if (tile) {
                 const targets = collectHoeDestroyTargets(tile.row, tile.col);
                 if (targets.length > 0) {
-                  hoeHoldTimeoutId = setTimeout(() => {
-                    hoeHoldTriggered = true;
-                    pendingHoeDestroyKeys = targets.slice();
-                    const count = pendingHoeDestroyKeys.length;
+                  state.hoeHoldTimeoutId = setTimeout(() => {
+                    state.hoeHoldTriggered = true;
+                    state.pendingHoeDestroyKeys = targets.slice();
+                    const count = state.pendingHoeDestroyKeys.length;
                     const label = count === 1 ? "crop" : "crops";
                     openConfirmModal(
                       `Destroy ${count} ${label}? No money will be earned.`,
                       () => {
-                        pendingHoeDestroyKeys.forEach((k) => destroyPlot(k));
-                        pendingHoeDestroyKeys = [];
+                        state.pendingHoeDestroyKeys.forEach((k) => destroyPlot(k));
+                        state.pendingHoeDestroyKeys = [];
                       },
                       count === 1 ? "Destroy Crop" : "Destroy Crops"
                     );
-                  }, HOE_DESTROY_WINDOW_MS);
+                  }, config.hoeDestroyWindowMs);
                 }
               }
             }
@@ -1378,89 +1244,77 @@
 
         function onPointerMove(e) {
           updatePointer(e);
-
-          if (isPinching && activePointers.size === 2) {
+          if (state.isPinching && state.activePointers.size === 2) {
             e.preventDefault();
             const [p1, p2] = getTwoPointers();
             const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-
-            if (pinchStartDistance > 0) {
-              const newScale = clampScale(pinchStartScale * (d / pinchStartDistance));
-              const k = newScale / scale;
-
-              offsetX = pinchCenterX - (pinchCenterX - offsetX) * k;
-              offsetY = pinchCenterY - (pinchCenterY - offsetY) * k;
-              scale = newScale;
-              scaleChanged = true;
-              needsRender = true;
+            if (state.pinchStartDistance > 0) {
+              const newScale = clampScale(state.pinchStartScale * (d / state.pinchStartDistance));
+              const k = newScale / state.scale;
+              state.offsetX = state.pinchCenter.x - (state.pinchCenter.x - state.offsetX) * k;
+              state.offsetY = state.pinchCenter.y - (state.pinchCenter.y - state.offsetY) * k;
+              state.scale = newScale;
+              state.scaleDirty = true;
+              state.needsRender = true;
             }
-          } else if (isDragging) {
+          } else if (state.isDragging) {
             e.preventDefault();
-            offsetX = dragOffsetStartX + (e.clientX - dragStartX);
-            offsetY = dragOffsetStartY + (e.clientY - dragStartY);
-            needsRender = true;
-
-            if (tapStart) {
-              const dx = e.clientX - tapStart.x;
-              const dy = e.clientY - tapStart.y;
+            state.offsetX = state.dragOffsetStart.x + (e.clientX - state.dragStart.x);
+            state.offsetY = state.dragOffsetStart.y + (e.clientY - state.dragStart.y);
+            state.needsRender = true;
+            if (state.tapStart) {
+              const dx = e.clientX - state.tapStart.x;
+              const dy = e.clientY - state.tapStart.y;
               if (dx * dx + dy * dy > 25) {
-                tapStart = null;
-                if (hoeHoldTimeoutId) {
-                  clearTimeout(hoeHoldTimeoutId);
-                  hoeHoldTimeoutId = null;
-                  pendingHoeDestroyKeys = [];
+                state.tapStart = null;
+                if (state.hoeHoldTimeoutId) {
+                  clearTimeout(state.hoeHoldTimeoutId);
+                  state.hoeHoldTimeoutId = null;
+                  state.pendingHoeDestroyKeys = [];
                 }
               }
             }
           }
-
           updateHoverFromEvent(e);
         }
 
         function onPointerUp(e) {
-          if (hoeHoldTimeoutId) {
-            clearTimeout(hoeHoldTimeoutId);
-            hoeHoldTimeoutId = null;
-            pendingHoeDestroyKeys = [];
+          if (state.hoeHoldTimeoutId) {
+            clearTimeout(state.hoeHoldTimeoutId);
+            state.hoeHoldTimeoutId = null;
+            state.pendingHoeDestroyKeys = [];
           }
-          activePointers.delete(e.pointerId);
+          state.activePointers.delete(e.pointerId);
           canvas.releasePointerCapture(e.pointerId);
-          if (activePointers.size < 2) isPinching = false;
-          if (activePointers.size === 0) isDragging = false;
+          if (state.activePointers.size < 2) state.isPinching = false;
+          if (state.activePointers.size === 0) state.isDragging = false;
 
-          if (hoeHoldTriggered) {
-            hoeHoldTriggered = false;
-            tapStart = null;
-            pendingHoeDestroyKeys = [];
-          } else if (tapStart && tapStart.id === e.pointerId) {
-            const dt = performance.now() - tapStart.time;
-            const dx = e.clientX - tapStart.x;
-            const dy = e.clientY - tapStart.y;
-            if (dt < 300 && dx * dx + dy * dy <= 25) {
-              handleTap(e.clientX, e.clientY);
-            }
+          if (state.hoeHoldTriggered) {
+            state.hoeHoldTriggered = false;
+            state.tapStart = null;
+            state.pendingHoeDestroyKeys = [];
+          } else if (state.tapStart && state.tapStart.id === e.pointerId) {
+            const dt = performance.now() - state.tapStart.time;
+            const dx = e.clientX - state.tapStart.x;
+            const dy = e.clientY - state.tapStart.y;
+            if (dt < 300 && dx * dx + dy * dy <= 25) handleTap(e.clientX, e.clientY);
           }
-          tapStart = null;
+          state.tapStart = null;
 
-          if (e.type === "pointerleave" || e.type === "pointercancel") {
-            setHoverTile(null);
-          } else {
-            updateHoverFromEvent(e);
-          }
+          if (e.type === "pointerleave" || e.type === "pointercancel") setHoverTile(null);
+          else updateHoverFromEvent(e);
 
-          if (scaleChanged && activePointers.size === 0) {
+          if (state.scaleDirty && state.activePointers.size === 0) {
             saveState();
-            scaleChanged = false;
+            state.scaleDirty = false;
           }
         }
 
         function onWheel(e) {
           e.preventDefault();
-
           const rect = canvas.getBoundingClientRect();
           const cx = rect.width / 2;
           const cy = rect.height / 2;
-
           const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
           zoomAt(factor, cx, cy);
         }
@@ -1481,152 +1335,111 @@
           }, 1200);
         }
 
-        canvas.addEventListener("pointerdown", onPointerDown);
-        canvas.addEventListener("pointermove", onPointerMove);
-        canvas.addEventListener("pointerup", onPointerUp);
-        canvas.addEventListener("pointercancel", onPointerUp);
-        canvas.addEventListener("pointerleave", onPointerUp);
-        canvas.addEventListener("wheel", onWheel, { passive: false });
-
-        window.addEventListener("resize", () => {
-          resizeCanvas();
-          needsRender = true;
-        });
-
-        const navToggle = document.getElementById("navToggle");
-        const navOffcanvas = document.getElementById("navOffcanvas");
-        const navOverlay = document.getElementById("navOverlay");
-        const navClose = document.getElementById("navClose");
-        const recenterBtn = document.getElementById("recenterBtn");
-        const cropGrid = document.getElementById("cropGrid");
-        const stockGrid = document.getElementById("stockGrid");
-        const hoeButton = document.getElementById("hoeButton");
-        const cropStockButton = document.getElementById("cropStockButton");
-        const cropStockImage = document.getElementById("cropStockImage");
-        const cropStockStockLabel = document.getElementById("cropStockStockLabel");
-        const cropStockStockWrapper = document.getElementById("cropStockStockWrapper");
-        const sizeButton = document.getElementById("sizeButton");
-        const sizeButtonLabel = document.getElementById("sizeButtonLabel");
-        const sizeMenu = document.getElementById("sizeMenu");
-        const resetFarmBtn = document.getElementById("resetFarmBtn");
-        const toggleStatsBtn = document.getElementById("toggleStatsBtn");
-        const confirmModal = document.getElementById("confirmModal");
-        const confirmMessage = document.getElementById("confirmMessage");
-        const confirmCancel = document.getElementById("confirmCancel");
-        const confirmConfirm = document.getElementById("confirmConfirm");
-        const confirmClose = document.getElementById("confirmClose");
-        const confirmTitle = document.getElementById("confirmTitle");
-
         function openOffcanvas() {
-          navOffcanvas.classList.remove("translate-x-full");
-          navOverlay.classList.remove("hidden");
-          navToggle.setAttribute("aria-expanded", "true");
+          if (!dom.navOffcanvas || !dom.navOverlay || !dom.navToggle) return;
+          dom.navOffcanvas.classList.remove("translate-x-full");
+          dom.navOverlay.classList.remove("hidden");
+          dom.navToggle.setAttribute("aria-expanded", "true");
         }
 
         function closeOffcanvas() {
-          navOffcanvas.classList.add("translate-x-full");
-          navOverlay.classList.add("hidden");
-          navToggle.setAttribute("aria-expanded", "false");
+          if (!dom.navOffcanvas || !dom.navOverlay || !dom.navToggle) return;
+          dom.navOffcanvas.classList.add("translate-x-full");
+          dom.navOverlay.classList.add("hidden");
+          dom.navToggle.setAttribute("aria-expanded", "false");
         }
 
         function toggleOffcanvas() {
-          const isClosed = navOffcanvas.classList.contains("translate-x-full");
+          if (!dom.navOffcanvas) return;
+          const isClosed = dom.navOffcanvas.classList.contains("translate-x-full");
           if (isClosed) openOffcanvas();
           else closeOffcanvas();
         }
 
-        let pendingConfirmAction = null;
-
         function closeConfirmModal() {
-          if (!confirmModal) return;
-          confirmModal.classList.add("hidden");
+          if (!dom.confirmModal) return;
+          dom.confirmModal.classList.add("hidden");
           document.body.classList.remove("overflow-hidden");
           pendingConfirmAction = null;
         }
 
         function openConfirmModal(message, onConfirm, title = "Confirm") {
-          if (!confirmModal || !confirmMessage || !confirmConfirm || !confirmCancel) {
+          if (!dom.confirmModal || !dom.confirmMessage || !dom.confirmConfirm || !dom.confirmCancel) {
             onConfirm();
             return;
           }
-
-          if (confirmTitle) {
-            confirmTitle.textContent = title;
-          }
-          confirmMessage.textContent = message;
+          if (dom.confirmTitle) dom.confirmTitle.textContent = title;
+          dom.confirmMessage.textContent = message;
           pendingConfirmAction = onConfirm;
-          confirmModal.classList.remove("hidden");
+          dom.confirmModal.classList.remove("hidden");
           document.body.classList.add("overflow-hidden");
-          confirmConfirm.focus();
+          dom.confirmConfirm.focus();
         }
 
         function updateStatsToggleUI() {
-          if (!toggleStatsBtn) return;
-          toggleStatsBtn.textContent = "Show Stats";
-          toggleStatsBtn.classList.toggle("bg-emerald-600", showStats);
-          toggleStatsBtn.classList.toggle("text-white", showStats);
-          toggleStatsBtn.classList.toggle("border-emerald-500", showStats);
-          toggleStatsBtn.classList.toggle("bg-neutral-800", !showStats);
-          toggleStatsBtn.classList.toggle("text-neutral-200", !showStats);
-          toggleStatsBtn.classList.toggle("border-neutral-600", !showStats);
+          if (!dom.toggleStatsBtn) return;
+          dom.toggleStatsBtn.textContent = "Show Stats";
+          dom.toggleStatsBtn.classList.toggle("bg-emerald-600", state.showStats);
+          dom.toggleStatsBtn.classList.toggle("text-white", state.showStats);
+          dom.toggleStatsBtn.classList.toggle("border-emerald-500", state.showStats);
+          dom.toggleStatsBtn.classList.toggle("bg-neutral-800", !state.showStats);
+          dom.toggleStatsBtn.classList.toggle("text-neutral-200", !state.showStats);
+          dom.toggleStatsBtn.classList.toggle("border-neutral-600", !state.showStats);
         }
 
         function updateModeButtonsUI() {
-          const plantingMode = !hoeSelected;
-          if (hoeButton) {
-            hoeButton.classList.toggle("border-emerald-500", hoeSelected);
-            hoeButton.classList.toggle("border-neutral-700", !hoeSelected);
-            hoeButton.classList.remove("bg-emerald-500/10");
-            hoeButton.setAttribute("aria-pressed", hoeSelected ? "true" : "false");
+          const plantingMode = !state.hoeSelected;
+          if (dom.hoeButton) {
+            dom.hoeButton.classList.toggle("border-emerald-500", state.hoeSelected);
+            dom.hoeButton.classList.toggle("border-neutral-700", !state.hoeSelected);
+            dom.hoeButton.classList.remove("bg-emerald-500/10");
+            dom.hoeButton.setAttribute("aria-pressed", state.hoeSelected ? "true" : "false");
           }
-          if (cropStockButton) {
-            cropStockButton.classList.toggle("border-emerald-500", plantingMode);
-            cropStockButton.classList.toggle("border-neutral-700", !plantingMode);
+          if (dom.cropStockButton) {
+            dom.cropStockButton.classList.toggle("border-emerald-500", plantingMode);
+            dom.cropStockButton.classList.toggle("border-neutral-700", !plantingMode);
           }
         }
 
         function updateCropStockButtonUI() {
-          if (!cropStockButton) return;
-          const crop = selectedCropKey ? crops[selectedCropKey] : null;
-          const stock = stocks[selectedStockKey];
+          if (!dom.cropStockButton) return;
+          const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
+          const stock = stocks[state.selectedStockKey];
           const src = cropImageSrc(crop ? crop.id : null);
-          if (cropStockImage) {
-            cropStockImage.src = src;
-            cropStockImage.alt = crop ? crop.name : "Crop";
+          if (dom.cropStockImage) {
+            dom.cropStockImage.src = src;
+            dom.cropStockImage.alt = crop ? crop.name : "Crop";
           }
           const stockText = stock ? stock.symbol : "";
-          if (cropStockStockLabel) cropStockStockLabel.textContent = stockText;
-          if (cropStockStockLabel) {
+          if (dom.cropStockStockLabel) {
+            dom.cropStockStockLabel.textContent = stockText;
             const len = stockText.length || 1;
             const fontSize = len > 6 ? 8 : len > 4 ? 9 : 11;
-            cropStockStockLabel.style.fontSize = fontSize + "px";
+            dom.cropStockStockLabel.style.fontSize = fontSize + "px";
           }
-          if (cropStockStockWrapper) {
+          if (dom.cropStockStockWrapper) {
             const hideStock = crop && (crop.id === "grass" || crop.id === "farmland");
-            cropStockStockWrapper.classList.toggle("hidden", hideStock);
+            dom.cropStockStockWrapper.classList.toggle("hidden", hideStock);
           }
         }
 
         function updateSizeButtonUI() {
-          if (!sizeButton) return;
+          if (!dom.sizeButton) return;
           const size = currentSizeOption();
-          if (sizeButtonLabel) sizeButtonLabel.textContent = size ? size.name : "";
-          sizeButton.classList.toggle("border-emerald-500", false);
+          if (dom.sizeButtonLabel) dom.sizeButtonLabel.textContent = size ? size.name : "";
         }
 
         function renderSizeMenu() {
-          if (!sizeMenu) return;
-          sizeMenu.innerHTML = "";
+          if (!dom.sizeMenu) return;
+          dom.sizeMenu.innerHTML = "";
           Object.values(sizes).forEach((size) => {
             const locked = !size.unlocked;
             const btn = document.createElement("button");
             btn.type = "button";
             btn.className = "w-full px-3 py-2 text-left text-[11px] font-semibold border-b border-neutral-800 last:border-b-0 flex items-center justify-between";
-            if (!locked) {
-              btn.classList.add("hover:bg-neutral-800");
-            }
+            if (!locked) btn.classList.add("hover:bg-neutral-800");
             btn.textContent = size.name;
-            if (size.id === selectedSizeKey) {
+            if (size.id === state.selectedSizeKey) {
               btn.classList.add("text-emerald-400");
             } else {
               btn.classList.add(locked ? "text-neutral-600" : "text-neutral-100");
@@ -1638,7 +1451,7 @@
               unlockCostEl.className = "text-[10px] font-normal";
               btn.appendChild(unlockCostEl);
             }
-            const canAffordUnlock = locked && typeof size.unlockCost === "number" && totalMoney >= size.unlockCost;
+            const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
             btn.disabled = locked && !canAffordUnlock;
             if (unlockCostEl) {
               unlockCostEl.classList.toggle("text-amber-300", canAffordUnlock);
@@ -1650,78 +1463,147 @@
                 openConfirmModal(
                   `Unlock ${size.name} for ${formatCurrency(size.unlockCost)}?`,
                   () => {
-                    totalMoney -= size.unlockCost;
+                    state.totalMoney -= size.unlockCost;
                     size.unlocked = true;
-                    selectedSizeKey = size.id;
+                    state.selectedSizeKey = size.id;
                     onMoneyChanged();
                     renderSizeMenu();
                     updateSizeButtonUI();
-                    needsRender = true;
+                    state.needsRender = true;
                     saveState();
+                    if (dom.sizeMenu) dom.sizeMenu.classList.add("hidden");
+                    sizeMenuVisible = false;
                   },
                   "Confirm Unlock"
                 );
                 return;
               }
-              selectedSizeKey = size.id;
+              state.selectedSizeKey = size.id;
               renderSizeMenu();
               updateSizeButtonUI();
-              needsRender = true;
+              state.needsRender = true;
               saveState();
-              sizeMenu.classList.add("hidden");
+              dom.sizeMenu.classList.add("hidden");
+              sizeMenuVisible = false;
             });
-            sizeMenu.appendChild(btn);
+            dom.sizeMenu.appendChild(btn);
           });
         }
 
-        if (navToggle) {
-          navToggle.addEventListener("click", toggleOffcanvas);
+        function closeSizeMenu() {
+          if (!dom.sizeMenu) return;
+          dom.sizeMenu.classList.add("hidden");
+          sizeMenuVisible = false;
         }
 
-        navClose.addEventListener("click", closeOffcanvas);
-        navOverlay.addEventListener("click", closeOffcanvas);
-
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") {
-            closeConfirmModal();
-            closeOffcanvas();
-          }
-        });
-
-        if (recenterBtn) {
-          recenterBtn.addEventListener("click", () => {
-            centerView();
-            closeOffcanvas();
-          });
-        }
-
-        if (confirmCancel) {
-          confirmCancel.addEventListener("click", closeConfirmModal);
-        }
-        if (confirmClose) {
-          confirmClose.addEventListener("click", closeConfirmModal);
-        }
-        if (confirmConfirm) {
-          confirmConfirm.addEventListener("click", () => {
-            if (pendingConfirmAction) pendingConfirmAction();
-            closeConfirmModal();
-          });
-        }
-        if (confirmModal) {
-          confirmModal.addEventListener("click", (e) => {
-            if (e.target === confirmModal) {
-              closeConfirmModal();
+        function renderCropOptions() {
+          if (!dom.cropGrid) return;
+          dom.cropGrid.innerHTML = "";
+          Object.values(crops).forEach((crop) => {
+            const card = document.createElement("button");
+            card.type = "button";
+            const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
+            let baseClass = "relative w-full aspect-square rounded-md overflow-hidden border text-left bg-neutral-900";
+            if (crop.id === state.selectedCropKey) baseClass += " border-emerald-500 ring-1 ring-emerald-500";
+            else if (!crop.unlocked && canAffordUnlock) baseClass += " border-amber-400/60 hover:border-amber-300";
+            else baseClass += " border-neutral-700 hover:border-neutral-500";
+            if (!crop.unlocked) {
+              baseClass += " cursor-pointer";
+              if (!canAffordUnlock) baseClass += " opacity-40";
+            } else {
+              baseClass += " cursor-pointer";
             }
+            card.className = baseClass;
+
+            const img = document.createElement("img");
+            if (crop.id === "grass") img.src = "images/grass.jpg";
+            else if (crop.id === "farmland") img.src = "images/farmland.jpg";
+            else img.src = `images/${crop.id}/${crop.id}-phase-4.png`;
+            img.alt = crop.name;
+            img.className = "absolute inset-0 w-full h-full object-cover";
+            if (!crop.unlocked && !canAffordUnlock) img.className += " grayscale";
+            card.appendChild(img);
+
+            const overlay = document.createElement("div");
+            overlay.className = "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
+            if (crop.id === "grass") {
+              overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div><div class="text-neutral-200">Cost: Free</div>`;
+            } else if (crop.id === "farmland") {
+              const nextCost = crop.placed < 4 ? 0 : 25;
+              const costText = nextCost === 0 ? "Cost: Free" : `Cost: ${formatCurrency(nextCost)}`;
+              overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div><div class="text-neutral-200">${costText}</div>`;
+            } else {
+              const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
+              const costText = plantCost > 0 ? formatCurrency(plantCost) : "Free";
+              const sellText = formatCurrency(crop.baseValue);
+              overlay.innerHTML =
+                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
+                `<div class="text-neutral-200">Cost: ${costText}</div>` +
+                `<div class="text-neutral-200">Sell: ${sellText}</div>` +
+                `<div class="text-neutral-300">Time: ${crop.growMinutes} min</div>`;
+              if (!crop.unlocked && crop.unlockCost > 0) {
+                overlay.innerHTML += `<div class="text-[9px] font-normal text-amber-300 mt-1">Unlock: ${formatCurrency(crop.unlockCost)}</div>`;
+              }
+            }
+            card.appendChild(overlay);
+
+            card.addEventListener("click", () => {
+              if (!crop.unlocked) {
+                if (crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost) {
+                  openConfirmModal(
+                    `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
+                    () => {
+                      state.totalMoney -= crop.unlockCost;
+                      crop.unlocked = true;
+                      state.selectedCropKey = crop.id;
+                      state.previousCropKey = crop.id;
+                      onMoneyChanged();
+                      updateCropStockButtonUI();
+                      saveState();
+                    },
+                    "Confirm Unlock"
+                  );
+                }
+                return;
+              }
+              state.selectedCropKey = crop.id;
+              state.previousCropKey = crop.id;
+              renderCropOptions();
+              updateCropStockButtonUI();
+              saveState();
+            });
+
+            dom.cropGrid.appendChild(card);
           });
         }
 
-        if (toggleStatsBtn) {
-          toggleStatsBtn.addEventListener("click", () => {
-            showStats = !showStats;
-            updateStatsToggleUI();
-            needsRender = true;
-            saveState();
+        function renderStockOptions() {
+          if (!dom.stockGrid) return;
+          dom.stockGrid.innerHTML = "";
+          Object.values(stocks).forEach((stock) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            let cls = "w-full aspect-square rounded-md border flex items-center justify-center text-[11px] font-semibold tracking-wide";
+            if (stock.symbol === state.selectedStockKey) cls += " border-emerald-500 bg-emerald-500/10";
+            else cls += " border-neutral-700 bg-neutral-900 hover:bg-neutral-800";
+            btn.className = cls;
+            btn.textContent = stock.symbol;
+            btn.addEventListener("click", () => {
+              state.selectedStockKey = stock.symbol;
+              renderStockOptions();
+              updateCropStockButtonUI();
+              saveState();
+            });
+            dom.stockGrid.appendChild(btn);
           });
+        }
+
+        function updateStockPrices() {
+          Object.values(stocks).forEach((s) => {
+            const factor = 1 + (Math.random() - 0.5) * 0.01;
+            s.price = Math.max(1, s.price * factor);
+          });
+          state.needsRender = true;
         }
 
         function resetFarm() {
@@ -1732,223 +1614,8 @@
           }
           window.location.reload();
         }
-
-        if (resetFarmBtn) {
-          resetFarmBtn.addEventListener("click", () => {
-            openConfirmModal("Reset your farm and start fresh? This clears all progress.", resetFarm, "Reset Farm");
-          });
-        }
-
-        if (hoeButton) {
-          hoeButton.addEventListener("click", () => {
-            hoeSelected = !hoeSelected;
-            lastHoeDestroyAttempt = { key: null, time: 0 };
-            updateModeButtonsUI();
-            needsRender = true;
-            saveState();
-          });
-        }
-
-        if (cropStockButton) {
-          cropStockButton.addEventListener("click", () => {
-            hoeSelected = false;
-            lastHoeDestroyAttempt = { key: null, time: 0 };
-            if (!selectedCropKey) {
-              const firstUnlocked = Object.values(crops).find((c) => c && c.unlocked);
-              if (firstUnlocked) {
-                selectedCropKey = firstUnlocked.id;
-                previousCropKey = firstUnlocked.id;
-              }
-            }
-            updateModeButtonsUI();
-            needsRender = true;
-            saveState();
-          });
-        }
-
-        let sizeMenuVisible = false;
-
-        function closeSizeMenu() {
-          if (!sizeMenu) return;
-          sizeMenu.classList.add("hidden");
-          sizeMenuVisible = false;
-        }
-
-        if (sizeButton) {
-          sizeButton.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (!sizeMenu) return;
-            if (sizeMenuVisible) {
-              closeSizeMenu();
-            } else {
-              renderSizeMenu();
-              sizeMenu.classList.remove("hidden");
-              sizeMenuVisible = true;
-            }
-          });
-        }
-
-        document.addEventListener("click", (e) => {
-          if (!sizeMenuVisible) return;
-          if (sizeMenu && (sizeMenu.contains(e.target) || (sizeButton && sizeButton.contains(e.target)))) {
-            return;
-          }
-          closeSizeMenu();
-        });
-        document.addEventListener("pointerleave", () => {
-          if (hoeHoldTimeoutId) {
-            clearTimeout(hoeHoldTimeoutId);
-            hoeHoldTimeoutId = null;
-            pendingHoeDestroyKeys = [];
-          }
-        });
-
-        function renderCropOptions() {
-          if (!cropGrid) return;
-          cropGrid.innerHTML = "";
-
-          Object.values(crops).forEach((crop) => {
-            const card = document.createElement("button");
-            card.type = "button";
-
-            const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && totalMoney >= crop.unlockCost;
-
-            let baseClass = "relative w-full aspect-square rounded-md overflow-hidden border text-left bg-neutral-900";
-            if (crop.id === selectedCropKey) {
-              baseClass += " border-emerald-500 ring-1 ring-emerald-500";
-            } else if (!crop.unlocked && canAffordUnlock) {
-              baseClass += " border-amber-400/60 hover:border-amber-300";
-            } else {
-              baseClass += " border-neutral-700 hover:border-neutral-500";
-            }
-            if (!crop.unlocked) {
-              baseClass += " cursor-pointer";
-              if (!canAffordUnlock) {
-                baseClass += " opacity-40";
-              }
-            } else {
-              baseClass += " cursor-pointer";
-            }
-            card.className = baseClass;
-
-            const img = document.createElement("img");
-            if (crop.id === "grass") {
-              img.src = "images/grass.jpg";
-            } else if (crop.id === "farmland") {
-              img.src = "images/farmland.jpg";
-            } else {
-              img.src = `images/${crop.id}/${crop.id}-phase-4.png`;
-            }
-            img.alt = crop.name;
-            img.className = "absolute inset-0 w-full h-full object-cover";
-            if (!crop.unlocked && !canAffordUnlock) {
-              img.className += " grayscale";
-            }
-            card.appendChild(img);
-
-            const overlay = document.createElement("div");
-            overlay.className = "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
-
-            if (crop.id === "grass") {
-              overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div>` + `<div class="text-neutral-200">Cost: Free</div>`;
-            } else if (crop.id === "farmland") {
-              const nextCost = crop.placed < 4 ? 0 : 25;
-              const costText = nextCost === 0 ? "Cost: Free" : `Cost: ${formatCurrency(nextCost)}`;
-
-              overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div>` + `<div class="text-neutral-200">${costText}</div>`;
-            } else {
-              const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
-              const costText = plantCost > 0 ? formatCurrency(plantCost) : "Free";
-              const sellText = formatCurrency(crop.baseValue);
-
-              overlay.innerHTML =
-                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
-                `<div class="text-neutral-200">Cost: ${costText}</div>` +
-                `<div class="text-neutral-200">Sell: ${sellText}</div>` +
-                `<div class="text-neutral-300">Time: ${crop.growMinutes} min</div>`;
-
-              if (!crop.unlocked && crop.unlockCost > 0) {
-                overlay.innerHTML += `<div class="text-[9px] font-normal text-amber-300 mt-1">Unlock: ${formatCurrency(crop.unlockCost)}</div>`;
-              }
-            }
-
-            card.appendChild(overlay);
-
-            card.addEventListener("click", () => {
-              if (!crop.unlocked) {
-                if (crop.unlockCost > 0 && totalMoney >= crop.unlockCost) {
-                  openConfirmModal(
-                    `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
-                    () => {
-                      totalMoney -= crop.unlockCost;
-                      crop.unlocked = true;
-                      selectedCropKey = crop.id;
-                      previousCropKey = crop.id;
-                      onMoneyChanged();
-                      updateCropStockButtonUI();
-                      saveState();
-                    },
-                    "Confirm Unlock"
-                  );
-                }
-                return;
-              }
-
-              selectedCropKey = crop.id;
-              previousCropKey = crop.id;
-              renderCropOptions();
-              updateCropStockButtonUI();
-              saveState();
-            });
-
-            cropGrid.appendChild(card);
-          });
-        }
-
-        function renderStockOptions() {
-          if (!stockGrid) return;
-          stockGrid.innerHTML = "";
-          Object.values(stocks).forEach((stock) => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            let cls = "w-full aspect-square rounded-md border flex items-center justify-center text-[11px] font-semibold tracking-wide";
-            if (stock.symbol === selectedStockKey) {
-              cls += " border-emerald-500 bg-emerald-500/10";
-            } else {
-              cls += " border-neutral-700 bg-neutral-900 hover:bg-neutral-800";
-            }
-            btn.className = cls;
-            btn.textContent = stock.symbol;
-            btn.addEventListener("click", () => {
-              selectedStockKey = stock.symbol;
-              renderStockOptions();
-              updateCropStockButtonUI();
-              saveState();
-            });
-            stockGrid.appendChild(btn);
-          });
-        }
-
-        function renderSizeOptions() {}
-
-        setInterval(() => {
-          Object.values(stocks).forEach((s) => {
-            const factor = 1 + (Math.random() - 0.5) * 0.01;
-            s.price = Math.max(1, s.price * factor);
-          });
-          needsRender = true;
-        }, 1000);
-
-        onMoneyChanged();
-        renderStockOptions();
-        updateCropStockButtonUI();
-        updateSizeButtonUI();
-        renderSizeMenu();
-        updateModeButtonsUI();
-        resizeCanvas();
-        updateStatsToggleUI();
-        loop();
       })();
     </script>
+
   </body>
 </html>
