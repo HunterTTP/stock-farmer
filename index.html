@@ -1003,8 +1003,63 @@
           setHoverTile(tile ? { row: tile.row, col: tile.col } : null);
         }
 
+        function determineActionForTile(row, col, nowMs = Date.now()) {
+          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) {
+            return { type: "none" };
+          }
+
+          const key = row + "," + col;
+          const existingPlot = plots.get(key);
+          if (existingPlot) {
+            const crop = crops[existingPlot.cropKey];
+            if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) {
+              return { type: "harvest" };
+            }
+            return { type: "none" };
+          }
+
+          if (selectedCropKey === "grass") {
+            return { type: "removeFarmland" };
+          }
+
+          if (selectedCropKey === "farmland") {
+            const farmlandCrop = crops.farmland;
+            if (!farmlandCrop) return { type: "none" };
+            if (plots.has(key) || filled.has(key)) return { type: "none" };
+            const cost = farmlandCrop.placed < 4 ? 0 : 25;
+            if (cost > 0 && totalMoney < cost) return { type: "none" };
+            return { type: "placeFarmland" };
+          }
+
+          const crop = crops[selectedCropKey];
+          const stock = stocks[selectedStockKey];
+          if (!crop || !stock || !crop.unlocked) return { type: "none" };
+          if (!filled.has(key)) return { type: "none" };
+          if (
+            typeof crop.limit === "number" &&
+            crop.limit >= 0 &&
+            crop.placed >= crop.limit
+          ) {
+            return { type: "none" };
+          }
+
+          const plantCost =
+            typeof crop.placeCost === "number" ? crop.placeCost : 0;
+          if (plantCost > 0 && totalMoney < plantCost) {
+            return { type: "none" };
+          }
+
+          return {
+            type: "plantCrop",
+            cropKey: selectedCropKey,
+            stockKey: selectedStockKey,
+          };
+        }
+
         function computeHoverPreview(baseRow, baseCol, size, nowMs) {
           const results = [];
+
+          const action = determineActionForTile(baseRow, baseCol, nowMs);
 
           const placed = {};
           Object.values(crops).forEach((c) => {
@@ -1031,13 +1086,6 @@
             return plots.get(key) || null;
           };
 
-          const selectedCrop = crops[selectedCropKey];
-          const selectedStock = stocks[selectedStockKey];
-          const plantCost =
-            selectedCrop && typeof selectedCrop.placeCost === "number"
-              ? selectedCrop.placeCost
-              : 0;
-
           for (let dr = 0; dr < size; dr++) {
             for (let dc = 0; dc < size; dc++) {
               const row = baseRow + dr;
@@ -1050,106 +1098,117 @@
                 continue;
               }
 
-              const existingPlot = getPlot(key);
-              if (existingPlot) {
-                const plotCrop = crops[existingPlot.cropKey];
-                const plotStock = stocks[existingPlot.stockKey];
-                if (plotCrop && plotStock) {
-                  const elapsed = nowMs - existingPlot.plantedAt;
-                  const ready = elapsed >= plotCrop.growTimeMs;
-                  if (ready) {
-                    const effectivePrice =
-                      existingPlot.lockedStockPrice != null
-                        ? existingPlot.lockedStockPrice
-                        : plotStock.price;
-                    const pctChange =
-                      (effectivePrice - existingPlot.stockPriceAtPlant) /
-                      existingPlot.stockPriceAtPlant;
-                    const value = Math.max(
-                      0,
-                      plotCrop.baseValue * (1 + pctChange)
-                    );
-                    state.money += value;
-                    if (
-                      typeof state.placed[plotCrop.id] === "number" &&
-                      state.placed[plotCrop.id] > 0
-                    ) {
-                      state.placed[plotCrop.id] -= 1;
-                    }
-                    state.plotsRemoved.add(key);
-                    allowed = true;
-                  }
-                }
-                results.push({ row, col, allowed });
-                continue;
-              }
+              allowed = simulateTileActionForPreview(
+                action,
+                key,
+                state,
+                nowMs,
+                getFilled,
+                getPlot
+              );
 
-              if (selectedCropKey === "grass") {
-                if (getFilled(key)) {
-                  allowed = true;
-                  state.filledRemovals.add(key);
-                  if (
-                    typeof state.placed.farmland === "number" &&
-                    state.placed.farmland > 0
-                  ) {
-                    state.placed.farmland -= 1;
-                  }
-                }
-                results.push({ row, col, allowed });
-                continue;
-              }
-
-              if (selectedCropKey === "farmland") {
-                if (!getFilled(key) && !plots.has(key)) {
-                  const farmlandPlaced =
-                    typeof state.placed.farmland === "number"
-                      ? state.placed.farmland
-                      : 0;
-                  const farmlandCost = farmlandPlaced < 4 ? 0 : 25;
-                  if (state.money >= farmlandCost) {
-                    allowed = true;
-                    state.money -= farmlandCost;
-                    state.filledAdds.add(key);
-                    state.placed.farmland = farmlandPlaced + 1;
-                  }
-                }
-                results.push({ row, col, allowed });
-                continue;
-              }
-
-              const hasFarmland = getFilled(key);
-              if (
-                !hasFarmland ||
-                !selectedCrop ||
-                !selectedCrop.unlocked ||
-                !selectedStock
-              ) {
-                results.push({ row, col, allowed });
-                continue;
-              }
-
-              if (
-                typeof selectedCrop.limit === "number" &&
-                selectedCrop.limit >= 0 &&
-                state.placed[selectedCrop.id] >= selectedCrop.limit
-              ) {
-                results.push({ row, col, allowed });
-                continue;
-              }
-
-              if (state.money < plantCost) {
-                results.push({ row, col, allowed });
-                continue;
-              }
-
-              allowed = true;
-              state.money -= plantCost;
-              state.placed[selectedCrop.id] += 1;
               results.push({ row, col, allowed });
             }
           }
 
           return results;
+        }
+
+        function simulateTileActionForPreview(
+          action,
+          key,
+          state,
+          nowMs,
+          getFilled,
+          getPlot
+        ) {
+          if (!action || action.type === "none") return false;
+
+          switch (action.type) {
+            case "harvest": {
+              const existingPlot = getPlot(key);
+              const plotCrop = existingPlot
+                ? crops[existingPlot.cropKey]
+                : null;
+              const plotStock = existingPlot
+                ? stocks[existingPlot.stockKey]
+                : null;
+              if (!existingPlot || !plotCrop || !plotStock) return false;
+              const ready =
+                nowMs - existingPlot.plantedAt >= plotCrop.growTimeMs;
+              if (!ready) return false;
+
+              const effectivePrice =
+                existingPlot.lockedStockPrice != null
+                  ? existingPlot.lockedStockPrice
+                  : plotStock.price;
+              const pctChange =
+                (effectivePrice - existingPlot.stockPriceAtPlant) /
+                existingPlot.stockPriceAtPlant;
+              const value = Math.max(0, plotCrop.baseValue * (1 + pctChange));
+
+              state.money += value;
+              if (
+                typeof state.placed[plotCrop.id] === "number" &&
+                state.placed[plotCrop.id] > 0
+              ) {
+                state.placed[plotCrop.id] -= 1;
+              }
+              state.plotsRemoved.add(key);
+              return true;
+            }
+            case "removeFarmland": {
+              if (getFilled(key)) {
+                state.filledRemovals.add(key);
+                if (
+                  typeof state.placed.farmland === "number" &&
+                  state.placed.farmland > 0
+                ) {
+                  state.placed.farmland -= 1;
+                }
+                return true;
+              }
+              return false;
+            }
+            case "placeFarmland": {
+              if (getFilled(key) || getPlot(key)) return false;
+              const farmlandPlaced =
+                typeof state.placed.farmland === "number"
+                  ? state.placed.farmland
+                  : 0;
+              const farmlandCost = farmlandPlaced < 4 ? 0 : 25;
+              if (state.money < farmlandCost) return false;
+              state.money -= farmlandCost;
+              state.filledAdds.add(key);
+              state.placed.farmland = farmlandPlaced + 1;
+              return true;
+            }
+            case "plantCrop": {
+              const crop = crops[action.cropKey];
+              const stock = stocks[action.stockKey];
+              if (!crop || !stock || !crop.unlocked) return false;
+              if (getPlot(key)) return false;
+              if (!getFilled(key)) return false;
+
+              if (
+                typeof crop.limit === "number" &&
+                crop.limit >= 0 &&
+                state.placed[crop.id] >= crop.limit
+              ) {
+                return false;
+              }
+
+              const plantCost =
+                typeof crop.placeCost === "number" ? crop.placeCost : 0;
+              if (state.money < plantCost) return false;
+
+              state.money -= plantCost;
+              state.placed[crop.id] += 1;
+              return true;
+            }
+            default:
+              return false;
+          }
         }
 
         function harvestPlot(key) {
@@ -1182,108 +1241,123 @@
           saveState();
         }
 
-        function handleTileAction(row, col) {
+        function handleTileAction(row, col, action) {
           if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS)
             return;
           const key = row + "," + col;
-          const existingPlot = plots.get(key);
-          if (existingPlot) {
-            const crop = crops[existingPlot.cropKey];
-            if (!crop) return;
-            const elapsed = Date.now() - existingPlot.plantedAt;
-            if (elapsed >= crop.growTimeMs) {
-              harvestPlot(key);
-            }
-            return;
-          }
+          const resolvedAction = action || determineActionForTile(row, col);
+          if (!resolvedAction || resolvedAction.type === "none") return;
 
-          if (selectedCropKey === "grass") {
-            const hadFarmland = filled.delete(key);
-            if (hadFarmland && crops.farmland) {
-              const f = crops.farmland;
-              if (typeof f.placed === "number" && f.placed > 0) {
-                f.placed -= 1;
+          switch (resolvedAction.type) {
+            case "harvest": {
+              const existingPlot = plots.get(key);
+              if (!existingPlot) return;
+              const crop = crops[existingPlot.cropKey];
+              if (!crop) return;
+              const elapsed = Date.now() - existingPlot.plantedAt;
+              if (elapsed >= crop.growTimeMs) {
+                harvestPlot(key);
               }
+              return;
             }
-            needsRender = true;
-            renderCropOptions();
-            saveState();
-            return;
-          }
+            case "removeFarmland": {
+              const hadFarmland = filled.delete(key);
+              if (hadFarmland && crops.farmland) {
+                const f = crops.farmland;
+                if (typeof f.placed === "number" && f.placed > 0) {
+                  f.placed -= 1;
+                }
+              }
+              needsRender = true;
+              renderCropOptions();
+              saveState();
+              return;
+            }
+            case "placeFarmland": {
+              const farmlandCrop = crops.farmland;
+              if (!farmlandCrop) return;
+              if (plots.has(key)) return;
+              if (filled.has(key)) return;
 
-          if (selectedCropKey === "farmland") {
-            const farmlandCrop = crops.farmland;
-            if (!farmlandCrop) return;
-            if (plots.has(key)) return;
-            if (filled.has(key)) return;
+              const cost = farmlandCrop.placed < 4 ? 0 : 25;
+              if (cost > 0) {
+                if (totalMoney < cost) return;
+                totalMoney -= cost;
+                updateTotalDisplay();
+                costAnimations.push({
+                  key,
+                  value: -cost,
+                  start: performance.now(),
+                });
+              }
 
-            const cost = farmlandCrop.placed < 4 ? 0 : 25;
-            if (cost > 0) {
-              if (totalMoney < cost) return;
-              totalMoney -= cost;
-              updateTotalDisplay();
-              costAnimations.push({
-                key,
-                value: -cost,
-                start: performance.now(),
+              filled.add(key);
+              farmlandCrop.placed += 1;
+              needsRender = true;
+              renderCropOptions();
+              saveState();
+              return;
+            }
+            case "plantCrop": {
+              const cropKey =
+                resolvedAction && resolvedAction.cropKey
+                  ? resolvedAction.cropKey
+                  : selectedCropKey;
+              const stockKey =
+                resolvedAction && resolvedAction.stockKey
+                  ? resolvedAction.stockKey
+                  : selectedStockKey;
+              const crop = crops[cropKey];
+              const stock = stocks[stockKey];
+              if (!crop || !stock || !crop.unlocked) return;
+
+              if (plots.has(key)) return;
+              if (!filled.has(key)) {
+                return;
+              }
+
+              if (
+                typeof crop.limit === "number" &&
+                crop.limit >= 0 &&
+                crop.placed >= crop.limit
+              ) {
+                return;
+              }
+
+              const plantCost =
+                typeof crop.placeCost === "number" ? crop.placeCost : 0;
+
+              if (plantCost > 0) {
+                if (totalMoney < plantCost) return;
+
+                totalMoney -= plantCost;
+                updateTotalDisplay();
+
+                costAnimations.push({
+                  key,
+                  value: -plantCost,
+                  start: performance.now(),
+                });
+              }
+
+              plots.set(key, {
+                cropKey,
+                stockKey,
+                plantedAt: Date.now(),
+                stockPriceAtPlant: stock.price,
+                lockedStockPrice: null,
+                stageBreakpoints: createRandomStageBreakpoints(),
               });
+
+              crop.placed += 1;
+
+              needsRender = true;
+              saveState();
+              return;
             }
-
-            filled.add(key);
-            farmlandCrop.placed += 1;
-            needsRender = true;
-            renderCropOptions();
-            saveState();
-            return;
+            default:
+              return;
           }
-
-          if (!filled.has(key)) {
-            return;
-          }
-
-          const cropKey = selectedCropKey;
-          const stockKey = selectedStockKey;
-          const crop = crops[cropKey];
-          const stock = stocks[stockKey];
-          if (!crop || !stock || !crop.unlocked) return;
-
-          if (
-            typeof crop.limit === "number" &&
-            crop.limit >= 0 &&
-            crop.placed >= crop.limit
-          ) {
-            return;
-          }
-
-          const plantCost =
-            typeof crop.placeCost === "number" ? crop.placeCost : 0;
-
-          if (plantCost > 0) {
-            if (totalMoney < plantCost) return;
-
-            totalMoney -= plantCost;
-            updateTotalDisplay();
-
-            costAnimations.push({
-              key,
-              value: -plantCost,
-              start: performance.now(),
-            });
-          }
-
-          plots.set(key, {
-            cropKey,
-            stockKey,
-            plantedAt: Date.now(),
-            stockPriceAtPlant: stock.price,
-            lockedStockPrice: null,
-            stageBreakpoints: createRandomStageBreakpoints(),
-          });
-
-          crop.placed += 1;
-
-          needsRender = true;
-          saveState();
         }
 
         function handleTap(clientX, clientY) {
@@ -1293,12 +1367,13 @@
           const size = tool.size || 1;
           const baseRow = tile.row;
           const baseCol = tile.col;
+          const action = determineActionForTile(baseRow, baseCol);
 
           for (let dr = 0; dr < size; dr++) {
             for (let dc = 0; dc < size; dc++) {
               const row = baseRow + dr;
               const col = baseCol + dc;
-              handleTileAction(row, col);
+              handleTileAction(row, col, action);
             }
           }
         }
