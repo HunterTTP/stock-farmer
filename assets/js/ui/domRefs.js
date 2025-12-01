@@ -1,0 +1,28 @@
+export function getDomRefs() {
+  return {
+    totalDisplay: document.getElementById("totalDisplay"),
+    navToggle: document.getElementById("navToggle"),
+    navOffcanvas: document.getElementById("navOffcanvas"),
+    navOverlay: document.getElementById("navOverlay"),
+    navClose: document.getElementById("navClose"),
+    recenterBtn: document.getElementById("recenterBtn"),
+    cropGrid: document.getElementById("cropGrid"),
+    stockGrid: document.getElementById("stockGrid"),
+    hoeButton: document.getElementById("hoeButton"),
+    cropStockButton: document.getElementById("cropStockButton"),
+    cropStockImage: document.getElementById("cropStockImage"),
+    cropStockStockLabel: document.getElementById("cropStockStockLabel"),
+    cropStockStockWrapper: document.getElementById("cropStockStockWrapper"),
+    sizeButton: document.getElementById("sizeButton"),
+    sizeButtonLabel: document.getElementById("sizeButtonLabel"),
+    sizeMenu: document.getElementById("sizeMenu"),
+    resetFarmBtn: document.getElementById("resetFarmBtn"),
+    toggleStatsBtn: document.getElementById("toggleStatsBtn"),
+    confirmModal: document.getElementById("confirmModal"),
+    confirmMessage: document.getElementById("confirmMessage"),
+    confirmCancel: document.getElementById("confirmCancel"),
+    confirmConfirm: document.getElementById("confirmConfirm"),
+    confirmClose: document.getElementById("confirmClose"),
+    confirmTitle: document.getElementById("confirmTitle"),
+  };
+}
