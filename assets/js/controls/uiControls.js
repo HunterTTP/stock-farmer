@@ -274,6 +274,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   function refreshAllUI() {
     updateTotalDisplay();
     renderStockOptions();
+    renderCropOptions();
     updateCropStockButtonUI();
     updateSizeButtonUI();
     renderSizeMenu();

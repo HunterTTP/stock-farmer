@@ -1,7 +1,8 @@
 export function formatCurrency(amount, allowCents = true) {
   const rounded = Math.round(amount * 100) / 100;
-  const hasCents = allowCents && Math.abs(rounded - Math.round(rounded)) > 0.0001;
-  if (hasCents) return "$" + rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (allowCents) {
+    return "$" + rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
   return "$" + Math.round(rounded).toLocaleString();
 }
 
