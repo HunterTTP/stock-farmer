@@ -126,8 +126,8 @@
         </div>
         <div id="confirmMessage" class="px-4 py-4 text-sm text-neutral-100 leading-relaxed"></div>
         <div class="px-4 pb-4 flex gap-2">
-          <button id="confirmConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Confirm</button>
-          <button id="confirmCancel" class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">Cancel</button>
+          <button id="confirmConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Yes</button>
+          <button id="confirmCancel" class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">No</button>
         </div>
       </div>
     </div>
@@ -170,7 +170,7 @@
       </div>
     </div>
 
-        <script>
+    <script>
       (() => {
         "use strict";
 
@@ -240,7 +240,6 @@
           hoeSelected: false,
           hoeHoldTimeoutId: null,
           hoeHoldTriggered: false,
-          pendingHoeDestroyKeys: [],
         };
 
         const world = {
@@ -367,11 +366,6 @@
               closeConfirmModal();
             });
           }
-          if (dom.confirmModal) {
-            dom.confirmModal.addEventListener("click", (e) => {
-              if (e.target === dom.confirmModal) closeConfirmModal();
-            });
-          }
 
           if (dom.toggleStatsBtn) {
             dom.toggleStatsBtn.addEventListener("click", () => {
@@ -436,7 +430,6 @@
             if (state.hoeHoldTimeoutId) {
               clearTimeout(state.hoeHoldTimeoutId);
               state.hoeHoldTimeoutId = null;
-              state.pendingHoeDestroyKeys = [];
             }
           });
         }
@@ -1096,11 +1089,7 @@
             case "confirmDestroy": {
               const existingPlot = world.plots.get(key);
               if (!existingPlot) return { success: false, reason: "Nothing to remove" };
-              openConfirmModal(
-                "Are you sure you want to destroy this crop? No money will be earned.",
-                () => destroyPlot(key),
-                "Destroy Crop"
-              );
+              openConfirmModal("Are you sure you want to destroy this crop? No money will be earned.", () => destroyPlot(key), "Destroy Crop");
               return { success: true };
             }
             case "removeFarmland": {
@@ -1222,19 +1211,13 @@
               if (tile) {
                 const targets = collectHoeDestroyTargets(tile.row, tile.col);
                 if (targets.length > 0) {
+                  const destroyTargets = targets.slice();
                   state.hoeHoldTimeoutId = setTimeout(() => {
+                    state.hoeHoldTimeoutId = null;
                     state.hoeHoldTriggered = true;
-                    state.pendingHoeDestroyKeys = targets.slice();
-                    const count = state.pendingHoeDestroyKeys.length;
+                    const count = destroyTargets.length;
                     const label = count === 1 ? "crop" : "crops";
-                    openConfirmModal(
-                      `Destroy ${count} ${label}? No money will be earned.`,
-                      () => {
-                        state.pendingHoeDestroyKeys.forEach((k) => destroyPlot(k));
-                        state.pendingHoeDestroyKeys = [];
-                      },
-                      count === 1 ? "Destroy Crop" : "Destroy Crops"
-                    );
+                    openConfirmModal(`Destroy ${count} ${label}? No money will be earned.`, () => destroyTargets.forEach((k) => destroyPlot(k)), count === 1 ? "Destroy Crop" : "Destroy Crops");
                   }, config.hoeDestroyWindowMs);
                 }
               }
@@ -1270,7 +1253,6 @@
                 if (state.hoeHoldTimeoutId) {
                   clearTimeout(state.hoeHoldTimeoutId);
                   state.hoeHoldTimeoutId = null;
-                  state.pendingHoeDestroyKeys = [];
                 }
               }
             }
@@ -1282,7 +1264,6 @@
           if (state.hoeHoldTimeoutId) {
             clearTimeout(state.hoeHoldTimeoutId);
             state.hoeHoldTimeoutId = null;
-            state.pendingHoeDestroyKeys = [];
           }
           state.activePointers.delete(e.pointerId);
           canvas.releasePointerCapture(e.pointerId);
@@ -1292,7 +1273,6 @@
           if (state.hoeHoldTriggered) {
             state.hoeHoldTriggered = false;
             state.tapStart = null;
-            state.pendingHoeDestroyKeys = [];
           } else if (state.tapStart && state.tapStart.id === e.pointerId) {
             const dt = performance.now() - state.tapStart.time;
             const dx = e.clientX - state.tapStart.x;
@@ -1616,6 +1596,5 @@
         }
       })();
     </script>
-
   </body>
 </html>

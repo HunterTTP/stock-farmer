@@ -1,0 +1,8 @@
+        function closeConfirmModal() {
+          if (!dom.confirmModal) return;
+          dom.confirmModal.classList.add("hidden");
+          document.body.classList.remove("overflow-hidden");
+          pendingConfirmAction = null;
+          state.hoeHoldTriggered = false;
+          state.pendingHoeDestroyKeys = [];
+        }
