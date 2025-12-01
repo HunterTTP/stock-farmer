@@ -16,6 +16,21 @@
         flex-direction: column;
         background-color: #000;
       }
+      .action-error {
+        position: fixed;
+        z-index: 50;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #fefefe;
+        background: rgba(239, 68, 68, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+        transform: translate(-50%, -100%);
+        max-width: 240px;
+        text-align: center;
+      }
       .canvas-wrapper {
         flex: 1 1 auto;
         position: relative;
@@ -34,8 +49,6 @@
     <nav class="bg-neutral-900 text-white">
       <div class="flex items-center px-4 py-2 relative">
         <a class="text-sm font-semibold whitespace-nowrap" href="#">Stock Farmer</a>
-
-        <div id="currentSelection" class="absolute left-1/2 -translate-x-1/2 text-[11px] font-mono text-neutral-300 whitespace-nowrap overflow-hidden text-ellipsis opacity-0 transition-opacity"></div>
 
         <div class="ml-auto flex items-center gap-2">
           <div id="totalDisplay" class="text-xs font-mono px-2 py-1 rounded bg-neutral-800">$0.00</div>
@@ -77,24 +90,22 @@
           <div id="stockGrid" class="grid grid-cols-3 gap-2"></div>
         </div>
 
-        <div>
-          <p class="mb-2 font-medium text-neutral-200">Tool</p>
-          <div id="toolGrid" class="grid grid-cols-4 gap-2"></div>
-        </div>
-
         <div class="flex items-center justify-between text-[11px]">
-          <span class="text-neutral-200">Show stock stats</span>
-          <button id="toggleStatsBtn" class="px-2 py-1 rounded border border-neutral-600 text-[11px] bg-neutral-800" type="button">On</button>
+          <span class="text-neutral-200"></span>
+          <button id="toggleStatsBtn" class="w-full border border-neutral-600 text-[11px] bg-neutral-800 px-2 py-2 rounded-md">Show Stats</button>
         </div>
 
         <button class="w-full border border-gray-500 text-xs px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="recenterBtn">Recenter view</button>
+        <button class="w-full border border-red-700 text-xs px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center mt-2" id="resetFarmBtn">
+          Reset farm
+        </button>
       </div>
     </div>
 
     <div id="confirmModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
       <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl overflow-hidden">
         <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-          <h3 class="text-sm font-semibold text-white">Confirm unlock</h3>
+          <h3 id="confirmTitle" class="text-sm font-semibold text-white">Confirm</h3>
           <button id="confirmClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
             <span class="sr-only">Close</span>
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -112,6 +123,40 @@
 
     <div class="canvas-wrapper">
       <canvas id="gridCanvas"></canvas>
+      <div class="pointer-events-none absolute inset-x-0 bottom-2 px-3 flex justify-center z-20">
+        <div class="pointer-events-auto w-full max-w-xl">
+          <div class="flex items-stretch justify-center gap-2 flex-wrap">
+            <button
+              id="cropStockButton"
+              class="flex-shrink-0 border border-neutral-700 rounded-md bg-neutral-900 hover:bg-neutral-800 flex items-center gap-2 px-3 py-2 text-[11px] font-semibold tracking-wide shadow-lg">
+              <div class="w-10 h-10 rounded border border-neutral-700 overflow-hidden bg-neutral-800 flex-shrink-0">
+                <img id="cropStockImage" class="w-full h-full object-cover" alt="Crop" />
+              </div>
+              <div id="cropStockStockWrapper" class="w-10 h-10 rounded border border-neutral-700 bg-neutral-800 flex items-center justify-center text-[11px] font-semibold text-white">
+                <span id="cropStockStockLabel" class="truncate"></span>
+              </div>
+            </button>
+            <button
+              id="hoeButton"
+              class="w-12 border border-neutral-700 rounded-md bg-neutral-900 hover:bg-neutral-800 flex items-center justify-center shadow-lg"
+              aria-label="Toggle hoe"
+              aria-pressed="false">
+              <img src="images/hoe/hoe-phase-1.png" alt="Hoe" class="w-7 h-7 object-contain pointer-events-none" />
+            </button>
+            <div class="relative">
+              <button
+                id="sizeButton"
+                class="h-full border border-neutral-700 rounded-md bg-neutral-900 hover:bg-neutral-800 px-3 py-2 text-[11px] font-semibold tracking-wide flex items-center gap-2 shadow-lg">
+                <span id="sizeButtonLabel" class="text-white"></span>
+                <svg class="w-3 h-3 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div id="sizeMenu" class="hidden absolute bottom-full mb-2 right-0 min-w-[140px] bg-neutral-900 border border-neutral-700 rounded-md shadow-2xl overflow-hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -157,7 +202,6 @@
         let showStats = true;
 
         const totalDisplay = document.getElementById("totalDisplay");
-        const currentSelectionEl = document.getElementById("currentSelection");
 
         const crops = {
           grass: {
@@ -239,7 +283,7 @@
           TSLA: { symbol: "TSLA", name: "TSLA", price: 100 },
         };
 
-        const tools = {
+        const sizes = {
           single: {
             id: "single",
             name: "1x1",
@@ -273,7 +317,12 @@
         let selectedCropKey = "wheat";
         let previousCropKey = "wheat";
         let selectedStockKey = "SP500";
-        let selectedToolKey = "single";
+        let selectedSizeKey = "single";
+        let hoeSelected = false;
+        let hoeHoldTimeoutId = null;
+        let hoeHoldTriggered = false;
+        let pendingHoeDestroyKeys = [];
+        const HOE_DESTROY_WINDOW_MS = 350;
 
         const plots = new Map();
         const harvestAnimations = [];
@@ -283,6 +332,17 @@
         const filled = new Set(defaultFilled);
 
         const SAVE_KEY = "stockFarmerState";
+
+        function currentSizeOption() {
+          return sizes[selectedSizeKey] || sizes.single;
+        }
+
+        function cropImageSrc(cropId) {
+          if (cropId === "grass") return "images/grass.jpg";
+          if (cropId === "farmland") return "images/farmland.jpg";
+          if (cropId) return `images/${cropId}/${cropId}-phase-4.png`;
+          return "images/grass.jpg";
+        }
 
         function createRandomStageBreakpoints() {
           const a = Math.random() * 0.6 + 0.1;
@@ -298,11 +358,12 @@
             selectedCropKey,
             previousCropKey,
             selectedStockKey,
-            selectedToolKey,
+            selectedSizeKey,
+            hoeSelected,
             showStats,
             scale,
             cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
-            toolsUnlocked: Object.fromEntries(Object.entries(tools).map(([id, t]) => [id, t.unlocked])),
+            sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
             cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
           };
           try {
@@ -347,9 +408,10 @@
               });
             }
 
-            if (data.toolsUnlocked) {
-              Object.entries(data.toolsUnlocked).forEach(([id, unlocked]) => {
-                if (tools[id]) tools[id].unlocked = !!unlocked;
+            const sizeUnlockData = data.sizesUnlocked || data.toolsUnlocked;
+            if (sizeUnlockData) {
+              Object.entries(sizeUnlockData).forEach(([id, unlocked]) => {
+                if (sizes[id]) sizes[id].unlocked = !!unlocked;
               });
             }
 
@@ -361,25 +423,42 @@
               });
             }
 
-            if (data.selectedCropKey && crops[data.selectedCropKey]) {
-              selectedCropKey = data.selectedCropKey;
-              previousCropKey = data.previousCropKey || selectedCropKey;
+            if (Object.prototype.hasOwnProperty.call(data, "selectedCropKey")) {
+              if (data.selectedCropKey && crops[data.selectedCropKey]) {
+                selectedCropKey = data.selectedCropKey;
+              } else if (data.selectedCropKey === null) {
+                selectedCropKey = null;
+              }
+            }
+
+            if (data.previousCropKey && crops[data.previousCropKey]) {
+              previousCropKey = data.previousCropKey;
             }
 
             if (data.selectedStockKey && stocks[data.selectedStockKey]) {
               selectedStockKey = data.selectedStockKey;
             }
 
-            if (data.selectedToolKey && tools[data.selectedToolKey]) {
-              selectedToolKey = data.selectedToolKey;
+            if (data.selectedSizeKey && sizes[data.selectedSizeKey]) {
+              selectedSizeKey = data.selectedSizeKey;
+            } else if (data.selectedToolKey && sizes[data.selectedToolKey]) {
+              selectedSizeKey = data.selectedToolKey;
             }
 
             if (typeof data.showStats === "boolean") {
               showStats = data.showStats;
             }
 
+            if (typeof data.hoeSelected === "boolean") {
+              hoeSelected = data.hoeSelected;
+            }
+
             if (typeof data.scale === "number") {
               savedScaleFromState = data.scale;
+            }
+
+            if (!hoeSelected && selectedCropKey && crops[selectedCropKey]) {
+              previousCropKey = selectedCropKey;
             }
 
             needsRender = true;
@@ -412,7 +491,8 @@
           selectedCropKey = "wheat";
           previousCropKey = "wheat";
           selectedStockKey = "SP500";
-          selectedToolKey = "single";
+          selectedSizeKey = "single";
+          hoeSelected = false;
         }
 
         recalcPlacedCounts();
@@ -449,64 +529,7 @@
         function onMoneyChanged() {
           updateTotalDisplay();
           renderCropOptions();
-          renderToolOptions();
-        }
-
-        function updateCurrentSelectionLabel() {
-          if (!currentSelectionEl) return;
-          const crop = crops[selectedCropKey];
-          const stock = stocks[selectedStockKey];
-
-          if (!crop) {
-            currentSelectionEl.innerHTML = "";
-            currentSelectionEl.classList.add("opacity-0");
-            return;
-          }
-
-          if (crop.id === "grass") {
-            const cropBubble = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
-
-            currentSelectionEl.innerHTML = '<span class="hidden sm:inline">Currently planting ' + cropBubble + "</span>" + '<span class="inline sm:hidden">' + crop.name + "</span>";
-
-            currentSelectionEl.classList.remove("opacity-0");
-            return;
-          }
-
-          if (crop.id === "farmland") {
-            const cropBubble = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
-
-            currentSelectionEl.innerHTML = '<span class="hidden sm:inline">Currently placing ' + cropBubble + "</span>" + '<span class="inline sm:hidden">' + crop.name + "</span>";
-
-            currentSelectionEl.classList.remove("opacity-0");
-            return;
-          }
-
-          if (!stock) {
-            currentSelectionEl.innerHTML = "";
-            currentSelectionEl.classList.add("opacity-0");
-            return;
-          }
-
-          const cropBubbleDesktop = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
-          const stockBubbleDesktop = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + stock.name + "</span>";
-
-          const cropBubbleMobile = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
-          const stockBubbleMobile = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + stock.symbol + "</span>";
-
-          currentSelectionEl.innerHTML =
-            '<span class="hidden sm:inline">' +
-            "Currently planting " +
-            cropBubbleDesktop +
-            " tracking " +
-            stockBubbleDesktop +
-            "</span>" +
-            '<span class="inline sm:hidden">' +
-            cropBubbleMobile +
-            " / " +
-            stockBubbleMobile +
-            "</span>";
-
-          currentSelectionEl.classList.remove("opacity-0");
+          renderSizeOptions();
         }
 
         function centerView() {
@@ -817,8 +840,8 @@
           ctx.stroke();
 
           if (hoverTile) {
-            const tool = tools[selectedToolKey] || tools.single;
-            const size = Math.max(1, tool.size || 1);
+            const sizeOption = currentSizeOption();
+            const size = Math.max(1, sizeOption.size || 1);
             const preview = computeHoverPreview(hoverTile.row, hoverTile.col, size, now);
             const allowedColor = "rgba(34,197,94,0.75)";
             const blockedColor = "rgba(239,68,68,0.75)";
@@ -885,48 +908,59 @@
 
         function determineActionForTile(row, col, nowMs = Date.now()) {
           if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) {
-            return { type: "none" };
+            return { type: "none", reason: "Out of bounds" };
           }
 
           const key = row + "," + col;
           const existingPlot = plots.get(key);
-          if (existingPlot) {
-            const crop = crops[existingPlot.cropKey];
-            if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) {
-              return { type: "harvest" };
+          if (hoeSelected) {
+            if (existingPlot) {
+              const crop = crops[existingPlot.cropKey];
+              if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) {
+                return { type: "harvest" };
+              }
+              return { type: "none", reason: "Not ready to harvest" };
             }
-            return { type: "none" };
+            return { type: "none", reason: "Nothing to harvest" };
           }
 
-          if (selectedCropKey === "grass") {
+          if (existingPlot) {
+            return { type: "none", reason: "Already planted" };
+          }
+
+          const cropSelection = selectedCropKey ? crops[selectedCropKey] : null;
+          if (!cropSelection) return { type: "none", reason: "Select a crop" };
+
+          if (cropSelection.id === "grass") {
             return { type: "removeFarmland" };
           }
 
-          if (selectedCropKey === "farmland") {
+          if (cropSelection.id === "farmland") {
             const farmlandCrop = crops.farmland;
-            if (!farmlandCrop) return { type: "none" };
-            if (plots.has(key) || filled.has(key)) return { type: "none" };
+            if (!farmlandCrop) return { type: "none", reason: "Missing farmland crop" };
+            if (plots.has(key) || filled.has(key)) return { type: "none", reason: "Tile occupied" };
             const cost = farmlandCrop.placed < 4 ? 0 : 25;
-            if (cost > 0 && totalMoney < cost) return { type: "none" };
+            if (cost > 0 && totalMoney < cost) return { type: "none", reason: `Not enough money` };
             return { type: "placeFarmland" };
           }
 
-          const crop = crops[selectedCropKey];
+          const crop = cropSelection;
           const stock = stocks[selectedStockKey];
-          if (!crop || !stock || !crop.unlocked) return { type: "none" };
-          if (!filled.has(key)) return { type: "none" };
+          if (!crop || !crop.unlocked) return { type: "none", reason: "Crop locked" };
+          if (!stock) return { type: "none", reason: "Select a stock" };
+          if (!filled.has(key)) return { type: "none", reason: "Need farmland first" };
           if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) {
-            return { type: "none" };
+            return { type: "none", reason: "Crop limit reached" };
           }
 
           const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
           if (plantCost > 0 && totalMoney < plantCost) {
-            return { type: "none" };
+            return { type: "none", reason: `Not enough money` };
           }
 
           return {
             type: "plantCrop",
-            cropKey: selectedCropKey,
+            cropKey: cropSelection.id,
             stockKey: selectedStockKey,
           };
         }
@@ -934,7 +968,7 @@
         function computeHoverPreview(baseRow, baseCol, size, nowMs) {
           const results = [];
 
-          const action = determineActionForTile(baseRow, baseCol, nowMs);
+          const baseAction = hoeSelected ? null : determineActionForTile(baseRow, baseCol, nowMs);
 
           const placed = {};
           Object.values(crops).forEach((c) => {
@@ -972,7 +1006,9 @@
                 continue;
               }
 
-              allowed = simulateTileActionForPreview(action, key, state, nowMs, getFilled, getPlot);
+              const actionForCell = hoeSelected ? determineActionForTile(row, col, nowMs) : baseAction;
+
+              allowed = simulateTileActionForPreview(actionForCell, key, state, nowMs, getFilled, getPlot);
 
               results.push({ row, col, allowed });
             }
@@ -1075,46 +1111,103 @@
           saveState();
         }
 
+        function destroyPlot(key) {
+          const plot = plots.get(key);
+          if (!plot) return;
+          const crop = crops[plot.cropKey];
+          if (crop && typeof crop.placed === "number" && crop.placed > 0) {
+            crop.placed -= 1;
+          }
+          plots.delete(key);
+          needsRender = true;
+          saveState();
+        }
+
+        function collectHoeDestroyTargets(baseRow, baseCol) {
+          const targets = [];
+          const sizeOption = currentSizeOption();
+          const size = Math.max(1, sizeOption.size || 1);
+          const now = performance.now();
+          for (let dr = 0; dr < size; dr++) {
+            for (let dc = 0; dc < size; dc++) {
+              const row = baseRow + dr;
+              const col = baseCol + dc;
+              if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) continue;
+              const key = row + "," + col;
+              const plot = plots.get(key);
+              const crop = plot ? crops[plot.cropKey] : null;
+              if (plot && crop && now - plot.plantedAt < crop.growTimeMs) {
+                targets.push(key);
+              }
+            }
+          }
+          return targets;
+        }
+
         function handleTileAction(row, col, action) {
-          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) return;
+          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) return { success: false };
           const key = row + "," + col;
           const resolvedAction = action || determineActionForTile(row, col);
-          if (!resolvedAction || resolvedAction.type === "none") return;
+          if (!resolvedAction || resolvedAction.type === "none") return { success: false, reason: resolvedAction ? resolvedAction.reason : undefined };
 
           switch (resolvedAction.type) {
             case "harvest": {
               const existingPlot = plots.get(key);
-              if (!existingPlot) return;
+              if (!existingPlot) return { success: false, reason: "Nothing to harvest" };
               const crop = crops[existingPlot.cropKey];
-              if (!crop) return;
+              if (!crop) return { success: false, reason: "Unknown crop" };
               const elapsed = Date.now() - existingPlot.plantedAt;
               if (elapsed >= crop.growTimeMs) {
                 harvestPlot(key);
+                return { success: true };
               }
-              return;
+              return { success: false, reason: "Not ready to harvest" };
+            }
+            case "confirmDestroy": {
+              const existingPlot = plots.get(key);
+              if (!existingPlot) return { success: false, reason: "Nothing to remove" };
+              openConfirmModal(
+                "Are you sure you want to destroy this crop? No money will be earned.",
+                () => {
+                  destroyPlot(key);
+                },
+                "Destroy Crop"
+              );
+              lastHoeDestroyAttempt = { key: null, time: 0 };
+              return { success: true };
             }
             case "removeFarmland": {
               const hadFarmland = filled.delete(key);
               if (hadFarmland && crops.farmland) {
                 const f = crops.farmland;
+                const previousPlaced = f.placed || 0;
                 if (typeof f.placed === "number" && f.placed > 0) {
                   f.placed -= 1;
+                }
+                if (previousPlaced > 4) {
+                  totalMoney += 25;
+                  onMoneyChanged();
+                  costAnimations.push({
+                    key,
+                    value: 25,
+                    start: performance.now(),
+                  });
                 }
               }
               needsRender = true;
               renderCropOptions();
               saveState();
-              return;
+              return { success: hadFarmland, reason: hadFarmland ? undefined : "No farmland here" };
             }
             case "placeFarmland": {
               const farmlandCrop = crops.farmland;
-              if (!farmlandCrop) return;
-              if (plots.has(key)) return;
-              if (filled.has(key)) return;
+              if (!farmlandCrop) return { success: false, reason: "Missing farmland crop" };
+              if (plots.has(key)) return { success: false, reason: "Tile occupied" };
+              if (filled.has(key)) return { success: false, reason: "Tile occupied" };
 
               const cost = farmlandCrop.placed < 4 ? 0 : 25;
               if (cost > 0) {
-                if (totalMoney < cost) return;
+                if (totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)} to place` };
                 totalMoney -= cost;
                 onMoneyChanged();
                 costAnimations.push({
@@ -1129,28 +1222,29 @@
               needsRender = true;
               renderCropOptions();
               saveState();
-              return;
+              return { success: true };
             }
             case "plantCrop": {
               const cropKey = resolvedAction && resolvedAction.cropKey ? resolvedAction.cropKey : selectedCropKey;
               const stockKey = resolvedAction && resolvedAction.stockKey ? resolvedAction.stockKey : selectedStockKey;
               const crop = crops[cropKey];
               const stock = stocks[stockKey];
-              if (!crop || !stock || !crop.unlocked) return;
+              if (!crop || !crop.unlocked) return { success: false, reason: "Crop locked" };
+              if (!stock) return { success: false, reason: "Select a stock" };
 
-              if (plots.has(key)) return;
+              if (plots.has(key)) return { success: false, reason: "Tile already planted" };
               if (!filled.has(key)) {
-                return;
+                return { success: false, reason: "Need farmland first" };
               }
 
               if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) {
-                return;
+                return { success: false, reason: "Crop limit reached" };
               }
 
               const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
 
               if (plantCost > 0) {
-                if (totalMoney < plantCost) return;
+                if (totalMoney < plantCost) return { success: false, reason: `Need ${formatCurrency(plantCost)} to plant ${crop.name}` };
 
                 totalMoney -= plantCost;
                 onMoneyChanged();
@@ -1175,28 +1269,39 @@
 
               needsRender = true;
               saveState();
-              return;
+              return { success: true };
             }
             default:
-              return;
+              return { success: false };
           }
         }
 
         function handleTap(clientX, clientY) {
           const tile = tileFromClient(clientX, clientY);
           if (!tile) return;
-          const tool = tools[selectedToolKey] || tools.single;
-          const size = tool.size || 1;
+          const sizeOption = currentSizeOption();
+          const size = sizeOption.size || 1;
           const baseRow = tile.row;
           const baseCol = tile.col;
-          const action = determineActionForTile(baseRow, baseCol);
+          const baseAction = hoeSelected ? null : determineActionForTile(baseRow, baseCol);
+          let failure = null;
 
           for (let dr = 0; dr < size; dr++) {
             for (let dc = 0; dc < size; dc++) {
               const row = baseRow + dr;
               const col = baseCol + dc;
-              handleTileAction(row, col, action);
+              const actionForCell = hoeSelected ? determineActionForTile(row, col) : baseAction;
+              const result = handleTileAction(row, col, actionForCell);
+              if (!result.success && !failure && actionForCell && actionForCell.reason) {
+                failure = { reason: actionForCell.reason, x: clientX, y: clientY };
+              } else if (!result.success && !failure && result.reason) {
+                failure = { reason: result.reason, x: clientX, y: clientY };
+              }
             }
+          }
+
+          if (failure) {
+            showActionError(failure.reason, failure.x, failure.y);
           }
         }
 
@@ -1229,6 +1334,29 @@
               y: e.clientY,
               time: performance.now(),
             };
+
+            if (hoeSelected) {
+              const tile = tileFromClient(e.clientX, e.clientY);
+              if (tile) {
+                const targets = collectHoeDestroyTargets(tile.row, tile.col);
+                if (targets.length > 0) {
+                  hoeHoldTimeoutId = setTimeout(() => {
+                    hoeHoldTriggered = true;
+                    pendingHoeDestroyKeys = targets.slice();
+                    const count = pendingHoeDestroyKeys.length;
+                    const label = count === 1 ? "crop" : "crops";
+                    openConfirmModal(
+                      `Destroy ${count} ${label}? No money will be earned.`,
+                      () => {
+                        pendingHoeDestroyKeys.forEach((k) => destroyPlot(k));
+                        pendingHoeDestroyKeys = [];
+                      },
+                      count === 1 ? "Destroy Crop" : "Destroy Crops"
+                    );
+                  }, HOE_DESTROY_WINDOW_MS);
+                }
+              }
+            }
           }
         }
 
@@ -1261,6 +1389,11 @@
               const dy = e.clientY - tapStart.y;
               if (dx * dx + dy * dy > 25) {
                 tapStart = null;
+                if (hoeHoldTimeoutId) {
+                  clearTimeout(hoeHoldTimeoutId);
+                  hoeHoldTimeoutId = null;
+                  pendingHoeDestroyKeys = [];
+                }
               }
             }
           }
@@ -1269,12 +1402,21 @@
         }
 
         function onPointerUp(e) {
+          if (hoeHoldTimeoutId) {
+            clearTimeout(hoeHoldTimeoutId);
+            hoeHoldTimeoutId = null;
+            pendingHoeDestroyKeys = [];
+          }
           activePointers.delete(e.pointerId);
           canvas.releasePointerCapture(e.pointerId);
           if (activePointers.size < 2) isPinching = false;
           if (activePointers.size === 0) isDragging = false;
 
-          if (tapStart && tapStart.id === e.pointerId) {
+          if (hoeHoldTriggered) {
+            hoeHoldTriggered = false;
+            tapStart = null;
+            pendingHoeDestroyKeys = [];
+          } else if (tapStart && tapStart.id === e.pointerId) {
             const dt = performance.now() - tapStart.time;
             const dx = e.clientX - tapStart.x;
             const dy = e.clientY - tapStart.y;
@@ -1307,6 +1449,22 @@
           zoomAt(factor, cx, cy);
         }
 
+        function showActionError(message, clientX, clientY) {
+          const bubble = document.createElement("div");
+          bubble.className = "action-error";
+          bubble.textContent = message;
+          const clampedX = Math.max(12, Math.min(window.innerWidth - 12, clientX));
+          const clampedY = Math.max(12, Math.min(window.innerHeight - 12, clientY - 16));
+          bubble.style.left = clampedX + "px";
+          bubble.style.top = clampedY + "px";
+          document.body.appendChild(bubble);
+          setTimeout(() => {
+            bubble.style.opacity = "0";
+            bubble.style.transition = "opacity 120ms ease";
+            setTimeout(() => bubble.remove(), 150);
+          }, 1200);
+        }
+
         canvas.addEventListener("pointerdown", onPointerDown);
         canvas.addEventListener("pointermove", onPointerMove);
         canvas.addEventListener("pointerup", onPointerUp);
@@ -1326,13 +1484,22 @@
         const recenterBtn = document.getElementById("recenterBtn");
         const cropGrid = document.getElementById("cropGrid");
         const stockGrid = document.getElementById("stockGrid");
-        const toolGrid = document.getElementById("toolGrid");
+        const hoeButton = document.getElementById("hoeButton");
+        const cropStockButton = document.getElementById("cropStockButton");
+        const cropStockImage = document.getElementById("cropStockImage");
+        const cropStockStockLabel = document.getElementById("cropStockStockLabel");
+        const cropStockStockWrapper = document.getElementById("cropStockStockWrapper");
+        const sizeButton = document.getElementById("sizeButton");
+        const sizeButtonLabel = document.getElementById("sizeButtonLabel");
+        const sizeMenu = document.getElementById("sizeMenu");
+        const resetFarmBtn = document.getElementById("resetFarmBtn");
         const toggleStatsBtn = document.getElementById("toggleStatsBtn");
         const confirmModal = document.getElementById("confirmModal");
         const confirmMessage = document.getElementById("confirmMessage");
         const confirmCancel = document.getElementById("confirmCancel");
         const confirmConfirm = document.getElementById("confirmConfirm");
         const confirmClose = document.getElementById("confirmClose");
+        const confirmTitle = document.getElementById("confirmTitle");
 
         function openOffcanvas() {
           navOffcanvas.classList.remove("translate-x-full");
@@ -1361,12 +1528,15 @@
           pendingConfirmAction = null;
         }
 
-        function openConfirmModal(message, onConfirm) {
+        function openConfirmModal(message, onConfirm, title = "Confirm") {
           if (!confirmModal || !confirmMessage || !confirmConfirm || !confirmCancel) {
             onConfirm();
             return;
           }
 
+          if (confirmTitle) {
+            confirmTitle.textContent = title;
+          }
           confirmMessage.textContent = message;
           pendingConfirmAction = onConfirm;
           confirmModal.classList.remove("hidden");
@@ -1376,14 +1546,111 @@
 
         function updateStatsToggleUI() {
           if (!toggleStatsBtn) return;
-          toggleStatsBtn.textContent = showStats ? "On" : "Off";
-          if (showStats) {
-            toggleStatsBtn.classList.remove("bg-neutral-900", "text-neutral-400");
-            toggleStatsBtn.classList.add("bg-emerald-600", "text-white");
-          } else {
-            toggleStatsBtn.classList.remove("bg-emerald-600", "text-white");
-            toggleStatsBtn.classList.add("bg-neutral-900", "text-neutral-400");
+          toggleStatsBtn.textContent = "Show Stats";
+          toggleStatsBtn.classList.toggle("bg-emerald-600", showStats);
+          toggleStatsBtn.classList.toggle("text-white", showStats);
+          toggleStatsBtn.classList.toggle("border-emerald-500", showStats);
+          toggleStatsBtn.classList.toggle("bg-neutral-800", !showStats);
+          toggleStatsBtn.classList.toggle("text-neutral-200", !showStats);
+          toggleStatsBtn.classList.toggle("border-neutral-600", !showStats);
+        }
+
+        function updateModeButtonsUI() {
+          const plantingMode = !hoeSelected;
+          if (hoeButton) {
+            hoeButton.classList.toggle("border-emerald-500", hoeSelected);
+            hoeButton.classList.toggle("border-neutral-700", !hoeSelected);
+            hoeButton.classList.remove("bg-emerald-500/10");
+            hoeButton.setAttribute("aria-pressed", hoeSelected ? "true" : "false");
           }
+          if (cropStockButton) {
+            cropStockButton.classList.toggle("border-emerald-500", plantingMode);
+            cropStockButton.classList.toggle("border-neutral-700", !plantingMode);
+          }
+        }
+
+        function updateCropStockButtonUI() {
+          if (!cropStockButton) return;
+          const crop = selectedCropKey ? crops[selectedCropKey] : null;
+          const stock = stocks[selectedStockKey];
+          const src = cropImageSrc(crop ? crop.id : null);
+          if (cropStockImage) {
+            cropStockImage.src = src;
+            cropStockImage.alt = crop ? crop.name : "Crop";
+          }
+          const stockText = stock ? stock.symbol : "";
+          if (cropStockStockLabel) cropStockStockLabel.textContent = stockText;
+          if (cropStockStockWrapper) {
+            const hideStock = crop && (crop.id === "grass" || crop.id === "farmland");
+            cropStockStockWrapper.classList.toggle("hidden", hideStock);
+          }
+        }
+
+        function updateSizeButtonUI() {
+          if (!sizeButton) return;
+          const size = currentSizeOption();
+          if (sizeButtonLabel) sizeButtonLabel.textContent = size ? size.name : "";
+          sizeButton.classList.toggle("border-emerald-500", false);
+        }
+
+        function renderSizeMenu() {
+          if (!sizeMenu) return;
+          sizeMenu.innerHTML = "";
+          Object.values(sizes).forEach((size) => {
+            const locked = !size.unlocked;
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "w-full px-3 py-2 text-left text-[11px] font-semibold border-b border-neutral-800 last:border-b-0 flex items-center justify-between";
+            if (!locked) {
+              btn.classList.add("hover:bg-neutral-800");
+            }
+            btn.textContent = size.name;
+            if (size.id === selectedSizeKey) {
+              btn.classList.add("text-emerald-400");
+            } else {
+              btn.classList.add(locked ? "text-neutral-600" : "text-neutral-100");
+            }
+            let unlockCostEl = null;
+            if (locked && typeof size.unlockCost === "number") {
+              unlockCostEl = document.createElement("span");
+              unlockCostEl.textContent = `Unlock: ${formatCurrency(size.unlockCost)}`;
+              unlockCostEl.className = "text-[10px] font-normal";
+              btn.appendChild(unlockCostEl);
+            }
+            const canAffordUnlock = locked && typeof size.unlockCost === "number" && totalMoney >= size.unlockCost;
+            btn.disabled = locked && !canAffordUnlock;
+            if (unlockCostEl) {
+              unlockCostEl.classList.toggle("text-amber-300", canAffordUnlock);
+              unlockCostEl.classList.toggle("text-neutral-600", !canAffordUnlock);
+            }
+            btn.addEventListener("click", () => {
+              if (locked) {
+                if (!canAffordUnlock) return;
+                openConfirmModal(
+                  `Unlock ${size.name} for ${formatCurrency(size.unlockCost)}?`,
+                  () => {
+                    totalMoney -= size.unlockCost;
+                    size.unlocked = true;
+                    selectedSizeKey = size.id;
+                    onMoneyChanged();
+                    renderSizeMenu();
+                    updateSizeButtonUI();
+                    needsRender = true;
+                    saveState();
+                  },
+                  "Confirm Unlock"
+                );
+                return;
+              }
+              selectedSizeKey = size.id;
+              renderSizeMenu();
+              updateSizeButtonUI();
+              needsRender = true;
+              saveState();
+              sizeMenu.classList.add("hidden");
+            });
+            sizeMenu.appendChild(btn);
+          });
         }
 
         if (navToggle) {
@@ -1435,6 +1702,85 @@
             saveState();
           });
         }
+
+        function resetFarm() {
+          try {
+            localStorage.clear();
+          } catch (err) {
+            console.error("Failed to clear storage", err);
+          }
+          window.location.reload();
+        }
+
+        if (resetFarmBtn) {
+          resetFarmBtn.addEventListener("click", () => {
+            openConfirmModal("Reset your farm and start fresh? This clears all progress.", resetFarm, "Reset Farm");
+          });
+        }
+
+        if (hoeButton) {
+          hoeButton.addEventListener("click", () => {
+            hoeSelected = !hoeSelected;
+            lastHoeDestroyAttempt = { key: null, time: 0 };
+            updateModeButtonsUI();
+            needsRender = true;
+            saveState();
+          });
+        }
+
+        if (cropStockButton) {
+          cropStockButton.addEventListener("click", () => {
+            hoeSelected = false;
+            lastHoeDestroyAttempt = { key: null, time: 0 };
+            if (!selectedCropKey) {
+              const firstUnlocked = Object.values(crops).find((c) => c && c.unlocked);
+              if (firstUnlocked) {
+                selectedCropKey = firstUnlocked.id;
+                previousCropKey = firstUnlocked.id;
+              }
+            }
+            updateModeButtonsUI();
+            needsRender = true;
+            saveState();
+          });
+        }
+
+        let sizeMenuVisible = false;
+
+        function closeSizeMenu() {
+          if (!sizeMenu) return;
+          sizeMenu.classList.add("hidden");
+          sizeMenuVisible = false;
+        }
+
+        if (sizeButton) {
+          sizeButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (!sizeMenu) return;
+            if (sizeMenuVisible) {
+              closeSizeMenu();
+            } else {
+              renderSizeMenu();
+              sizeMenu.classList.remove("hidden");
+              sizeMenuVisible = true;
+            }
+          });
+        }
+
+        document.addEventListener("click", (e) => {
+          if (!sizeMenuVisible) return;
+          if (sizeMenu && (sizeMenu.contains(e.target) || (sizeButton && sizeButton.contains(e.target)))) {
+            return;
+          }
+          closeSizeMenu();
+        });
+        document.addEventListener("pointerleave", () => {
+          if (hoeHoldTimeoutId) {
+            clearTimeout(hoeHoldTimeoutId);
+            hoeHoldTimeoutId = null;
+            pendingHoeDestroyKeys = [];
+          }
+        });
 
         function renderCropOptions() {
           if (!cropGrid) return;
@@ -1510,16 +1856,19 @@
             card.addEventListener("click", () => {
               if (!crop.unlocked) {
                 if (crop.unlockCost > 0 && totalMoney >= crop.unlockCost) {
-                  openConfirmModal(`Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`, () => {
-                    totalMoney -= crop.unlockCost;
-                    crop.unlocked = true;
-                    selectedCropKey = crop.id;
-                    previousCropKey = crop.id;
-                    onMoneyChanged();
-                    renderCropOptions();
-                    updateCurrentSelectionLabel();
-                    saveState();
-                  });
+                  openConfirmModal(
+                    `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
+                    () => {
+                      totalMoney -= crop.unlockCost;
+                      crop.unlocked = true;
+                      selectedCropKey = crop.id;
+                      previousCropKey = crop.id;
+                      onMoneyChanged();
+                      updateCropStockButtonUI();
+                      saveState();
+                    },
+                    "Confirm Unlock"
+                  );
                 }
                 return;
               }
@@ -1527,7 +1876,7 @@
               selectedCropKey = crop.id;
               previousCropKey = crop.id;
               renderCropOptions();
-              updateCurrentSelectionLabel();
+              updateCropStockButtonUI();
               saveState();
             });
 
@@ -1552,66 +1901,14 @@
             btn.addEventListener("click", () => {
               selectedStockKey = stock.symbol;
               renderStockOptions();
-              updateCurrentSelectionLabel();
+              updateCropStockButtonUI();
               saveState();
             });
             stockGrid.appendChild(btn);
           });
         }
 
-        function renderToolOptions() {
-          if (!toolGrid) return;
-          toolGrid.innerHTML = "";
-          Object.values(tools).forEach((tool) => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            const canAffordUnlock = !tool.unlocked && typeof tool.unlockCost === "number" && totalMoney >= tool.unlockCost;
-            let cls = "w-full aspect-square rounded-md border flex flex-col items-center justify-center text-[11px] font-semibold tracking-wide bg-neutral-900 hover:bg-neutral-800";
-            if (tool.id === selectedToolKey) {
-              cls += " border-emerald-500 bg-emerald-500/10";
-            } else if (!tool.unlocked && canAffordUnlock) {
-              cls += " border-amber-400/60 ring-1 ring-amber-400/60";
-            } else {
-              cls += " border-neutral-700";
-            }
-            if (!tool.unlocked && !canAffordUnlock) {
-              cls += " opacity-50";
-            }
-            btn.className = cls;
-
-            const label = document.createElement("div");
-            label.textContent = tool.name;
-            btn.appendChild(label);
-
-            if (!tool.unlocked && tool.unlockCost > 0) {
-              const cost = document.createElement("div");
-              cost.className = "text-[9px] font-normal mt-1 text-amber-300";
-              cost.textContent = formatCurrency(tool.unlockCost);
-              btn.appendChild(cost);
-            }
-
-            btn.addEventListener("click", () => {
-              if (!tool.unlocked) {
-                if (tool.unlockCost > 0 && totalMoney >= tool.unlockCost) {
-                  openConfirmModal(`Unlock ${tool.name} for ${formatCurrency(tool.unlockCost)}?`, () => {
-                    totalMoney -= tool.unlockCost;
-                    tool.unlocked = true;
-                    selectedToolKey = tool.id;
-                    onMoneyChanged();
-                    renderToolOptions();
-                    saveState();
-                  });
-                }
-                return;
-              }
-              selectedToolKey = tool.id;
-              renderToolOptions();
-              saveState();
-            });
-
-            toolGrid.appendChild(btn);
-          });
-        }
+        function renderSizeOptions() {}
 
         setInterval(() => {
           Object.values(stocks).forEach((s) => {
@@ -1623,7 +1920,10 @@
 
         onMoneyChanged();
         renderStockOptions();
-        updateCurrentSelectionLabel();
+        updateCropStockButtonUI();
+        updateSizeButtonUI();
+        renderSizeMenu();
+        updateModeButtonsUI();
         resizeCanvas();
         updateStatsToggleUI();
         loop();
