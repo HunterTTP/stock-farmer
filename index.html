@@ -33,37 +33,21 @@
   <body class="bg-black text-white">
     <nav class="bg-neutral-900 text-white">
       <div class="flex items-center px-4 py-2 relative">
-        <a class="text-sm font-semibold whitespace-nowrap" href="#"
-          >Stock Farmer</a
-        >
+        <a class="text-sm font-semibold whitespace-nowrap" href="#">Stock Farmer</a>
 
-        <div
-          id="currentSelection"
-          class="absolute left-1/2 -translate-x-1/2 text-[11px] font-mono text-neutral-300 whitespace-nowrap overflow-hidden text-ellipsis opacity-0 transition-opacity"
-        ></div>
+        <div id="currentSelection" class="absolute left-1/2 -translate-x-1/2 text-[11px] font-mono text-neutral-300 whitespace-nowrap overflow-hidden text-ellipsis opacity-0 transition-opacity"></div>
 
         <div class="ml-auto flex items-center gap-2">
-          <div
-            id="totalDisplay"
-            class="text-xs font-mono px-2 py-1 rounded bg-neutral-800"
-          >
-            $0.00
-          </div>
+          <div id="totalDisplay" class="text-xs font-mono px-2 py-1 rounded bg-neutral-800">$0.00</div>
           <button
             id="navToggle"
             class="inline-flex items-center justify-center p-2 rounded-md border border-gray-500 hover:bg-neutral-800 focus:outline-none"
             type="button"
             aria-controls="navOffcanvas"
-            aria-expanded="false"
-          >
+            aria-expanded="false">
             <span class="sr-only">Open controls</span>
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none">
-              <path
-                d="M3 5h14M3 10h14M3 15h14"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-              />
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
             </svg>
           </button>
         </div>
@@ -72,37 +56,17 @@
 
     <div id="navOverlay" class="fixed inset-0 bg-black/50 hidden z-30"></div>
 
-    <div
-      id="navOffcanvas"
-      class="fixed inset-y-0 right-0 w-64 bg-neutral-900 text-white shadow-xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col"
-    >
-      <div
-        class="flex items-center justify-between px-4 py-3 border-b border-neutral-700"
-      >
+    <div id="navOffcanvas" class="fixed inset-y-0 right-0 w-64 bg-neutral-900 text-white shadow-xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-700">
         <h5 class="text-sm font-semibold" id="navOffcanvasLabel">Controls</h5>
-        <button
-          id="navClose"
-          class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none"
-        >
+        <button id="navClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
           <span class="sr-only">Close</span>
-          <svg
-            class="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M5 5l10 10M15 5L5 15"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-            />
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
           </svg>
         </button>
       </div>
-      <div
-        class="flex-1 p-4 text-xs text-neutral-300 space-y-4 overflow-y-auto"
-      >
+      <div class="flex-1 p-4 text-xs text-neutral-300 space-y-4 overflow-y-auto">
         <div>
           <p class="mb-2 font-medium text-neutral-200">Crop</p>
           <div id="cropGrid" class="grid grid-cols-2 gap-2"></div>
@@ -120,21 +84,29 @@
 
         <div class="flex items-center justify-between text-[11px]">
           <span class="text-neutral-200">Show stock stats</span>
-          <button
-            id="toggleStatsBtn"
-            class="px-2 py-1 rounded border border-neutral-600 text-[11px] bg-neutral-800"
-            type="button"
-          >
-            On
-          </button>
+          <button id="toggleStatsBtn" class="px-2 py-1 rounded border border-neutral-600 text-[11px] bg-neutral-800" type="button">On</button>
         </div>
 
-        <button
-          class="w-full border border-gray-500 text-xs px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center"
-          id="recenterBtn"
-        >
-          Recenter view
-        </button>
+        <button class="w-full border border-gray-500 text-xs px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="recenterBtn">Recenter view</button>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
+      <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+          <h3 class="text-sm font-semibold text-white">Confirm unlock</h3>
+          <button id="confirmClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
+            <span class="sr-only">Close</span>
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div id="confirmMessage" class="px-4 py-4 text-sm text-neutral-100 leading-relaxed"></div>
+        <div class="px-4 pb-4 flex gap-2">
+          <button id="confirmConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Confirm</button>
+          <button id="confirmCancel" class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -329,18 +301,9 @@
             selectedToolKey,
             showStats,
             scale,
-            cropsUnlocked: Object.fromEntries(
-              Object.entries(crops).map(([id, c]) => [id, c.unlocked])
-            ),
-            toolsUnlocked: Object.fromEntries(
-              Object.entries(tools).map(([id, t]) => [id, t.unlocked])
-            ),
-            cropLimits: Object.fromEntries(
-              Object.entries(crops).map(([id, c]) => [
-                id,
-                typeof c.limit === "number" ? c.limit : -1,
-              ])
-            ),
+            cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
+            toolsUnlocked: Object.fromEntries(Object.entries(tools).map(([id, t]) => [id, t.unlocked])),
+            cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
           };
           try {
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -471,8 +434,22 @@
         };
 
         function updateTotalDisplay() {
-          const text = "$" + totalMoney.toFixed(2);
-          if (totalDisplay) totalDisplay.textContent = text;
+          if (totalDisplay) totalDisplay.textContent = formatCurrency(totalMoney, true);
+        }
+
+        function formatCurrency(amount, allowCents = true) {
+          const rounded = Math.round(amount * 100) / 100;
+          const hasCents = allowCents && Math.abs(rounded - Math.round(rounded)) > 0.0001;
+          if (hasCents) {
+            return "$" + rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+          return "$" + Math.round(rounded).toLocaleString();
+        }
+
+        function onMoneyChanged() {
+          updateTotalDisplay();
+          renderCropOptions();
+          renderToolOptions();
         }
 
         function updateCurrentSelectionLabel() {
@@ -487,36 +464,18 @@
           }
 
           if (crop.id === "grass") {
-            const cropBubble =
-              '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
-              crop.name +
-              "</span>";
+            const cropBubble = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
 
-            currentSelectionEl.innerHTML =
-              '<span class="hidden sm:inline">Currently planting ' +
-              cropBubble +
-              "</span>" +
-              '<span class="inline sm:hidden">' +
-              crop.name +
-              "</span>";
+            currentSelectionEl.innerHTML = '<span class="hidden sm:inline">Currently planting ' + cropBubble + "</span>" + '<span class="inline sm:hidden">' + crop.name + "</span>";
 
             currentSelectionEl.classList.remove("opacity-0");
             return;
           }
 
           if (crop.id === "farmland") {
-            const cropBubble =
-              '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
-              crop.name +
-              "</span>";
+            const cropBubble = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
 
-            currentSelectionEl.innerHTML =
-              '<span class="hidden sm:inline">Currently placing ' +
-              cropBubble +
-              "</span>" +
-              '<span class="inline sm:hidden">' +
-              crop.name +
-              "</span>";
+            currentSelectionEl.innerHTML = '<span class="hidden sm:inline">Currently placing ' + cropBubble + "</span>" + '<span class="inline sm:hidden">' + crop.name + "</span>";
 
             currentSelectionEl.classList.remove("opacity-0");
             return;
@@ -528,23 +487,11 @@
             return;
           }
 
-          const cropBubbleDesktop =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
-            crop.name +
-            "</span>";
-          const stockBubbleDesktop =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
-            stock.name +
-            "</span>";
+          const cropBubbleDesktop = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
+          const stockBubbleDesktop = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + stock.name + "</span>";
 
-          const cropBubbleMobile =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
-            crop.name +
-            "</span>";
-          const stockBubbleMobile =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' +
-            stock.symbol +
-            "</span>";
+          const cropBubbleMobile = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + crop.name + "</span>";
+          const stockBubbleMobile = '<span class="inline-flex items-center px-2 py-0.5 rounded bg-neutral-800 text-neutral-100 mx-0.5">' + stock.symbol + "</span>";
 
           currentSelectionEl.innerHTML =
             '<span class="hidden sm:inline">' +
@@ -587,17 +534,12 @@
           canvas.height = rect.height * dpr;
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-          const scaleFromHeight =
-            rect.height / (VISIBLE_ROWS_AT_START * tileSize);
-          const scaleFromWidth =
-            rect.width / (VISIBLE_ROWS_AT_START * tileSize);
+          const scaleFromHeight = rect.height / (VISIBLE_ROWS_AT_START * tileSize);
+          const scaleFromWidth = rect.width / (VISIBLE_ROWS_AT_START * tileSize);
           const initialScale = Math.min(scaleFromHeight, scaleFromWidth);
 
           if (!firstResizeDone) {
-            const targetScale =
-              savedScaleFromState != null
-                ? clampScale(savedScaleFromState)
-                : initialScale;
+            const targetScale = savedScaleFromState != null ? clampScale(savedScaleFromState) : initialScale;
             scale = targetScale;
             defaultScale = targetScale;
             firstResizeDone = true;
@@ -622,14 +564,7 @@
           scaleChanged = false;
         }
 
-        function renderFloatingValue(
-          anim,
-          nowPerf,
-          startRow,
-          endRow,
-          startCol,
-          endCol
-        ) {
+        function renderFloatingValue(anim, nowPerf, startRow, endRow, startCol, endCol) {
           const visibleDuration = 1000;
           const fadeDuration = 500;
           const totalDuration = visibleDuration + fadeDuration;
@@ -646,12 +581,7 @@
             return false;
           }
 
-          if (
-            row < startRow ||
-            row >= endRow ||
-            col < startCol ||
-            col >= endCol
-          ) {
+          if (row < startRow || row >= endRow || col < startCol || col >= endCol) {
             return false;
           }
 
@@ -695,8 +625,7 @@
         }
 
         function render() {
-          const hasAnimations =
-            harvestAnimations.length > 0 || costAnimations.length > 0;
+          const hasAnimations = harvestAnimations.length > 0 || costAnimations.length > 0;
           if (!needsRender && !hasAnimations) return;
           needsRender = false;
 
@@ -730,13 +659,7 @@
 
               const isFarmland = filled.has(key);
               if (isFarmland) {
-                ctx.drawImage(
-                  farmlandImg,
-                  x,
-                  y,
-                  tileScreenSize,
-                  tileScreenSize
-                );
+                ctx.drawImage(farmlandImg, x, y, tileScreenSize, tileScreenSize);
               } else {
                 ctx.drawImage(grassImg, x, y, tileScreenSize, tileScreenSize);
               }
@@ -762,39 +685,26 @@
               if (isReady) {
                 phaseIndex = 3;
               } else {
-                const breakpoints =
-                  Array.isArray(plot.stageBreakpoints) &&
-                  plot.stageBreakpoints.length === 2
-                    ? plot.stageBreakpoints
-                    : [1 / 3, 2 / 3];
+                const breakpoints = Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
                 if (progress >= breakpoints[1]) phaseIndex = 2;
                 else if (progress >= breakpoints[0]) phaseIndex = 1;
               }
 
-              const img =
-                crop.images[phaseIndex] || crop.images[crop.images.length - 1];
+              const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
 
-              const effectivePrice =
-                isReady && plot.lockedStockPrice != null
-                  ? plot.lockedStockPrice
-                  : stock.price;
+              const effectivePrice = isReady && plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
 
-              const pctChange =
-                (effectivePrice - plot.stockPriceAtPlant) /
-                plot.stockPriceAtPlant;
+              const pctChange = (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
 
               const value = Math.max(0, crop.baseValue * (1 + pctChange));
-              const pctText = `${pctChange >= 0 ? "+" : ""}${(
-                pctChange * 100
-              ).toFixed(1)}%`;
+              const pctText = `${pctChange >= 0 ? "+" : ""}${(pctChange * 100).toFixed(1)}%`;
               const valueText = "$" + value.toFixed(2);
 
               const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
               const secs = Math.ceil(remainingMs / 1000);
               const mins = Math.floor(secs / 60);
               const secPart = secs % 60;
-              const timerText =
-                mins + ":" + secPart.toString().padStart(2, "0");
+              const timerText = mins + ":" + secPart.toString().padStart(2, "0");
 
               let arrow = "";
               if (pctChange > 0) arrow = "▲";
@@ -870,28 +780,14 @@
           }
 
           for (let i = harvestAnimations.length - 1; i >= 0; i--) {
-            const done = renderFloatingValue(
-              harvestAnimations[i],
-              nowPerf,
-              startRow,
-              endRow,
-              startCol,
-              endCol
-            );
+            const done = renderFloatingValue(harvestAnimations[i], nowPerf, startRow, endRow, startCol, endCol);
             if (done) {
               harvestAnimations.splice(i, 1);
             }
           }
 
           for (let i = costAnimations.length - 1; i >= 0; i--) {
-            const done = renderFloatingValue(
-              costAnimations[i],
-              nowPerf,
-              startRow,
-              endRow,
-              startCol,
-              endCol
-            );
+            const done = renderFloatingValue(costAnimations[i], nowPerf, startRow, endRow, startCol, endCol);
             if (done) {
               costAnimations.splice(i, 1);
             }
@@ -923,25 +819,14 @@
           if (hoverTile) {
             const tool = tools[selectedToolKey] || tools.single;
             const size = Math.max(1, tool.size || 1);
-            const preview = computeHoverPreview(
-              hoverTile.row,
-              hoverTile.col,
-              size,
-              now
-            );
+            const preview = computeHoverPreview(hoverTile.row, hoverTile.col, size, now);
             const allowedColor = "rgba(34,197,94,0.75)";
             const blockedColor = "rgba(239,68,68,0.75)";
             ctx.lineWidth = Math.max(1.2, scale * 0.9);
 
             for (const cell of preview) {
               const { row, col, allowed } = cell;
-              if (
-                row < startRow ||
-                row >= endRow ||
-                col < startCol ||
-                col >= endCol
-              )
-                continue;
+              if (row < startRow || row >= endRow || col < startCol || col >= endCol) continue;
               const x = offsetX + col * tileSize * scale;
               const y = offsetY + row * tileSize * scale;
               ctx.strokeStyle = allowed ? allowedColor : blockedColor;
@@ -977,17 +862,12 @@
           const { worldX, worldY } = worldFromClient(clientX, clientY);
           const col = Math.floor(worldX / tileSize);
           const row = Math.floor(worldY / tileSize);
-          if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS)
-            return null;
+          if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return null;
           return { row, col, key: row + "," + col };
         }
 
         function setHoverTile(tile) {
-          const same =
-            hoverTile &&
-            tile &&
-            hoverTile.row === tile.row &&
-            hoverTile.col === tile.col;
+          const same = hoverTile && tile && hoverTile.row === tile.row && hoverTile.col === tile.col;
           if (same) return;
           if (!hoverTile && !tile) return;
           hoverTile = tile;
@@ -1035,16 +915,11 @@
           const stock = stocks[selectedStockKey];
           if (!crop || !stock || !crop.unlocked) return { type: "none" };
           if (!filled.has(key)) return { type: "none" };
-          if (
-            typeof crop.limit === "number" &&
-            crop.limit >= 0 &&
-            crop.placed >= crop.limit
-          ) {
+          if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) {
             return { type: "none" };
           }
 
-          const plantCost =
-            typeof crop.placeCost === "number" ? crop.placeCost : 0;
+          const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
           if (plantCost > 0 && totalMoney < plantCost) {
             return { type: "none" };
           }
@@ -1063,8 +938,7 @@
 
           const placed = {};
           Object.values(crops).forEach((c) => {
-            placed[c.id] =
-              typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
+            placed[c.id] = typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
           });
 
           const state = {
@@ -1098,14 +972,7 @@
                 continue;
               }
 
-              allowed = simulateTileActionForPreview(
-                action,
-                key,
-                state,
-                nowMs,
-                getFilled,
-                getPlot
-              );
+              allowed = simulateTileActionForPreview(action, key, state, nowMs, getFilled, getPlot);
 
               results.push({ row, col, allowed });
             }
@@ -1114,44 +981,24 @@
           return results;
         }
 
-        function simulateTileActionForPreview(
-          action,
-          key,
-          state,
-          nowMs,
-          getFilled,
-          getPlot
-        ) {
+        function simulateTileActionForPreview(action, key, state, nowMs, getFilled, getPlot) {
           if (!action || action.type === "none") return false;
 
           switch (action.type) {
             case "harvest": {
               const existingPlot = getPlot(key);
-              const plotCrop = existingPlot
-                ? crops[existingPlot.cropKey]
-                : null;
-              const plotStock = existingPlot
-                ? stocks[existingPlot.stockKey]
-                : null;
+              const plotCrop = existingPlot ? crops[existingPlot.cropKey] : null;
+              const plotStock = existingPlot ? stocks[existingPlot.stockKey] : null;
               if (!existingPlot || !plotCrop || !plotStock) return false;
-              const ready =
-                nowMs - existingPlot.plantedAt >= plotCrop.growTimeMs;
+              const ready = nowMs - existingPlot.plantedAt >= plotCrop.growTimeMs;
               if (!ready) return false;
 
-              const effectivePrice =
-                existingPlot.lockedStockPrice != null
-                  ? existingPlot.lockedStockPrice
-                  : plotStock.price;
-              const pctChange =
-                (effectivePrice - existingPlot.stockPriceAtPlant) /
-                existingPlot.stockPriceAtPlant;
+              const effectivePrice = existingPlot.lockedStockPrice != null ? existingPlot.lockedStockPrice : plotStock.price;
+              const pctChange = (effectivePrice - existingPlot.stockPriceAtPlant) / existingPlot.stockPriceAtPlant;
               const value = Math.max(0, plotCrop.baseValue * (1 + pctChange));
 
               state.money += value;
-              if (
-                typeof state.placed[plotCrop.id] === "number" &&
-                state.placed[plotCrop.id] > 0
-              ) {
+              if (typeof state.placed[plotCrop.id] === "number" && state.placed[plotCrop.id] > 0) {
                 state.placed[plotCrop.id] -= 1;
               }
               state.plotsRemoved.add(key);
@@ -1160,10 +1007,7 @@
             case "removeFarmland": {
               if (getFilled(key)) {
                 state.filledRemovals.add(key);
-                if (
-                  typeof state.placed.farmland === "number" &&
-                  state.placed.farmland > 0
-                ) {
+                if (typeof state.placed.farmland === "number" && state.placed.farmland > 0) {
                   state.placed.farmland -= 1;
                 }
                 return true;
@@ -1172,10 +1016,7 @@
             }
             case "placeFarmland": {
               if (getFilled(key) || getPlot(key)) return false;
-              const farmlandPlaced =
-                typeof state.placed.farmland === "number"
-                  ? state.placed.farmland
-                  : 0;
+              const farmlandPlaced = typeof state.placed.farmland === "number" ? state.placed.farmland : 0;
               const farmlandCost = farmlandPlaced < 4 ? 0 : 25;
               if (state.money < farmlandCost) return false;
               state.money -= farmlandCost;
@@ -1190,16 +1031,11 @@
               if (getPlot(key)) return false;
               if (!getFilled(key)) return false;
 
-              if (
-                typeof crop.limit === "number" &&
-                crop.limit >= 0 &&
-                state.placed[crop.id] >= crop.limit
-              ) {
+              if (typeof crop.limit === "number" && crop.limit >= 0 && state.placed[crop.id] >= crop.limit) {
                 return false;
               }
 
-              const plantCost =
-                typeof crop.placeCost === "number" ? crop.placeCost : 0;
+              const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
               if (state.money < plantCost) return false;
 
               state.money -= plantCost;
@@ -1218,10 +1054,8 @@
           const stock = stocks[plot.stockKey];
           if (!crop || !stock) return;
 
-          const effectivePrice =
-            plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
-          const pctChange =
-            (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
+          const effectivePrice = plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
+          const pctChange = (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
           const value = Math.max(0, crop.baseValue * (1 + pctChange));
 
           harvestAnimations.push({
@@ -1235,15 +1069,14 @@
           }
 
           totalMoney += value;
-          updateTotalDisplay();
+          onMoneyChanged();
           plots.delete(key);
           needsRender = true;
           saveState();
         }
 
         function handleTileAction(row, col, action) {
-          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS)
-            return;
+          if (row < 0 || col < 0 || row >= GRID_ROWS || col >= GRID_COLS) return;
           const key = row + "," + col;
           const resolvedAction = action || determineActionForTile(row, col);
           if (!resolvedAction || resolvedAction.type === "none") return;
@@ -1283,7 +1116,7 @@
               if (cost > 0) {
                 if (totalMoney < cost) return;
                 totalMoney -= cost;
-                updateTotalDisplay();
+                onMoneyChanged();
                 costAnimations.push({
                   key,
                   value: -cost,
@@ -1299,14 +1132,8 @@
               return;
             }
             case "plantCrop": {
-              const cropKey =
-                resolvedAction && resolvedAction.cropKey
-                  ? resolvedAction.cropKey
-                  : selectedCropKey;
-              const stockKey =
-                resolvedAction && resolvedAction.stockKey
-                  ? resolvedAction.stockKey
-                  : selectedStockKey;
+              const cropKey = resolvedAction && resolvedAction.cropKey ? resolvedAction.cropKey : selectedCropKey;
+              const stockKey = resolvedAction && resolvedAction.stockKey ? resolvedAction.stockKey : selectedStockKey;
               const crop = crops[cropKey];
               const stock = stocks[stockKey];
               if (!crop || !stock || !crop.unlocked) return;
@@ -1316,22 +1143,17 @@
                 return;
               }
 
-              if (
-                typeof crop.limit === "number" &&
-                crop.limit >= 0 &&
-                crop.placed >= crop.limit
-              ) {
+              if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) {
                 return;
               }
 
-              const plantCost =
-                typeof crop.placeCost === "number" ? crop.placeCost : 0;
+              const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
 
               if (plantCost > 0) {
                 if (totalMoney < plantCost) return;
 
                 totalMoney -= plantCost;
-                updateTotalDisplay();
+                onMoneyChanged();
 
                 costAnimations.push({
                   key,
@@ -1419,9 +1241,7 @@
             const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
             if (pinchStartDistance > 0) {
-              const newScale = clampScale(
-                pinchStartScale * (d / pinchStartDistance)
-              );
+              const newScale = clampScale(pinchStartScale * (d / pinchStartDistance));
               const k = newScale / scale;
 
               offsetX = pinchCenterX - (pinchCenterX - offsetX) * k;
@@ -1508,6 +1328,11 @@
         const stockGrid = document.getElementById("stockGrid");
         const toolGrid = document.getElementById("toolGrid");
         const toggleStatsBtn = document.getElementById("toggleStatsBtn");
+        const confirmModal = document.getElementById("confirmModal");
+        const confirmMessage = document.getElementById("confirmMessage");
+        const confirmCancel = document.getElementById("confirmCancel");
+        const confirmConfirm = document.getElementById("confirmConfirm");
+        const confirmClose = document.getElementById("confirmClose");
 
         function openOffcanvas() {
           navOffcanvas.classList.remove("translate-x-full");
@@ -1527,14 +1352,33 @@
           else closeOffcanvas();
         }
 
+        let pendingConfirmAction = null;
+
+        function closeConfirmModal() {
+          if (!confirmModal) return;
+          confirmModal.classList.add("hidden");
+          document.body.classList.remove("overflow-hidden");
+          pendingConfirmAction = null;
+        }
+
+        function openConfirmModal(message, onConfirm) {
+          if (!confirmModal || !confirmMessage || !confirmConfirm || !confirmCancel) {
+            onConfirm();
+            return;
+          }
+
+          confirmMessage.textContent = message;
+          pendingConfirmAction = onConfirm;
+          confirmModal.classList.remove("hidden");
+          document.body.classList.add("overflow-hidden");
+          confirmConfirm.focus();
+        }
+
         function updateStatsToggleUI() {
           if (!toggleStatsBtn) return;
           toggleStatsBtn.textContent = showStats ? "On" : "Off";
           if (showStats) {
-            toggleStatsBtn.classList.remove(
-              "bg-neutral-900",
-              "text-neutral-400"
-            );
+            toggleStatsBtn.classList.remove("bg-neutral-900", "text-neutral-400");
             toggleStatsBtn.classList.add("bg-emerald-600", "text-white");
           } else {
             toggleStatsBtn.classList.remove("bg-emerald-600", "text-white");
@@ -1551,6 +1395,7 @@
 
         document.addEventListener("keydown", (e) => {
           if (e.key === "Escape") {
+            closeConfirmModal();
             closeOffcanvas();
           }
         });
@@ -1559,6 +1404,26 @@
           recenterBtn.addEventListener("click", () => {
             centerView();
             closeOffcanvas();
+          });
+        }
+
+        if (confirmCancel) {
+          confirmCancel.addEventListener("click", closeConfirmModal);
+        }
+        if (confirmClose) {
+          confirmClose.addEventListener("click", closeConfirmModal);
+        }
+        if (confirmConfirm) {
+          confirmConfirm.addEventListener("click", () => {
+            if (pendingConfirmAction) pendingConfirmAction();
+            closeConfirmModal();
+          });
+        }
+        if (confirmModal) {
+          confirmModal.addEventListener("click", (e) => {
+            if (e.target === confirmModal) {
+              closeConfirmModal();
+            }
           });
         }
 
@@ -1579,15 +1444,21 @@
             const card = document.createElement("button");
             card.type = "button";
 
-            let baseClass =
-              "relative w-full aspect-square rounded-md overflow-hidden border text-left bg-neutral-900";
+            const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && totalMoney >= crop.unlockCost;
+
+            let baseClass = "relative w-full aspect-square rounded-md overflow-hidden border text-left bg-neutral-900";
             if (crop.id === selectedCropKey) {
               baseClass += " border-emerald-500 ring-1 ring-emerald-500";
+            } else if (!crop.unlocked && canAffordUnlock) {
+              baseClass += " border-amber-400/60 hover:border-amber-300";
             } else {
               baseClass += " border-neutral-700 hover:border-neutral-500";
             }
             if (!crop.unlocked) {
-              baseClass += " opacity-40 cursor-pointer";
+              baseClass += " cursor-pointer";
+              if (!canAffordUnlock) {
+                baseClass += " opacity-40";
+              }
             } else {
               baseClass += " cursor-pointer";
             }
@@ -1603,44 +1474,34 @@
             }
             img.alt = crop.name;
             img.className = "absolute inset-0 w-full h-full object-cover";
-            if (!crop.unlocked) {
+            if (!crop.unlocked && !canAffordUnlock) {
               img.className += " grayscale";
             }
             card.appendChild(img);
 
             const overlay = document.createElement("div");
-            overlay.className =
-              "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
+            overlay.className = "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
 
             if (crop.id === "grass") {
-              overlay.innerHTML =
-                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
-                `<div class="text-neutral-200">Cost: Free</div>`;
+              overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div>` + `<div class="text-neutral-200">Cost: Free</div>`;
             } else if (crop.id === "farmland") {
               const nextCost = crop.placed < 4 ? 0 : 25;
-              const costText =
-                nextCost === 0 ? "Cost: Free" : `Cost: $${nextCost.toFixed(2)}`;
+              const costText = nextCost === 0 ? "Cost: Free" : `Cost: ${formatCurrency(nextCost)}`;
 
-              overlay.innerHTML =
-                `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
-                `<div class="text-neutral-200">${costText}</div>`;
+              overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div>` + `<div class="text-neutral-200">${costText}</div>`;
             } else {
-              const plantCost =
-                typeof crop.placeCost === "number" ? crop.placeCost : 0;
-              const costText =
-                plantCost > 0 ? `$${plantCost.toFixed(2)}` : "Free";
-              const sellText = `$${crop.baseValue.toFixed(2)}`;
+              const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
+              const costText = plantCost > 0 ? formatCurrency(plantCost) : "Free";
+              const sellText = formatCurrency(crop.baseValue);
 
               overlay.innerHTML =
                 `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
                 `<div class="text-neutral-200">Cost: ${costText}</div>` +
                 `<div class="text-neutral-200">Sell: ${sellText}</div>` +
-                `<div class="text-neutral-300">Grow time: ${crop.growMinutes} min</div>`;
+                `<div class="text-neutral-300">Time: ${crop.growMinutes} min</div>`;
 
               if (!crop.unlocked && crop.unlockCost > 0) {
-                overlay.innerHTML += `<div class="text-[9px] font-normal text-amber-300 mt-1">Unlock: $${crop.unlockCost.toFixed(
-                  2
-                )}</div>`;
+                overlay.innerHTML += `<div class="text-[9px] font-normal text-amber-300 mt-1">Unlock: ${formatCurrency(crop.unlockCost)}</div>`;
               }
             }
 
@@ -1649,14 +1510,16 @@
             card.addEventListener("click", () => {
               if (!crop.unlocked) {
                 if (crop.unlockCost > 0 && totalMoney >= crop.unlockCost) {
-                  totalMoney -= crop.unlockCost;
-                  crop.unlocked = true;
-                  selectedCropKey = crop.id;
-                  previousCropKey = crop.id;
-                  updateTotalDisplay();
-                  renderCropOptions();
-                  updateCurrentSelectionLabel();
-                  saveState();
+                  openConfirmModal(`Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`, () => {
+                    totalMoney -= crop.unlockCost;
+                    crop.unlocked = true;
+                    selectedCropKey = crop.id;
+                    previousCropKey = crop.id;
+                    onMoneyChanged();
+                    renderCropOptions();
+                    updateCurrentSelectionLabel();
+                    saveState();
+                  });
                 }
                 return;
               }
@@ -1678,8 +1541,7 @@
           Object.values(stocks).forEach((stock) => {
             const btn = document.createElement("button");
             btn.type = "button";
-            let cls =
-              "w-full aspect-square rounded-md border flex items-center justify-center text-[11px] font-semibold tracking-wide";
+            let cls = "w-full aspect-square rounded-md border flex items-center justify-center text-[11px] font-semibold tracking-wide";
             if (stock.symbol === selectedStockKey) {
               cls += " border-emerald-500 bg-emerald-500/10";
             } else {
@@ -1703,14 +1565,16 @@
           Object.values(tools).forEach((tool) => {
             const btn = document.createElement("button");
             btn.type = "button";
-            let cls =
-              "w-full aspect-square rounded-md border flex flex-col items-center justify-center text-[11px] font-semibold tracking-wide";
+            const canAffordUnlock = !tool.unlocked && typeof tool.unlockCost === "number" && totalMoney >= tool.unlockCost;
+            let cls = "w-full aspect-square rounded-md border flex flex-col items-center justify-center text-[11px] font-semibold tracking-wide bg-neutral-900 hover:bg-neutral-800";
             if (tool.id === selectedToolKey) {
               cls += " border-emerald-500 bg-emerald-500/10";
+            } else if (!tool.unlocked && canAffordUnlock) {
+              cls += " border-amber-400/60 ring-1 ring-amber-400/60";
             } else {
-              cls += " border-neutral-700 bg-neutral-900 hover:bg-neutral-800";
+              cls += " border-neutral-700";
             }
-            if (!tool.unlocked) {
+            if (!tool.unlocked && !canAffordUnlock) {
               cls += " opacity-50";
             }
             btn.className = cls;
@@ -1721,20 +1585,22 @@
 
             if (!tool.unlocked && tool.unlockCost > 0) {
               const cost = document.createElement("div");
-              cost.className = "text-[9px] font-normal text-amber-300 mt-1";
-              cost.textContent = `$${tool.unlockCost.toLocaleString()}`;
+              cost.className = "text-[9px] font-normal mt-1 text-amber-300";
+              cost.textContent = formatCurrency(tool.unlockCost);
               btn.appendChild(cost);
             }
 
             btn.addEventListener("click", () => {
               if (!tool.unlocked) {
                 if (tool.unlockCost > 0 && totalMoney >= tool.unlockCost) {
-                  totalMoney -= tool.unlockCost;
-                  tool.unlocked = true;
-                  selectedToolKey = tool.id;
-                  updateTotalDisplay();
-                  renderToolOptions();
-                  saveState();
+                  openConfirmModal(`Unlock ${tool.name} for ${formatCurrency(tool.unlockCost)}?`, () => {
+                    totalMoney -= tool.unlockCost;
+                    tool.unlocked = true;
+                    selectedToolKey = tool.id;
+                    onMoneyChanged();
+                    renderToolOptions();
+                    saveState();
+                  });
                 }
                 return;
               }
@@ -1755,10 +1621,8 @@
           needsRender = true;
         }, 1000);
 
-        updateTotalDisplay();
-        renderCropOptions();
+        onMoneyChanged();
         renderStockOptions();
-        renderToolOptions();
         updateCurrentSelectionLabel();
         resizeCanvas();
         updateStatsToggleUI();
