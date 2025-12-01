@@ -174,6 +174,7 @@
         let pinchCenterY = 0;
 
         let tapStart = null;
+        let hoverTile = null;
 
         let needsRender = true;
         let firstResizeDone = false;
@@ -761,7 +762,11 @@
               if (isReady) {
                 phaseIndex = 3;
               } else {
-                const breakpoints = Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
+                const breakpoints =
+                  Array.isArray(plot.stageBreakpoints) &&
+                  plot.stageBreakpoints.length === 2
+                    ? plot.stageBreakpoints
+                    : [1 / 3, 2 / 3];
                 if (progress >= breakpoints[1]) phaseIndex = 2;
                 else if (progress >= breakpoints[0]) phaseIndex = 1;
               }
@@ -914,6 +919,28 @@
           }
 
           ctx.stroke();
+
+          if (hoverTile) {
+            const tool = tools[selectedToolKey] || tools.single;
+            const size = Math.max(1, tool.size || 1);
+            ctx.strokeStyle = "rgba(255,255,255,0.6)";
+            ctx.lineWidth = Math.max(1.2, scale * 0.9);
+            ctx.beginPath();
+
+            for (let r = hoverTile.row; r < hoverTile.row + size; r++) {
+              if (r < 0 || r >= GRID_ROWS || r < startRow || r >= endRow)
+                continue;
+              for (let c = hoverTile.col; c < hoverTile.col + size; c++) {
+                if (c < 0 || c >= GRID_COLS || c < startCol || c >= endCol)
+                  continue;
+                const x = offsetX + c * tileSize * scale;
+                const y = offsetY + r * tileSize * scale;
+                ctx.rect(x, y, tileSize * scale, tileSize * scale);
+              }
+            }
+
+            ctx.stroke();
+          }
         }
 
         function loop() {
@@ -946,6 +973,27 @@
           if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS)
             return null;
           return { row, col, key: row + "," + col };
+        }
+
+        function setHoverTile(tile) {
+          const same =
+            hoverTile &&
+            tile &&
+            hoverTile.row === tile.row &&
+            hoverTile.col === tile.col;
+          if (same) return;
+          if (!hoverTile && !tile) return;
+          hoverTile = tile;
+          needsRender = true;
+        }
+
+        function updateHoverFromEvent(e) {
+          if (isDragging || isPinching) {
+            setHoverTile(null);
+            return;
+          }
+          const tile = tileFromClient(e.clientX, e.clientY);
+          setHoverTile(tile ? { row: tile.row, col: tile.col } : null);
         }
 
         function harvestPlot(key) {
@@ -1165,6 +1213,8 @@
               }
             }
           }
+
+          updateHoverFromEvent(e);
         }
 
         function onPointerUp(e) {
@@ -1182,6 +1232,12 @@
             }
           }
           tapStart = null;
+
+          if (e.type === "pointerleave" || e.type === "pointercancel") {
+            setHoverTile(null);
+          } else {
+            updateHoverFromEvent(e);
+          }
 
           if (scaleChanged && activePointers.size === 0) {
             saveState();
