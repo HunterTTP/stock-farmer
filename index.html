@@ -12,7 +12,7 @@
       <div class="flex flex-wrap items-center gap-3 px-5 py-3 relative">
         <a class="text-base font-semibold whitespace-nowrap" href="#">Stock Farmer</a>
 
-        <div class="flex-1 w-full sm:w-auto flex justify-center">
+        <div class="ml-auto flex items-center gap-3">
           <div class="flex items-center gap-3 bg-neutral-900/80 border border-neutral-800 rounded-full px-4 py-2 shadow-lg">
             <button id="userBadge" type="button" class="flex items-center gap-2 text-sm font-semibold text-white whitespace-nowrap focus:outline-none">
               <svg class="h-5 w-5 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -22,10 +22,6 @@
               <span id="auth-state">Guest</span>
             </button>
           </div>
-        </div>
-
-        <div class="ml-auto flex items-center gap-3">
-          <div id="totalDisplay" class="text-sm font-mono px-3 py-2 rounded bg-neutral-800">$0.00</div>
           <button
             id="navToggle"
             class="inline-flex items-center justify-center p-3 rounded-md border border-gray-500 hover:bg-neutral-800 focus:outline-none"
@@ -183,6 +179,9 @@
 
     <div class="canvas-wrapper">
       <canvas id="gridCanvas"></canvas>
+      <div class="pointer-events-none absolute top-3 left-3 z-20">
+        <div id="totalDisplay" class="pointer-events-auto text-sm font-mono px-3 py-2 rounded-md bg-neutral-900/90 border border-neutral-700 shadow-lg">$0.00</div>
+      </div>
       <div class="pointer-events-none absolute inset-x-0 bottom-2 px-3 flex justify-center z-20">
         <div class="pointer-events-auto w-full max-w-xl">
           <div class="flex items-stretch justify-center gap-2 flex-wrap">
