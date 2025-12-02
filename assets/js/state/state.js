@@ -18,7 +18,9 @@ export function createInitialState(config) {
     needsRender: true,
     firstResizeDone: false,
     savedScaleFromState: null,
-    scaleDirty: false,
+    savedOffsetX: null,
+    savedOffsetY: null,
+    viewDirty: false,
     totalMoney: 0,
     showStats: true,
     selectedCropKey: "wheat",
@@ -73,6 +75,8 @@ export function saveState({ state, world, crops, sizes, config }) {
     hoeSelected: state.hoeSelected,
     showStats: state.showStats,
     scale: state.scale,
+    offsetX: state.offsetX,
+    offsetY: state.offsetY,
     cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
     sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
     cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
@@ -140,7 +144,9 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
 
     if (typeof data.showStats === "boolean") state.showStats = data.showStats;
     if (typeof data.hoeSelected === "boolean") state.hoeSelected = data.hoeSelected;
-    if (typeof data.scale === "number") state.savedScaleFromState = data.scale;
+    if (Number.isFinite(data.scale)) state.savedScaleFromState = data.scale;
+    if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
+    if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
 
     if (!state.hoeSelected && state.selectedCropKey && crops[state.selectedCropKey]) {
       state.previousCropKey = state.selectedCropKey;

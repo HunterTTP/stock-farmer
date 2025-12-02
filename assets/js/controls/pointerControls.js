@@ -1,6 +1,13 @@
 import { clampScale } from "../utils/helpers.js";
 
 export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState }) {
+  function cancelHoeHold() {
+    if (state.hoeHoldTimeoutId) {
+      clearTimeout(state.hoeHoldTimeoutId);
+      state.hoeHoldTimeoutId = null;
+    }
+  }
+
   function updatePointer(e) {
     state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   }
@@ -38,6 +45,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.pinchStartScale = state.scale;
       state.pinchCenter = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
       state.tapStart = null;
+      cancelHoeHold();
     } else if (state.activePointers.size === 1) {
       state.isPinching = false;
       state.isDragging = true;
@@ -79,23 +87,23 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         state.offsetX = state.pinchCenter.x - (state.pinchCenter.x - state.offsetX) * k;
         state.offsetY = state.pinchCenter.y - (state.pinchCenter.y - state.offsetY) * k;
         state.scale = newScale;
-        state.scaleDirty = true;
+        viewport.clampToBounds();
+        state.viewDirty = true;
         state.needsRender = true;
       }
     } else if (state.isDragging) {
       e.preventDefault();
       state.offsetX = state.dragOffsetStart.x + (e.clientX - state.dragStart.x);
       state.offsetY = state.dragOffsetStart.y + (e.clientY - state.dragStart.y);
+      viewport.clampToBounds();
+      state.viewDirty = true;
       state.needsRender = true;
       if (state.tapStart) {
         const dx = e.clientX - state.tapStart.x;
         const dy = e.clientY - state.tapStart.y;
         if (dx * dx + dy * dy > 25) {
           state.tapStart = null;
-          if (state.hoeHoldTimeoutId) {
-            clearTimeout(state.hoeHoldTimeoutId);
-            state.hoeHoldTimeoutId = null;
-          }
+          cancelHoeHold();
         }
       }
     }
@@ -103,10 +111,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
   }
 
   function onPointerUp(e) {
-    if (state.hoeHoldTimeoutId) {
-      clearTimeout(state.hoeHoldTimeoutId);
-      state.hoeHoldTimeoutId = null;
-    }
+    cancelHoeHold();
     state.activePointers.delete(e.pointerId);
     canvas.releasePointerCapture(e.pointerId);
     if (state.activePointers.size < 2) state.isPinching = false;
@@ -126,9 +131,9 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     if (e.type === "pointerleave" || e.type === "pointercancel") setHoverTile(null);
     else updateHoverFromEvent(e);
 
-    if (state.scaleDirty && state.activePointers.size === 0) {
+    if (state.viewDirty && state.activePointers.size === 0) {
       saveState();
-      state.scaleDirty = false;
+      state.viewDirty = false;
     }
   }
 
@@ -150,10 +155,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     canvas.addEventListener("wheel", onWheel, { passive: false });
 
     document.addEventListener("pointerleave", () => {
-      if (state.hoeHoldTimeoutId) {
-        clearTimeout(state.hoeHoldTimeoutId);
-        state.hoeHoldTimeoutId = null;
-      }
+      cancelHoeHold();
     });
   }
 
