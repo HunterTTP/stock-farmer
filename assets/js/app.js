@@ -11,6 +11,7 @@ import { createRenderer } from "./render/canvasRenderer.js";
 import { createPointerControls } from "./controls/pointerControls.js";
 import { createActions } from "./logic/actions.js";
 import { formatCurrency, cropImageSrc, createRandomStageBreakpoints } from "./utils/helpers.js";
+import { registerGameContext } from "./firebase-auth.js";
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -65,6 +66,8 @@ ui = createUIControls({
   centerView: viewport.centerView,
   resetFarm,
 });
+
+registerGameContext({ state, world, crops, stocks, sizes, config, refreshUI: ui.refreshAllUI });
 
 const actions = createActions({
   state,

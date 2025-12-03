@@ -8,6 +8,7 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { buildSaveData, applyLoadedData, recalcPlacedCounts } from "./state/state.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMKAFtLXJyvGsZSI6ToK3AxsTVftsuKvg",
@@ -47,6 +48,71 @@ const signUp = async (email, password, username) => {
 const signIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
 
 const logOut = () => signOut(auth);
+
+let gameContext = null;
+
+const registerGameContext = (context) => {
+  gameContext = context;
+};
+
+let remoteFnsPromise = null;
+const getRemoteFns = () => {
+  if (!remoteFnsPromise) remoteFnsPromise = import("./firebase-store.js");
+  return remoteFnsPromise;
+};
+
+const syncOnLogin = async () => {
+  if (!gameContext) return;
+  try {
+    const { loadRemoteState, saveRemoteState } = await getRemoteFns();
+    const remote = await loadRemoteState();
+    if (remote) {
+      applyLoadedData(remote, gameContext);
+      try {
+        recalcPlacedCounts(gameContext.world, gameContext.crops);
+      } catch (error) {
+        console.error("Recalc after remote load failed", error);
+      }
+      try {
+        localStorage.setItem(gameContext.config.saveKey, JSON.stringify(remote));
+      } catch (error) {
+        console.error("Local overwrite failed", error);
+      }
+      if (gameContext.refreshUI) gameContext.refreshUI();
+    } else {
+      const localData = buildSaveData(gameContext);
+      await saveRemoteState(localData);
+    }
+  } catch (error) {
+    console.error("Sync on login failed", error);
+  }
+};
+
+const logOutAndReset = async () => {
+  try {
+    if (auth.currentUser && gameContext) {
+      const localData = buildSaveData(gameContext);
+      const { saveRemoteState } = await getRemoteFns();
+      await saveRemoteState(localData);
+    }
+  } catch (error) {
+    console.error("Final remote save failed", error);
+  }
+
+  try {
+    if (gameContext?.config?.saveKey) localStorage.removeItem(gameContext.config.saveKey);
+  } catch (error) {
+    console.error("Local clear failed", error);
+  }
+
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Sign out failed", error);
+  }
+
+  window.location.reload();
+};
 
 const initAuthUI = () => {
   const authStateEl = document.getElementById("auth-state");
@@ -139,6 +205,7 @@ const initAuthUI = () => {
       try {
         await signUp(email, password, username);
         signupForm.reset();
+        await syncOnLogin();
         closeModal();
       } catch (error) {
         setText(signupError, formatError(error));
@@ -156,6 +223,7 @@ const initAuthUI = () => {
       try {
         await signIn(email, password);
         loginForm.reset();
+        await syncOnLogin();
         closeModal();
       } catch (error) {
         setText(loginError, formatError(error));
@@ -181,13 +249,8 @@ const initAuthUI = () => {
 
   if (logoutConfirm) {
     logoutConfirm.addEventListener("click", async () => {
-      try {
-        await logOut();
-      } catch (error) {
-        console.error(error);
-      } finally {
-        closeLogoutModal();
-      }
+      closeLogoutModal();
+      await logOutAndReset();
     });
   }
 
@@ -202,4 +265,4 @@ const initAuthUI = () => {
 
 initAuthUI();
 
-export { auth, initAuthUI, signUp, signIn, logOut };
+export { auth, initAuthUI, signUp, signIn, logOut, registerGameContext, logOutAndReset };
