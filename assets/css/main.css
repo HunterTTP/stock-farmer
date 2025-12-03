@@ -51,3 +51,26 @@ body {
   max-width: 240px;
   text-align: center;
 }
+.dropdown-menu {
+  scrollbar-width: thin;
+  scrollbar-color: #404040 transparent;
+}
+.dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+.dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 999px;
+}
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+
+button,
+[role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+}

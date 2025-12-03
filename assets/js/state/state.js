@@ -22,6 +22,13 @@ export function createInitialState(config) {
     savedOffsetY: null,
     totalMoney: 0,
     showStats: true,
+    showTickerInfo: true,
+    showPctInfo: true,
+    showTimerInfo: true,
+    showSellInfo: true,
+    statTextAlpha: 1,
+    statBgAlpha: 1,
+    activeMode: "plant",
     selectedCropKey: "wheat",
     previousCropKey: "wheat",
     selectedStockKey: "SP500",
@@ -47,7 +54,14 @@ export function applyDefaultSelection(state) {
   state.previousCropKey = "wheat";
   state.selectedStockKey = "SP500";
   state.selectedSizeKey = "single";
+  state.activeMode = "plant";
   state.hoeSelected = false;
+  state.showTickerInfo = true;
+  state.showPctInfo = true;
+  state.showTimerInfo = true;
+  state.showSellInfo = true;
+  state.statTextAlpha = 1;
+  state.statBgAlpha = 1;
 }
 
 export function recalcPlacedCounts(world, crops) {
@@ -129,12 +143,29 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
     else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
 
     if (typeof data.showStats === "boolean") state.showStats = data.showStats;
-    if (typeof data.hoeSelected === "boolean") state.hoeSelected = data.hoeSelected;
+    const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
+    state.showTickerInfo =
+      typeof data.showTickerInfo === "boolean" ? data.showTickerInfo : legacyStock ?? state.showStats;
+    state.showPctInfo = typeof data.showPctInfo === "boolean" ? data.showPctInfo : state.showStats;
+    state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : state.showStats;
+    state.showSellInfo = typeof data.showSellInfo === "boolean" ? data.showSellInfo : state.showStats;
+    state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+    state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
+    state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
+    const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
+    if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build") {
+      state.activeMode = savedMode;
+    } else if (typeof data.hoeSelected === "boolean" && data.hoeSelected) {
+      state.activeMode = "harvest";
+    } else {
+      state.activeMode = "plant";
+    }
+    state.hoeSelected = state.activeMode === "harvest";
     if (Number.isFinite(data.scale)) state.savedScaleFromState = data.scale;
     if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
     if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
 
-    if (!state.hoeSelected && state.selectedCropKey && crops[state.selectedCropKey]) {
+    if (state.activeMode !== "harvest" && state.selectedCropKey && crops[state.selectedCropKey]) {
       state.previousCropKey = state.selectedCropKey;
     }
 
@@ -168,8 +199,15 @@ export function buildSaveData({ state, world, crops, sizes }) {
     previousCropKey: state.previousCropKey,
     selectedStockKey: state.selectedStockKey,
     selectedSizeKey: state.selectedSizeKey,
-    hoeSelected: state.hoeSelected,
+    activeMode: state.activeMode,
+    hoeSelected: state.activeMode === "harvest",
     showStats: state.showStats,
+    showTickerInfo: state.showTickerInfo,
+    showPctInfo: state.showPctInfo,
+    showTimerInfo: state.showTimerInfo,
+    showSellInfo: state.showSellInfo,
+    statTextAlpha: state.statTextAlpha,
+    statBgAlpha: state.statBgAlpha,
     scale: state.scale,
     offsetX: state.offsetX,
     offsetY: state.offsetY,
@@ -243,12 +281,29 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
   else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
 
   if (typeof data.showStats === "boolean") state.showStats = data.showStats;
-  if (typeof data.hoeSelected === "boolean") state.hoeSelected = data.hoeSelected;
+  const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
+  state.showTickerInfo =
+    typeof data.showTickerInfo === "boolean" ? data.showTickerInfo : legacyStock ?? state.showStats;
+  state.showPctInfo = typeof data.showPctInfo === "boolean" ? data.showPctInfo : state.showStats;
+  state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : state.showStats;
+  state.showSellInfo = typeof data.showSellInfo === "boolean" ? data.showSellInfo : state.showStats;
+  state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+  state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
+  state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
+  const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
+  if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build") {
+    state.activeMode = savedMode;
+  } else if (typeof data.hoeSelected === "boolean" && data.hoeSelected) {
+    state.activeMode = "harvest";
+  } else {
+    state.activeMode = "plant";
+  }
+  state.hoeSelected = state.activeMode === "harvest";
   if (Number.isFinite(data.scale)) state.savedScaleFromState = data.scale;
   if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
   if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
 
-  if (!state.hoeSelected && state.selectedCropKey && crops[state.selectedCropKey]) {
+  if (state.activeMode !== "harvest" && state.selectedCropKey && crops[state.selectedCropKey]) {
     state.previousCropKey = state.selectedCropKey;
   }
 

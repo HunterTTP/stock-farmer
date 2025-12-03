@@ -52,7 +52,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.dragStart = { x: e.clientX, y: e.clientY };
       state.dragOffsetStart = { x: state.offsetX, y: state.offsetY };
       state.tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now() };
-      if (state.hoeSelected) {
+      if (state.activeMode === "harvest") {
         const tile = viewport.tileFromClient(e.clientX, e.clientY);
         if (tile) {
           const targets = actions.collectHoeDestroyTargets(tile.row, tile.col);

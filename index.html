@@ -42,7 +42,7 @@
 
     <div id="navOffcanvas" class="fixed inset-y-0 right-0 w-64 bg-neutral-900 text-white shadow-xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col">
       <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-700">
-        <h5 class="text-sm font-semibold" id="navOffcanvasLabel">Controls</h5>
+        <h5 class="text-sm font-semibold" id="navOffcanvasLabel">Settings</h5>
         <button id="navClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
           <span class="sr-only">Close</span>
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -51,25 +51,49 @@
         </button>
       </div>
       <div class="flex-1 p-4 text-xs text-neutral-300 space-y-4 overflow-y-auto">
-        <button id="authTrigger" class="w-full text-sm font-semibold px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-neutral-900">Sign in / Sign up</button>
-
-        <div>
-          <p class="mb-2 font-medium text-neutral-200">Crop</p>
-          <div id="cropGrid" class="grid grid-cols-2 gap-2"></div>
+        <div class="space-y-2">
+          <button id="authTrigger" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white focus:outline-none">Sign in / Sign up</button>
+          <button id="logoutBtn" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-sky-600 hover:bg-sky-500 border-sky-500 text-white focus:outline-none hidden">Logout</button>
         </div>
 
-        <div>
-          <p class="mb-2 font-medium text-neutral-200">Stock</p>
-          <div id="stockGrid" class="grid grid-cols-3 gap-2"></div>
+        <div class="flex flex-col gap-3 text-sm font-semibold">
+          <label class="flex items-center gap-3 px-3 py-2 rounded-md border border-neutral-700 bg-neutral-800 cursor-pointer select-none">
+            <input id="showTickerToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
+            <span>Show Ticker</span>
+          </label>
+          <label class="flex items-center gap-3 px-3 py-2 rounded-md border border-neutral-700 bg-neutral-800 cursor-pointer select-none">
+            <input id="showPctToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
+            <span>Show Movement %</span>
+          </label>
+          <label class="flex items-center gap-3 px-3 py-2 rounded-md border border-neutral-700 bg-neutral-800 cursor-pointer select-none">
+            <input id="showTimerToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
+            <span>Show Timer</span>
+          </label>
+          <label class="flex items-center gap-3 px-3 py-2 rounded-md border border-neutral-700 bg-neutral-800 cursor-pointer select-none">
+            <input id="showSellToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
+            <span>Show Sell Price</span>
+          </label>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-300">
+              <span>Text Opacity</span>
+              <span id="statTextAlphaValue" class="font-semibold">100%</span>
+            </div>
+            <input id="statTextAlpha" type="range" min="20" max="100" value="100" class="w-full accent-emerald-500">
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-300">
+              <span>Background Opacity</span>
+              <span id="statBgAlphaValue" class="font-semibold">100%</span>
+            </div>
+            <input id="statBgAlpha" type="range" min="20" max="100" value="100" class="w-full accent-emerald-500">
+          </div>
         </div>
 
-        <div class="flex items-center justify-between text-[11px]">
-          <span class="text-neutral-200"></span>
-          <button id="toggleStatsBtn" class="w-full border border-neutral-600 text-[11px] bg-neutral-800 px-2 py-2 rounded-md">Show Stats</button>
-        </div>
+        <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="recenterBtn">Recenter view</button>
+      </div>
 
-        <button class="w-full border border-gray-500 text-xs px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="recenterBtn">Recenter view</button>
-        <button class="w-full border border-red-700 text-xs px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center mt-2" id="resetFarmBtn">
+      <div class="p-4 border-t border-neutral-800">
+        <button class="w-full border border-red-700 text-sm font-semibold px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center" id="resetFarmBtn">
           Reset farm
         </button>
       </div>
@@ -213,40 +237,119 @@
 
     <div class="canvas-wrapper">
       <canvas id="gridCanvas"></canvas>
-      <div class="pointer-events-none absolute top-3 left-3 z-20">
-        <div id="totalDisplay" class="pointer-events-auto text-sm font-mono px-3 py-2 rounded-md bg-neutral-900/90 border border-neutral-700 shadow-lg">$0.00</div>
+      <div class="pointer-events-none absolute top-3 right-3 z-20">
+        <div id="totalDisplay" class="pointer-events-none select-none text-sm font-semibold px-4 py-3 rounded-lg bg-neutral-900/80 border border-neutral-800 text-white shadow-lg">$0.00</div>
       </div>
-      <div class="pointer-events-none absolute inset-x-0 bottom-2 px-3 flex justify-center z-20">
+      <div class="pointer-events-none absolute top-3 left-3 z-20 inline-block">
+        <div class="pointer-events-auto space-y-3">
+          <div class="relative min-h-[220px] inline-block" id="dropdownColumn">
+            <div id="plantDropdowns" class="absolute inset-0 flex flex-col gap-2 items-start">
+              <div class="relative">
+                <button
+                  id="plantCropButton"
+                  type="button"
+                  class="h-12 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between focus:outline-none min-w-[9rem]">
+                  <div class="flex items-center gap-2 overflow-hidden">
+                    <img id="plantCropImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800" alt="Crop" />
+                    <span id="plantCropLabel" class="truncate">Crop</span>
+                  </div>
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <div
+                  id="plantCropMenu"
+                  class="dropdown-menu hidden absolute top-full mt-2 left-0 w-max min-w-[12rem] max-h-72 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+                </div>
+              </div>
+              <div class="relative">
+                <button
+                  id="plantStockButton"
+                  type="button"
+                  class="h-12 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between focus:outline-none min-w-[7rem]">
+                  <span id="plantStockLabel" class="truncate">Stock</span>
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <div
+                  id="plantStockMenu"
+                  class="dropdown-menu hidden absolute top-full mt-2 left-0 w-max min-w-[10rem] max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+                </div>
+              </div>
+              <div class="relative">
+                <button
+                  id="plantSizeButton"
+                  type="button"
+                  class="h-12 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between focus:outline-none min-w-[7rem]">
+                  <span id="plantSizeLabel" class="truncate">Size</span>
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <div
+                  id="plantSizeMenu"
+                  class="dropdown-menu hidden absolute top-full mt-2 left-0 w-max min-w-[10rem] max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+                </div>
+              </div>
+            </div>
+            <div id="harvestDropdowns" class="hidden absolute inset-0 flex flex-col gap-2 items-start">
+              <div class="relative">
+                <button
+                  id="harvestSizeButton"
+                  type="button"
+                  class="h-12 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between focus:outline-none min-w-[9rem]">
+                  <div class="flex items-center gap-2 overflow-hidden">
+                    <img src="images/hoe/hoe-phase-1.png" alt="Hoe" class="w-5 h-5 object-contain" />
+                    <span id="harvestSizeLabel" class="truncate">1x1</span>
+                  </div>
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <div
+                  id="harvestSizeMenu"
+                  class="dropdown-menu hidden absolute top-full mt-2 left-0 w-max min-w-[10rem] max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+                </div>
+              </div>
+            </div>
+            <div id="buildDropdowns" class="hidden absolute inset-0 flex flex-col gap-2 items-start">
+              <div class="relative">
+                <button
+                  id="buildSelectButton"
+                  type="button"
+                  class="h-12 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between focus:outline-none min-w-[9rem]">
+                  <span id="buildSelectLabel" class="truncate">Coming soon..</span>
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pointer-events-none absolute inset-x-0 bottom-3 px-3 flex flex-col items-center gap-3 z-20">
         <div class="pointer-events-auto w-full max-w-xl">
-          <div class="flex items-stretch justify-center gap-2 flex-wrap">
-              <button
-                id="cropStockButton"
-                class="flex-shrink-0 border border-neutral-700 rounded-md bg-neutral-900 hover:bg-neutral-800 flex items-center gap-3 px-4 py-3 text-sm font-semibold tracking-wide shadow-lg">
-              <div class="w-14 h-14 rounded border border-neutral-700 overflow-hidden bg-neutral-800 flex-shrink-0">
-                <img id="cropStockImage" class="w-full h-full object-cover" alt="Crop" />
-              </div>
-              <div id="cropStockStockWrapper" class="w-14 h-14 rounded border border-neutral-700 bg-neutral-800 flex items-center justify-center text-sm font-semibold text-white">
-                <span id="cropStockStockLabel"></span>
-              </div>
+          <div class="flex items-center justify-center gap-3 flex-wrap">
+            <button
+              id="modePlantBtn"
+              type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Plant
             </button>
             <button
-              id="hoeButton"
-              class="w-20 h-20 border border-neutral-700 rounded-md bg-neutral-900 hover:bg-neutral-800 flex items-center justify-center shadow-lg text-sm font-semibold px-5 py-5"
-              aria-label="Toggle hoe"
-              aria-pressed="false">
-              <img src="images/hoe/hoe-phase-1.png" alt="Hoe" class="w-10 h-10 object-contain pointer-events-none" />
+              id="modeHarvestBtn"
+              type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Harvest
             </button>
-            <div class="relative">
-              <button
-                id="sizeButton"
-                class="h-20 border border-neutral-700 rounded-md bg-neutral-900 hover:bg-neutral-800 px-6 py-6 text-base font-semibold tracking-wide flex items-center gap-2 shadow-lg">
-                <span id="sizeButtonLabel" class="text-white"></span>
-                <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </button>
-              <div id="sizeMenu" class="hidden absolute bottom-full mb-2 right-0 min-w-[140px] bg-neutral-900 border border-neutral-700 rounded-md shadow-2xl overflow-hidden"></div>
-            </div>
+            <button
+              id="modeBuildBtn"
+              type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Build
+            </button>
           </div>
         </div>
       </div>

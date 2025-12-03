@@ -474,6 +474,7 @@ const initAuthUI = () => {
   const authStateEl = document.getElementById("auth-state");
   const userBadge = document.getElementById("userBadge");
   const authTrigger = document.getElementById("authTrigger");
+  const logoutBtn = document.getElementById("logoutBtn");
   const authModal = document.getElementById("authModal");
   const authModalOverlay = document.getElementById("authModalOverlay");
   const authModalClose = document.getElementById("authModalClose");
@@ -577,12 +578,14 @@ const initAuthUI = () => {
       if (authStateEl) setAuthStatus(name, false);
       lastKnownDisplayName = name;
       if (authTrigger) authTrigger.classList.add("hidden");
+      if (logoutBtn) logoutBtn.classList.remove("hidden");
       ensureSessionWatch(user);
       if (gameContext && !loginSyncPromise && lastSyncedUserId !== user.uid)
         requestLoginSync();
     } else {
       if (authStateEl) setAuthStatus("Guest", false);
       if (authTrigger) authTrigger.classList.remove("hidden");
+      if (logoutBtn) logoutBtn.classList.add("hidden");
       cleanupSessionWatch();
       resetSyncTracking();
       if (shouldAutoOpenAuth) {
@@ -598,6 +601,11 @@ const initAuthUI = () => {
       console.log("[ui] open auth modal");
       toggleModal(true);
       switchTab("login");
+    });
+  }
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      toggleLogoutModal(true);
     });
   }
 

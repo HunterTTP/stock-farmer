@@ -125,50 +125,125 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
         ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
 
         if (isZoomedOut) {
-          if (state.showStats && !isReady) {
-            ctx.fillStyle = "rgba(0,0,0,0.7)";
-            ctx.fillRect(x, y, tileScreenSize, tileScreenSize);
-
-            ctx.save();
-            ctx.textAlign = "left";
-            ctx.textBaseline = "top";
-            const pad = tileScreenSize * 0.08;
-            let lineY = y + pad;
-            const baseX = x + pad;
-            ctx.font = `${tileScreenSize * 0.22}px system-ui`;
-            ctx.fillStyle = stockColor;
-            ctx.fillText(`${plot.stockKey} ${arrow}`, baseX, lineY);
-            lineY += tileScreenSize * 0.24;
-            ctx.font = `${tileScreenSize * 0.2}px system-ui`;
-            ctx.fillStyle = "white";
-            ctx.fillText(pctText, baseX, lineY);
-            lineY += tileScreenSize * 0.2;
-            ctx.fillText(valueText, baseX, lineY);
-            lineY += tileScreenSize * 0.2;
-            ctx.fillText(timerText, baseX, lineY);
-            ctx.restore();
-          }
-          continue;
-        }
-
-        const pad = 3 * state.scale;
-        const infoHeight = 32 * state.scale;
-        if (state.showStats && !isReady) {
-          ctx.fillStyle = "rgba(0,0,0,0.65)";
-          ctx.fillRect(x, y, tileScreenSize, infoHeight);
+        const statsEnabled = state.showStats && (state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo);
+        if (statsEnabled && !isReady) {
+          ctx.save();
+          const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
+          const padBottom = Math.max(2, padTop * 0.5);
+          const baseFont = Math.min(Math.max(tileScreenSize * 0.14, 8), Math.min(16, tileScreenSize * 0.24));
+          let fontSize = baseFont;
+          let spacing = Math.max(2, fontSize * 0.15);
+          ctx.textAlign = "left";
           ctx.textBaseline = "top";
-          ctx.font = `${9 * state.scale}px system-ui`;
-          const baseX = x + pad;
-          const baseY = y + pad;
-          const tickerText = `${plot.stockKey} ${arrow}`;
-          ctx.fillStyle = stockColor;
-          ctx.fillText(tickerText, baseX, baseY);
-          const tickerWidth = ctx.measureText(tickerText + " ").width;
-          ctx.fillStyle = "white";
-          ctx.fillText(pctText, baseX + tickerWidth, baseY);
-          ctx.fillText(valueText, baseX, baseY + 10 * state.scale);
-          ctx.fillText(timerText, baseX, baseY + 20 * state.scale);
+          ctx.font = `${fontSize}px system-ui`;
+
+          const availableWidth = tileScreenSize - padTop * 2;
+          const lines = [];
+          if (state.showTickerInfo) {
+            const base = `${plot.stockKey} ${arrow}`;
+            const pctLine = `${pctText}`;
+            const combined = state.showPctInfo ? `${base} ${pctLine}` : base;
+            const fitsCombined = ctx.measureText(combined).width <= availableWidth * 0.95;
+            if (fitsCombined) {
+              lines.push({ text: combined, color: stockColor });
+            } else {
+              lines.push({ text: base, color: stockColor });
+              if (state.showPctInfo) lines.push({ text: pctLine, color: stockColor });
+            }
+          } else if (state.showPctInfo) {
+            lines.push({ text: pctText, color: stockColor });
+          }
+          if (state.showSellInfo) lines.push({ text: valueText, color: "white" });
+          if (state.showTimerInfo) lines.push({ text: timerText, color: "white" });
+
+          if (lines.length) {
+            const availableHeight = Math.max(0, tileScreenSize - padTop - padBottom);
+            const maxFontToFit =
+              (availableHeight - spacing * Math.max(0, lines.length - 1)) / Math.max(1, lines.length);
+            if (maxFontToFit < fontSize) {
+              fontSize = Math.max(6, maxFontToFit);
+              spacing = Math.max(2, fontSize * 0.15);
+              ctx.font = `${fontSize}px system-ui`;
+            }
+          }
+
+          const contentHeight = lines.length ? fontSize * lines.length + spacing * (lines.length - 1) : 0;
+          const bgHeight = Math.min(tileScreenSize, padTop + padBottom + contentHeight);
+          const bgAlpha = Math.min(1, Math.max(0, state.statBgAlpha ?? 1));
+          ctx.fillStyle = `rgba(0,0,0,${0.65 * bgAlpha})`;
+          ctx.fillRect(x, y, tileScreenSize, bgHeight);
+
+          const textAlpha = Math.min(1, Math.max(0, state.statTextAlpha ?? 1));
+          ctx.globalAlpha = textAlpha;
+          let lineY = y + padTop;
+          const baseX = x + padTop;
+          lines.forEach((line, idx) => {
+            ctx.fillStyle = line.color;
+            ctx.fillText(line.text, baseX, lineY);
+            if (idx < lines.length - 1) lineY += fontSize + spacing;
+          });
+          ctx.restore();
         }
+        continue;
+      }
+
+      const statsEnabled = state.showStats && (state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo);
+      if (statsEnabled && !isReady) {
+        ctx.save();
+        const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
+        const padBottom = Math.max(2, padTop * 0.5);
+        const baseFont = Math.min(Math.max(tileScreenSize * 0.14, 8), Math.min(16, tileScreenSize * 0.24));
+        let fontSize = baseFont;
+        let spacing = Math.max(2, fontSize * 0.15);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.font = `${fontSize}px system-ui`;
+        const availableWidth = tileScreenSize - padTop * 2;
+        const lines = [];
+        if (state.showTickerInfo) {
+          const base = `${plot.stockKey} ${arrow}`;
+          const pctLine = `${pctText}`;
+          const combined = state.showPctInfo ? `${base} ${pctLine}` : base;
+          const fitsCombined = ctx.measureText(combined).width <= availableWidth * 0.95;
+          if (fitsCombined) {
+            lines.push({ text: combined, color: stockColor });
+          } else {
+            lines.push({ text: base, color: stockColor });
+            if (state.showPctInfo) lines.push({ text: pctLine, color: stockColor });
+          }
+        } else if (state.showPctInfo) {
+          lines.push({ text: pctText, color: stockColor });
+        }
+        if (state.showSellInfo) lines.push({ text: valueText, color: "white" });
+        if (state.showTimerInfo) lines.push({ text: timerText, color: "white" });
+        if (lines.length) {
+          const availableHeight = Math.max(0, tileScreenSize - padTop - padBottom);
+          const maxFontToFit =
+            (availableHeight - spacing * Math.max(0, lines.length - 1)) / Math.max(1, lines.length);
+          if (maxFontToFit < fontSize) {
+            fontSize = Math.max(6, maxFontToFit);
+            spacing = Math.max(2, fontSize * 0.15);
+            ctx.font = `${fontSize}px system-ui`;
+          }
+        }
+        const contentHeight = lines.length ? fontSize * lines.length + spacing * (lines.length - 1) : 0;
+        const bgHeight = Math.min(tileScreenSize, padTop + padBottom + contentHeight);
+
+        const bgAlpha = Math.min(1, Math.max(0, state.statBgAlpha ?? 1));
+        ctx.fillStyle = `rgba(0,0,0,${0.65 * bgAlpha})`;
+        ctx.fillRect(x, y, tileScreenSize, bgHeight);
+        ctx.textBaseline = "top";
+        let lineY = y + padTop;
+        const baseX = x + padTop;
+        const textAlpha = Math.min(1, Math.max(0, state.statTextAlpha ?? 1));
+        ctx.globalAlpha = textAlpha;
+        lines.forEach((line, idx) => {
+          ctx.fillStyle = line.color;
+          ctx.fillText(line.text, baseX, lineY);
+          if (idx < lines.length - 1) lineY += fontSize + spacing;
+        });
+        ctx.restore();
+      }
       }
     }
 

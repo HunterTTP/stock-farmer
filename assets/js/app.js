@@ -10,7 +10,7 @@ import { createViewport } from "./render/viewport.js";
 import { createRenderer } from "./render/canvasRenderer.js";
 import { createPointerControls } from "./controls/pointerControls.js";
 import { createActions } from "./logic/actions.js";
-import { formatCurrency, cropImageSrc, createRandomStageBreakpoints } from "./utils/helpers.js";
+import { formatCurrency, createRandomStageBreakpoints } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave } from "./firebase-auth.js";
 
 const canvas = document.getElementById("gridCanvas");
@@ -64,7 +64,6 @@ ui = createUIControls({
   stocks,
   sizes,
   formatCurrency,
-  cropImageSrc,
   onMoneyChanged,
   saveState: persistence.save,
   centerView: viewport.centerView,

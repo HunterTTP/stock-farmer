@@ -1,13 +1,14 @@
-export function createUIControls({ dom, state, crops, stocks, sizes, formatCurrency, cropImageSrc, onMoneyChanged, saveState, centerView, resetFarm }) {
+export function createUIControls({ dom, state, crops, stocks, sizes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm }) {
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
-  let sizeMenuVisible = false;
+  let openMenuKey = null;
   const defaultConfirmBtnClass =
     "py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none";
   const defaultCancelBtnClass =
     "w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none";
   const blueConfirmBtnClass =
     "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none";
+  const modeOrder = ["plant", "harvest", "build"];
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
 
@@ -70,88 +71,230 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     dom.confirmConfirm.focus();
   }
 
-  function updateStatsToggleUI() {
-    if (!dom.toggleStatsBtn) return;
-    dom.toggleStatsBtn.textContent = "Show Stats";
-    dom.toggleStatsBtn.classList.toggle("bg-emerald-600", state.showStats);
-    dom.toggleStatsBtn.classList.toggle("text-white", state.showStats);
-    dom.toggleStatsBtn.classList.toggle("border-emerald-500", state.showStats);
-    dom.toggleStatsBtn.classList.toggle("bg-neutral-800", !state.showStats);
-    dom.toggleStatsBtn.classList.toggle("text-neutral-200", !state.showStats);
-    dom.toggleStatsBtn.classList.toggle("border-neutral-600", !state.showStats);
+  function updateHideButtonsUI() {
+    if (dom.showTickerToggle) dom.showTickerToggle.checked = !!state.showTickerInfo;
+    if (dom.showPctToggle) dom.showPctToggle.checked = !!state.showPctInfo;
+    if (dom.showTimerToggle) dom.showTimerToggle.checked = !!state.showTimerInfo;
+    if (dom.showSellToggle) dom.showSellToggle.checked = !!state.showSellInfo;
+    if (dom.statTextAlpha) {
+      const pct = Math.round((state.statTextAlpha ?? 1) * 100);
+      dom.statTextAlpha.value = pct;
+      const label = document.getElementById("statTextAlphaValue");
+      if (label) label.textContent = `${pct}%`;
+    }
+    if (dom.statBgAlpha) {
+      const pct = Math.round((state.statBgAlpha ?? 1) * 100);
+      dom.statBgAlpha.value = pct;
+      const label = document.getElementById("statBgAlphaValue");
+      if (label) label.textContent = `${pct}%`;
+    }
+  }
+
+  function ensurePlantDefaults() {
+    if (!state.selectedCropKey) {
+      const fallback = state.previousCropKey && crops[state.previousCropKey] && crops[state.previousCropKey].unlocked ? crops[state.previousCropKey] : null;
+      const firstUnlocked = fallback || Object.values(crops).find((c) => c && c.unlocked);
+      if (firstUnlocked) {
+        state.selectedCropKey = firstUnlocked.id;
+        state.previousCropKey = firstUnlocked.id;
+      }
+    }
+    if (!state.selectedStockKey) {
+      const firstStock = Object.values(stocks)[0];
+      if (firstStock) state.selectedStockKey = firstStock.symbol;
+    }
   }
 
   function updateModeButtonsUI() {
-    const plantingMode = !state.hoeSelected;
-    if (dom.hoeButton) {
-      dom.hoeButton.classList.toggle("border-emerald-500", state.hoeSelected);
-      dom.hoeButton.classList.toggle("border-neutral-700", !state.hoeSelected);
-      dom.hoeButton.classList.remove("bg-emerald-500/10");
-      dom.hoeButton.setAttribute("aria-pressed", state.hoeSelected ? "true" : "false");
-    }
-    if (dom.cropStockButton) {
-      dom.cropStockButton.classList.toggle("border-emerald-500", plantingMode);
-      dom.cropStockButton.classList.toggle("border-neutral-700", !plantingMode);
-    }
+    const active = state.activeMode || "plant";
+    const entries = [
+      { key: "plant", el: dom.modePlantBtn },
+      { key: "harvest", el: dom.modeHarvestBtn },
+      { key: "build", el: dom.modeBuildBtn },
+    ];
+    entries.forEach(({ key, el }) => {
+      if (!el) return;
+      const isActive = key === active;
+      el.classList.toggle("border-emerald-500", isActive);
+      el.classList.toggle("shadow-emerald-500/20", isActive);
+      el.classList.toggle("border-neutral-800", !isActive);
+      el.classList.add("bg-neutral-900/80", "text-white");
+      el.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
   }
 
-  function updateCropStockButtonUI() {
-    if (!dom.cropStockButton) return;
-    const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
-    const stock = stocks[state.selectedStockKey];
-    const src = cropImageSrc(crop ? crop.id : null);
-    if (dom.cropStockImage) {
-      dom.cropStockImage.src = src;
-      dom.cropStockImage.alt = crop ? crop.name : "Crop";
-    }
-    const stockText = stock ? stock.symbol : "";
-    if (dom.cropStockStockLabel) {
-      dom.cropStockStockLabel.textContent = stockText;
-      const len = stockText.length || 1;
-      const fontSize = len > 6 ? 8 : len > 4 ? 9 : 11;
-      dom.cropStockStockLabel.style.fontSize = fontSize + "px";
-    }
-    if (dom.cropStockStockWrapper) {
-      const hideStock = crop && (crop.id === "grass" || crop.id === "farmland");
-      dom.cropStockStockWrapper.classList.toggle("hidden", hideStock);
-    }
+  function renderDropdownGroups() {
+    const active = state.activeMode || "plant";
+    if (dom.plantDropdowns) dom.plantDropdowns.classList.toggle("hidden", active !== "plant");
+    if (dom.harvestDropdowns) dom.harvestDropdowns.classList.toggle("hidden", active !== "harvest");
+    if (dom.buildDropdowns) dom.buildDropdowns.classList.toggle("hidden", active !== "build");
   }
 
-  function updateSizeButtonUI() {
-    if (!dom.sizeButton) return;
-    const size = currentSizeOption();
-    if (dom.sizeButtonLabel) dom.sizeButtonLabel.textContent = size ? size.name : "";
+  function setActiveMode(nextMode) {
+    if (!modeOrder.includes(nextMode)) return;
+    if (nextMode === "plant") ensurePlantDefaults();
+    state.activeMode = nextMode;
+    state.hoeSelected = nextMode === "harvest";
+    closeAllMenus();
+    updateModeButtonsUI();
+    renderSizeMenu();
+    if (nextMode === "plant") renderCropOptions();
+    if (nextMode === "plant") renderStockOptions();
+    if (nextMode === "build") renderBuildOptions();
+    renderDropdownGroups();
+    state.needsRender = true;
+    saveState();
   }
 
-  function renderSizeMenu() {
-    if (!dom.sizeMenu) return;
-    dom.sizeMenu.innerHTML = "";
-    Object.values(sizes).forEach((size) => {
-      const locked = !size.unlocked;
+  function cropThumbSrc(cropId) {
+    if (cropId === "grass") return "images/grass.jpg";
+    if (cropId === "farmland") return "images/farmland.jpg";
+    if (!cropId) return "images/farmland.jpg";
+    return `images/${cropId}/${cropId}-phase-4.png`;
+  }
+
+  function renderPlantCropMenu() {
+    if (!dom.plantCropMenu) return;
+    dom.plantCropMenu.innerHTML = "";
+    Object.values(crops).forEach((crop) => {
+      const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className =
+        "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (!crop.unlocked && !canAffordUnlock) item.classList.add("opacity-50", "cursor-not-allowed");
+      if (crop.id === state.selectedCropKey) item.classList.add("border-emerald-500", "bg-neutral-900/70");
+
+      const img = document.createElement("img");
+      img.src = cropThumbSrc(crop.id);
+      img.alt = crop.name;
+      img.className = "w-5 h-5 rounded-sm object-cover border border-neutral-800";
+      item.appendChild(img);
+
+      const textWrap = document.createElement("div");
+      textWrap.className = "flex-1 min-w-0";
+      const title = document.createElement("div");
+      title.className = "text-sm font-semibold text-white truncate";
+      title.textContent = crop.name;
+      const meta = document.createElement("div");
+      meta.className = "text-[11px] text-neutral-400 truncate";
+      if (crop.id === "grass") meta.textContent = "Free";
+      else if (crop.id === "farmland") meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
+      else {
+        const costText = typeof crop.placeCost === "number" && crop.placeCost > 0 ? formatCurrency(crop.placeCost) : "Free";
+        meta.textContent = `Cost ${costText} • Sell ${formatCurrency(crop.baseValue)} • ${crop.growMinutes}m`;
+      }
+      textWrap.appendChild(title);
+      textWrap.appendChild(meta);
+      item.appendChild(textWrap);
+
+      if (!crop.unlocked && crop.unlockCost > 0) {
+        const lockHint = document.createElement("div");
+        lockHint.className = "text-[11px] font-semibold text-amber-300";
+        lockHint.textContent = formatCurrency(crop.unlockCost);
+        item.appendChild(lockHint);
+      }
+
+      item.addEventListener("click", () => {
+        if (!crop.unlocked) {
+          if (crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost) {
+            openConfirmModal(
+              `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
+              () => {
+                state.totalMoney -= crop.unlockCost;
+                crop.unlocked = true;
+                state.selectedCropKey = crop.id;
+                state.previousCropKey = crop.id;
+                state.needsRender = true;
+                onMoneyChanged();
+                renderCropOptions();
+                closeAllMenus();
+                saveState();
+              },
+              "Confirm Unlock"
+            );
+          }
+          return;
+        }
+        state.selectedCropKey = crop.id;
+        state.previousCropKey = crop.id;
+        state.needsRender = true;
+        renderCropOptions();
+        closeAllMenus();
+        saveState();
+      });
+
+      dom.plantCropMenu.appendChild(item);
+    });
+  }
+
+  function renderCropOptions() {
+    renderPlantCropMenu();
+    updateSelectionLabels();
+  }
+
+  function renderPlantStockMenu() {
+    if (!dom.plantStockMenu) return;
+    dom.plantStockMenu.innerHTML = "";
+    Object.values(stocks).forEach((stock) => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "w-full px-3 py-2 text-left text-[11px] font-semibold border-b border-neutral-800 last:border-b-0 flex items-center justify-between";
-      if (!locked) btn.classList.add("hover:bg-neutral-800");
-      btn.textContent = size.name;
-      if (size.id === state.selectedSizeKey) {
-        btn.classList.add("text-emerald-400");
-      } else {
-        btn.classList.add(locked ? "text-neutral-600" : "text-neutral-100");
-      }
-      let unlockCostEl = null;
-      if (locked && typeof size.unlockCost === "number") {
-        unlockCostEl = document.createElement("span");
-        unlockCostEl.textContent = `Unlock: ${formatCurrency(size.unlockCost)}`;
-        unlockCostEl.className = "text-[10px] font-normal";
-        btn.appendChild(unlockCostEl);
-      }
-      const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
-      btn.disabled = locked && !canAffordUnlock;
-      if (unlockCostEl) {
-        unlockCostEl.classList.toggle("text-amber-300", canAffordUnlock);
-        unlockCostEl.classList.toggle("text-neutral-600", !canAffordUnlock);
-      }
+      btn.className =
+        "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm font-semibold border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (stock.symbol === state.selectedStockKey) btn.classList.add("border-emerald-500", "bg-neutral-900/70");
+      btn.textContent = stock.symbol;
       btn.addEventListener("click", () => {
+        state.selectedStockKey = stock.symbol;
+        renderStockOptions();
+        state.needsRender = true;
+        closeAllMenus();
+        saveState();
+      });
+      dom.plantStockMenu.appendChild(btn);
+    });
+  }
+
+  function renderStockOptions() {
+    renderPlantStockMenu();
+    updateSelectionLabels();
+  }
+
+  function renderSizeMenuFor(menuEl, variant = "text") {
+    if (!menuEl) return;
+    menuEl.innerHTML = "";
+    Object.values(sizes).forEach((size) => {
+      const locked = !size.unlocked;
+      const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className =
+        "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (size.id === state.selectedSizeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (locked && !canAffordUnlock) row.classList.add("opacity-50", "cursor-not-allowed");
+
+      const left = document.createElement("div");
+      left.className = "flex items-center gap-2";
+      if (variant === "harvest") {
+        const icon = document.createElement("img");
+        icon.src = "images/hoe/hoe-phase-1.png";
+        icon.alt = "Hoe";
+        icon.className = "w-5 h-5 object-contain";
+        left.appendChild(icon);
+      }
+      const label = document.createElement("span");
+      label.textContent = size.name;
+      left.appendChild(label);
+      row.appendChild(left);
+
+      if (locked && typeof size.unlockCost === "number") {
+        const cost = document.createElement("span");
+        cost.className = "text-[11px] font-semibold text-amber-300";
+        cost.textContent = formatCurrency(size.unlockCost);
+        row.appendChild(cost);
+      }
+
+      row.disabled = locked && !canAffordUnlock;
+      row.addEventListener("click", () => {
         if (locked) {
           if (!canAffordUnlock) return;
           openConfirmModal(
@@ -162,133 +305,83 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
               state.selectedSizeKey = size.id;
               onMoneyChanged();
               renderSizeMenu();
-              updateSizeButtonUI();
               state.needsRender = true;
+              closeAllMenus();
               saveState();
-              if (dom.sizeMenu) dom.sizeMenu.classList.add("hidden");
-              sizeMenuVisible = false;
             },
-            "Confirm Unlock"
+            "Confirm Unlock",
+            null,
+            { confirmVariant: "blue" }
           );
           return;
         }
         state.selectedSizeKey = size.id;
         renderSizeMenu();
-        updateSizeButtonUI();
         state.needsRender = true;
+        closeAllMenus();
         saveState();
-        dom.sizeMenu.classList.add("hidden");
-        sizeMenuVisible = false;
       });
-      dom.sizeMenu.appendChild(btn);
+
+      menuEl.appendChild(row);
     });
   }
 
-  function closeSizeMenu() {
-    if (!dom.sizeMenu) return;
-    dom.sizeMenu.classList.add("hidden");
-    sizeMenuVisible = false;
+  function renderSizeMenu() {
+    renderSizeMenuFor(dom.plantSizeMenu, "text");
+    renderSizeMenuFor(dom.harvestSizeMenu, "harvest");
+    updateSelectionLabels();
   }
 
-  function renderCropOptions() {
-    if (!dom.cropGrid) return;
-    dom.cropGrid.innerHTML = "";
-    Object.values(crops).forEach((crop) => {
-      const card = document.createElement("button");
-      card.type = "button";
-      const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
-      let baseClass = "relative w-full aspect-square rounded-md overflow-hidden border text-left bg-neutral-900";
-      if (crop.id === state.selectedCropKey) baseClass += " border-emerald-500 ring-1 ring-emerald-500";
-      else if (!crop.unlocked && canAffordUnlock) baseClass += " border-amber-400/60 hover:border-amber-300";
-      else baseClass += " border-neutral-700 hover:border-neutral-500";
-      if (!crop.unlocked) {
-        baseClass += " cursor-pointer";
-        if (!canAffordUnlock) baseClass += " opacity-40";
-      } else {
-        baseClass += " cursor-pointer";
-      }
-      card.className = baseClass;
+  function renderBuildOptions() {
+    if (dom.buildSelectLabel) dom.buildSelectLabel.textContent = "Coming soon..";
+  }
 
-      const img = document.createElement("img");
-      if (crop.id === "grass") img.src = "images/grass.jpg";
-      else if (crop.id === "farmland") img.src = "images/farmland.jpg";
-      else img.src = `images/${crop.id}/${crop.id}-phase-4.png`;
-      img.alt = crop.name;
-      img.className = "absolute inset-0 w-full h-full object-cover";
-      if (!crop.unlocked && !canAffordUnlock) img.className += " grayscale";
-      card.appendChild(img);
+  const menuMap = {
+    plantCrop: () => ({ button: dom.plantCropButton, menu: dom.plantCropMenu }),
+    plantStock: () => ({ button: dom.plantStockButton, menu: dom.plantStockMenu }),
+    plantSize: () => ({ button: dom.plantSizeButton, menu: dom.plantSizeMenu }),
+    harvestSize: () => ({ button: dom.harvestSizeButton, menu: dom.harvestSizeMenu }),
+  };
 
-      const overlay = document.createElement("div");
-      overlay.className = "relative z-10 h-full flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[10px] space-y-0.5";
-      if (crop.id === "grass") {
-        overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div><div class="text-neutral-200">Cost: Free</div>`;
-      } else if (crop.id === "farmland") {
-        const nextCost = crop.placed < 4 ? 0 : 25;
-        const costText = nextCost === 0 ? "Cost: Free" : `Cost: ${formatCurrency(nextCost)}`;
-        overlay.innerHTML = `<div class="font-semibold text-xs text-white">${crop.name}</div><div class="text-neutral-200">${costText}</div>`;
-      } else {
-        const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
-        const costText = plantCost > 0 ? formatCurrency(plantCost) : "Free";
-        const sellText = formatCurrency(crop.baseValue);
-        overlay.innerHTML =
-          `<div class="font-semibold text-xs text-white">${crop.name}</div>` +
-          `<div class="text-neutral-200">Cost: ${costText}</div>` +
-          `<div class="text-neutral-200">Sell: ${sellText}</div>` +
-          `<div class="text-neutral-300">Time: ${crop.growMinutes} min</div>`;
-        if (!crop.unlocked && crop.unlockCost > 0) {
-          overlay.innerHTML += `<div class="text-[9px] font-normal text-amber-300 mt-1">Unlock: ${formatCurrency(crop.unlockCost)}</div>`;
-        }
-      }
-      card.appendChild(overlay);
-
-      card.addEventListener("click", () => {
-        if (!crop.unlocked) {
-          if (crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost) {
-            openConfirmModal(
-              `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
-              () => {
-                state.totalMoney -= crop.unlockCost;
-                crop.unlocked = true;
-                state.selectedCropKey = crop.id;
-                state.previousCropKey = crop.id;
-                onMoneyChanged();
-                updateCropStockButtonUI();
-                saveState();
-              },
-              "Confirm Unlock"
-            );
-          }
-          return;
-        }
-        state.selectedCropKey = crop.id;
-        state.previousCropKey = crop.id;
-        renderCropOptions();
-        updateCropStockButtonUI();
-        saveState();
-      });
-
-      dom.cropGrid.appendChild(card);
+  function closeAllMenus() {
+    Object.values(menuMap).forEach((get) => {
+      const { menu } = get();
+      if (menu) menu.classList.add("hidden");
     });
+    openMenuKey = null;
   }
 
-  function renderStockOptions() {
-    if (!dom.stockGrid) return;
-    dom.stockGrid.innerHTML = "";
-    Object.values(stocks).forEach((stock) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      let cls = "w-full aspect-square rounded-md border flex items-center justify-center text-[11px] font-semibold tracking-wide";
-      if (stock.symbol === state.selectedStockKey) cls += " border-emerald-500 bg-emerald-500/10";
-      else cls += " border-neutral-700 bg-neutral-900 hover:bg-neutral-800";
-      btn.className = cls;
-      btn.textContent = stock.symbol;
-      btn.addEventListener("click", () => {
-        state.selectedStockKey = stock.symbol;
-        renderStockOptions();
-        updateCropStockButtonUI();
-        saveState();
-      });
-      dom.stockGrid.appendChild(btn);
+  function toggleMenu(key) {
+    const entry = menuMap[key]?.();
+    if (!entry || !entry.menu) return;
+    const shouldOpen = openMenuKey !== key;
+    closeAllMenus();
+    if (shouldOpen) {
+      entry.menu.classList.remove("hidden");
+      openMenuKey = key;
+    }
+  }
+
+  function updateSelectionLabels() {
+    const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
+    if (dom.plantCropLabel) dom.plantCropLabel.textContent = crop ? crop.name : "Crop";
+    if (dom.plantCropImage) {
+      dom.plantCropImage.src = cropThumbSrc(crop ? crop.id : null);
+      dom.plantCropImage.alt = crop ? crop.name : "Crop";
+    }
+    const stock = state.selectedStockKey ? stocks[state.selectedStockKey] : null;
+    if (dom.plantStockLabel) dom.plantStockLabel.textContent = stock ? stock.symbol : "Stock";
+    const size = currentSizeOption();
+    if (dom.plantSizeLabel) dom.plantSizeLabel.textContent = size ? size.name : "Size";
+    if (dom.harvestSizeLabel) dom.harvestSizeLabel.textContent = size ? size.name : "Size";
+    if (dom.buildSelectLabel) dom.buildSelectLabel.textContent = "Coming soon..";
+  }
+
+  function bindMenuToggle(button, key) {
+    if (!button) return;
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleMenu(key);
     });
   }
 
@@ -297,14 +390,15 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   }
 
   function refreshAllUI() {
+    ensurePlantDefaults();
     updateTotalDisplay();
     renderStockOptions();
     renderCropOptions();
-    updateCropStockButtonUI();
-    updateSizeButtonUI();
     renderSizeMenu();
+    renderBuildOptions();
     updateModeButtonsUI();
-    updateStatsToggleUI();
+    updateHideButtonsUI();
+    renderDropdownGroups();
   }
 
   function showActionError(message, clientX, clientY) {
@@ -362,63 +456,56 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       });
     }
 
-    if (dom.toggleStatsBtn) {
-      dom.toggleStatsBtn.addEventListener("click", () => {
-        state.showStats = !state.showStats;
-        updateStatsToggleUI();
+    const bindShowToggle = (input, key) => {
+      if (!input) return;
+      input.addEventListener("change", () => {
+        state[key] = !!input.checked;
+        state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+        updateHideButtonsUI();
         state.needsRender = true;
         saveState();
       });
-    }
+    };
+    bindShowToggle(dom.showTickerToggle, "showTickerInfo");
+    bindShowToggle(dom.showPctToggle, "showPctInfo");
+    bindShowToggle(dom.showTimerToggle, "showTimerInfo");
+    bindShowToggle(dom.showSellToggle, "showSellInfo");
 
+    const bindAlpha = (input, key, labelId) => {
+      if (!input) return;
+      const label = labelId ? document.getElementById(labelId) : null;
+      input.addEventListener("input", () => {
+        const val = Math.max(20, Math.min(100, Number(input.value) || 100));
+        state[key] = val / 100;
+        if (label) label.textContent = `${val}%`;
+        state.needsRender = true;
+        saveState();
+      });
+    };
+    bindAlpha(dom.statTextAlpha, "statTextAlpha", "statTextAlphaValue");
+    bindAlpha(dom.statBgAlpha, "statBgAlpha", "statBgAlphaValue");
     if (dom.resetFarmBtn) {
       dom.resetFarmBtn.addEventListener("click", () => {
         openConfirmModal("Reset your farm and start fresh? This clears all progress.", resetFarm, "Reset Farm");
       });
     }
 
-    if (dom.hoeButton) {
-      dom.hoeButton.addEventListener("click", () => {
-        state.hoeSelected = !state.hoeSelected;
-        updateModeButtonsUI();
-        state.needsRender = true;
-        saveState();
-      });
-    }
+    if (dom.modePlantBtn) dom.modePlantBtn.addEventListener("click", () => setActiveMode("plant"));
+    if (dom.modeHarvestBtn) dom.modeHarvestBtn.addEventListener("click", () => setActiveMode("harvest"));
+    if (dom.modeBuildBtn) dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
 
-    if (dom.cropStockButton) {
-      dom.cropStockButton.addEventListener("click", () => {
-        state.hoeSelected = false;
-        if (!state.selectedCropKey) {
-          const firstUnlocked = Object.values(crops).find((c) => c && c.unlocked);
-          if (firstUnlocked) {
-            state.selectedCropKey = firstUnlocked.id;
-            state.previousCropKey = firstUnlocked.id;
-          }
-        }
-        updateModeButtonsUI();
-        state.needsRender = true;
-        saveState();
-      });
-    }
-
-    if (dom.sizeButton) {
-      dom.sizeButton.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (sizeMenuVisible) {
-          closeSizeMenu();
-        } else {
-          renderSizeMenu();
-          dom.sizeMenu?.classList.remove("hidden");
-          sizeMenuVisible = true;
-        }
-      });
-    }
+    bindMenuToggle(dom.plantCropButton, "plantCrop");
+    bindMenuToggle(dom.plantStockButton, "plantStock");
+    bindMenuToggle(dom.plantSizeButton, "plantSize");
+    bindMenuToggle(dom.harvestSizeButton, "harvestSize");
 
     document.addEventListener("click", (e) => {
-      if (!sizeMenuVisible) return;
-      if (dom.sizeMenu && (dom.sizeMenu.contains(e.target) || (dom.sizeButton && dom.sizeButton.contains(e.target)))) return;
-      closeSizeMenu();
+      const target = e.target;
+      const inside = Object.values(menuMap).some((get) => {
+        const { button, menu } = get();
+        return (button && button.contains(target)) || (menu && menu.contains(target));
+      });
+      if (!inside) closeAllMenus();
     });
   }
 
@@ -427,10 +514,15 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     refreshAllUI,
     currentSizeOption,
     updateTotalDisplay,
-    updateStatsToggleUI,
+    updateHideButtonsUI,
     updateModeButtonsUI,
-    updateCropStockButtonUI,
-    updateSizeButtonUI,
+    updateCropStockButtonUI: () => {
+      renderCropOptions();
+      renderStockOptions();
+    },
+    updateSizeButtonUI: () => {
+      renderSizeMenu();
+    },
     renderSizeMenu,
     renderCropOptions,
     renderStockOptions,

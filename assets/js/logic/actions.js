@@ -18,7 +18,10 @@ export function createActions({
     if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { type: "none", reason: "Out of bounds" };
     const key = row + "," + col;
     const existingPlot = world.plots.get(key);
-    if (state.hoeSelected) {
+    const mode = state.activeMode || "plant";
+    const isHarvestMode = mode === "harvest";
+    const isBuildMode = mode === "build";
+    if (isHarvestMode) {
       if (existingPlot) {
         const crop = crops[existingPlot.cropKey];
         if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) return { type: "harvest" };
@@ -26,6 +29,8 @@ export function createActions({
       }
       return { type: "none", reason: "Nothing to harvest" };
     }
+
+    if (isBuildMode) return { type: "none", reason: "Building mode coming soon" };
 
     if (existingPlot) return { type: "none", reason: "Already planted" };
     const cropSelection = state.selectedCropKey ? crops[state.selectedCropKey] : null;
@@ -106,7 +111,8 @@ export function createActions({
 
   function computeHoverPreview(baseRow, baseCol, size, nowMs) {
     const results = [];
-    const baseAction = state.hoeSelected ? null : determineActionForTile(baseRow, baseCol, nowMs);
+    const isHarvestMode = state.activeMode === "harvest";
+    const baseAction = isHarvestMode ? null : determineActionForTile(baseRow, baseCol, nowMs);
     const placed = {};
     Object.values(crops).forEach((c) => {
       placed[c.id] = typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
@@ -131,7 +137,7 @@ export function createActions({
           results.push({ row, col, allowed });
           continue;
         }
-        const actionForCell = state.hoeSelected ? determineActionForTile(row, col, nowMs) : baseAction;
+        const actionForCell = isHarvestMode ? determineActionForTile(row, col, nowMs) : baseAction;
         allowed = simulateTileActionForPreview(actionForCell, key, previewState, nowMs, getFilled, getPlot);
         results.push({ row, col, allowed });
       }
@@ -168,6 +174,7 @@ export function createActions({
   }
 
   function collectHoeDestroyTargets(baseRow, baseCol) {
+    if (state.activeMode !== "harvest") return [];
     const targets = [];
     const sizeOption = currentSizeOption();
     const size = Math.max(1, sizeOption.size || 1);
@@ -288,14 +295,15 @@ export function createActions({
     const size = sizeOption.size || 1;
     const baseRow = tile.row;
     const baseCol = tile.col;
-    const baseAction = state.hoeSelected ? null : determineActionForTile(baseRow, baseCol);
+    const isHarvestMode = state.activeMode === "harvest";
+    const baseAction = isHarvestMode ? null : determineActionForTile(baseRow, baseCol);
     let failure = null;
     let hadSuccess = false;
     for (let dr = 0; dr < size; dr++) {
       for (let dc = 0; dc < size; dc++) {
         const row = baseRow + dr;
         const col = baseCol + dc;
-        const actionForCell = state.hoeSelected ? determineActionForTile(row, col) : baseAction;
+        const actionForCell = isHarvestMode ? determineActionForTile(row, col) : baseAction;
         const result = handleTileAction(row, col, actionForCell);
         if (result.success) {
           hadSuccess = true;
