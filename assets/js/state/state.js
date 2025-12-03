@@ -143,10 +143,23 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
 }
 
 export function buildSaveData({ state, world, crops, sizes }) {
+  const plots = Array.from(world.plots.entries()).map(([key, value]) => {
+    const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
+    const cleaned = {
+      cropKey: value?.cropKey || null,
+      stockKey: value?.stockKey || null,
+      plantedAt: typeof value?.plantedAt === "number" ? value.plantedAt : Date.now(),
+      stockPriceAtPlant: typeof value?.stockPriceAtPlant === "number" ? value.stockPriceAtPlant : 0,
+      lockedStockPrice: value?.lockedStockPrice ?? null,
+      stageBreakpoints,
+    };
+    return [key, cleaned];
+  });
+
   return {
     totalMoney: state.totalMoney,
     filled: Array.from(world.filled),
-    plots: Array.from(world.plots.entries()),
+    plots,
     selectedCropKey: state.selectedCropKey,
     previousCropKey: state.previousCropKey,
     selectedStockKey: state.selectedStockKey,

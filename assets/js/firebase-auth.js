@@ -38,21 +38,30 @@ const setText = (el, value) => {
 };
 
 const signUp = async (email, password, username) => {
+  console.log("[auth] signUp start", email);
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   if (username) {
     await updateProfile(auth.currentUser, { displayName: username });
   }
+  console.log("[auth] signUp success", credential.user?.uid);
   return credential;
 };
 
-const signIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
+const signIn = (email, password) => {
+  console.log("[auth] signIn start", email);
+  return signInWithEmailAndPassword(auth, email, password);
+};
 
-const logOut = () => signOut(auth);
+const logOut = () => {
+  console.log("[auth] logOut start");
+  return signOut(auth);
+};
 
 let gameContext = null;
 
 const registerGameContext = (context) => {
   gameContext = context;
+  console.log("[sync] registerGameContext");
 };
 
 let remoteFnsPromise = null;
@@ -61,12 +70,23 @@ const getRemoteFns = () => {
   return remoteFnsPromise;
 };
 
+const summarizeState = (data) => {
+  if (!data || typeof data !== "object") return { filled: 0, plots: 0 };
+  return {
+    filled: Array.isArray(data.filled) ? data.filled.length : 0,
+    plots: Array.isArray(data.plots) ? data.plots.length : 0,
+  };
+};
+
 const syncOnLogin = async () => {
   if (!gameContext) return;
   try {
+    console.log("[sync] syncOnLogin start");
     const { loadRemoteState, saveRemoteState } = await getRemoteFns();
     const remote = await loadRemoteState();
     if (remote) {
+      const summary = summarizeState(remote);
+      console.log("[sync] remote data found", summary);
       applyLoadedData(remote, gameContext);
       try {
         recalcPlacedCounts(gameContext.world, gameContext.crops);
@@ -81,17 +101,21 @@ const syncOnLogin = async () => {
       if (gameContext.refreshUI) gameContext.refreshUI();
     } else {
       const localData = buildSaveData(gameContext);
+      console.log("[sync] no remote data, pushing local", summarizeState(localData));
       await saveRemoteState(localData);
     }
+    console.log("[sync] syncOnLogin complete");
   } catch (error) {
     console.error("Sync on login failed", error);
   }
 };
 
 const logOutAndReset = async () => {
+  console.log("[sync] logOutAndReset start");
   try {
     if (auth.currentUser && gameContext) {
       const localData = buildSaveData(gameContext);
+      console.log("[sync] final remote save", summarizeState(localData));
       const { saveRemoteState } = await getRemoteFns();
       await saveRemoteState(localData);
     }
@@ -154,6 +178,7 @@ const initAuthUI = () => {
   setText(authStateEl, "Guest");
 
   onAuthStateChanged(auth, (user) => {
+    console.log("[auth] state changed", user ? user.uid : "guest");
     if (!authStateEl) return;
     if (user) {
       const name = user.displayName?.trim() || user.email || "User";
@@ -166,15 +191,24 @@ const initAuthUI = () => {
   });
 
   if (authTrigger) {
-    authTrigger.addEventListener("click", () => toggleModal(true));
+    authTrigger.addEventListener("click", () => {
+      console.log("[ui] open auth modal");
+      toggleModal(true);
+    });
   }
 
   if (authModalOverlay) {
-    authModalOverlay.addEventListener("click", closeModal);
+    authModalOverlay.addEventListener("click", () => {
+      console.log("[ui] close auth modal overlay");
+      closeModal();
+    });
   }
 
   if (authModalClose) {
-    authModalClose.addEventListener("click", closeModal);
+    authModalClose.addEventListener("click", () => {
+      console.log("[ui] close auth modal button");
+      closeModal();
+    });
   }
 
   window.addEventListener("keydown", (event) => {
@@ -187,6 +221,7 @@ const initAuthUI = () => {
   if (userBadge) {
     userBadge.addEventListener("click", async () => {
       const user = auth.currentUser;
+      console.log("[ui] userBadge click", user ? "authed" : "guest");
       if (!user) {
         toggleModal(true);
         return;
@@ -209,6 +244,7 @@ const initAuthUI = () => {
         closeModal();
       } catch (error) {
         setText(signupError, formatError(error));
+        console.error("[auth] signup failed", error);
       }
     });
   }
@@ -227,6 +263,7 @@ const initAuthUI = () => {
         closeModal();
       } catch (error) {
         setText(loginError, formatError(error));
+        console.error("[auth] login failed", error);
       }
     });
   }
@@ -243,6 +280,7 @@ const initAuthUI = () => {
         setText(resetMessage, "Reset email sent.");
       } catch (error) {
         setText(loginError, formatError(error));
+        console.error("[auth] reset failed", error);
       }
     });
   }
