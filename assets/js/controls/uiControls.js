@@ -2,6 +2,12 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
   let sizeMenuVisible = false;
+  const defaultConfirmBtnClass =
+    "py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none";
+  const defaultCancelBtnClass =
+    "w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none";
+  const blueConfirmBtnClass =
+    "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none";
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
 
@@ -34,13 +40,29 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     pendingCancelAction = null;
   }
 
-  function openConfirmModal(message, onConfirm, title = "Confirm", onCancel = null) {
+  function openConfirmModal(message, onConfirm, title = "Confirm", onCancel = null, options = {}) {
     if (!dom.confirmModal || !dom.confirmMessage || !dom.confirmConfirm || !dom.confirmCancel) {
       onConfirm();
       return;
     }
+    const {
+      confirmText = "Yes",
+      cancelText = "No",
+      showCancel = true,
+      hideClose = false,
+      confirmVariant = "default",
+    } = options;
+    const confirmBaseClass =
+      confirmVariant === "blue" ? blueConfirmBtnClass : defaultConfirmBtnClass;
+    const confirmWidthClass = showCancel ? "w-1/2" : "w-full";
+
     if (dom.confirmTitle) dom.confirmTitle.textContent = title;
     dom.confirmMessage.textContent = message;
+    dom.confirmConfirm.textContent = confirmText;
+    dom.confirmConfirm.className = `${confirmWidthClass} ${confirmBaseClass}`;
+    dom.confirmCancel.textContent = cancelText;
+    dom.confirmCancel.className = defaultCancelBtnClass + (showCancel ? "" : " hidden");
+    dom.confirmClose?.classList.toggle("hidden", hideClose);
     pendingConfirmAction = onConfirm;
     pendingCancelAction = onCancel;
     dom.confirmModal.classList.remove("hidden");

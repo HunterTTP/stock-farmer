@@ -48,10 +48,12 @@ let sessionUnsub = null;
 let sessionPromptOpen = false;
 let hasSessionOwnership = false;
 let lastActiveSessionId = null;
+let isLoggingOut = false;
 const sessionId =
   typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : "sess-" + Math.random().toString(36).slice(2, 10);
+const AUTH_MODAL_FLAG = "stockFarmer.authModalOpen";
 
 const errorMessages = {
   "auth/invalid-email": "Please enter a valid email.",
@@ -346,7 +348,9 @@ const handleForeignSession = (user) => {
     await logOutAndReset();
   };
   if (gameContext?.openConfirmModal) {
-    gameContext.openConfirmModal(message, takeover, "Another Device", abandon);
+    gameContext.openConfirmModal(message, takeover, "Another Device", abandon, {
+      hideClose: true,
+    });
   } else if (window.confirm(message)) {
     takeover();
   } else {
@@ -360,11 +364,21 @@ const handleSessionMoved = () => {
   hasSessionOwnership = false;
   const message = "Your game session has been moved to another device.";
   const confirm = async () => {
+    try {
+      sessionStorage.setItem(AUTH_MODAL_FLAG, "1");
+    } catch (error) {
+      console.error("Failed to mark auth modal flag", error);
+    }
     sessionPromptOpen = false;
     await logOutAndReset();
   };
   if (gameContext?.openConfirmModal) {
-    gameContext.openConfirmModal(message, confirm, "Session Moved");
+    gameContext.openConfirmModal(message, confirm, "Session Moved", null, {
+      showCancel: false,
+      confirmText: "OK",
+      confirmVariant: "blue",
+      hideClose: true,
+    });
   } else if (window.confirm(message)) {
     confirm();
   } else {
@@ -409,6 +423,7 @@ const ensureSessionWatch = (user) => {
 };
 const logOutAndReset = async () => {
   console.log("[sync] logOutAndReset start");
+  isLoggingOut = true;
   try {
     if (auth.currentUser && gameContext) {
       const localData = buildSaveData(gameContext);
@@ -473,6 +488,17 @@ const initAuthUI = () => {
   let authResolved = false;
   let lastKnownDisplayName = null;
 
+  const consumeAuthFlag = () => {
+    try {
+      const shouldOpen = sessionStorage.getItem(AUTH_MODAL_FLAG) === "1";
+      if (shouldOpen) sessionStorage.removeItem(AUTH_MODAL_FLAG);
+      return shouldOpen;
+    } catch (error) {
+      console.error("Auth modal flag read failed", error);
+      return false;
+    }
+  };
+
   const setAuthStatus = (text, pending = false) => {
     setText(authStateEl, text);
     if (authStateEl) authStateEl.classList.toggle("opacity-70", pending);
@@ -525,6 +551,7 @@ const initAuthUI = () => {
 
   onAuthStateChanged(auth, (user) => {
     console.log("[auth] state changed", user ? user.uid : "guest");
+    const shouldAutoOpenAuth = !user && !isLoggingOut && consumeAuthFlag();
     if (user) {
       const name =
         user.displayName?.trim() ||
@@ -542,6 +569,10 @@ const initAuthUI = () => {
       if (authTrigger) authTrigger.classList.remove("hidden");
       cleanupSessionWatch();
       resetSyncTracking();
+      if (shouldAutoOpenAuth) {
+        toggleModal(true);
+        switchTab("login");
+      }
     }
     authResolved = true;
   });
