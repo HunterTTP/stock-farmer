@@ -115,8 +115,8 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
         const timerText = mins + ":" + secPart.toString().padStart(2, "0");
 
         let arrow = "";
-        if (pctChange > 0) arrow = "^";
-        else if (pctChange < 0) arrow = "v";
+        if (pctChange > 0) arrow = "▲";
+        else if (pctChange < 0) arrow = "▼";
 
         let stockColor = "white";
         if (pctChange > 0) stockColor = "#22c55e";
