@@ -1,6 +1,6 @@
 import { clampScale } from "../utils/helpers.js";
 
-export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState }) {
+export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal }) {
   function cancelHoeHold() {
     if (state.hoeHoldTimeoutId) {
       clearTimeout(state.hoeHoldTimeoutId);
@@ -88,7 +88,6 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         state.offsetY = state.pinchCenter.y - (state.pinchCenter.y - state.offsetY) * k;
         state.scale = newScale;
         viewport.clampToBounds();
-        state.viewDirty = true;
         state.needsRender = true;
       }
     } else if (state.isDragging) {
@@ -96,7 +95,6 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.offsetX = state.dragOffsetStart.x + (e.clientX - state.dragStart.x);
       state.offsetY = state.dragOffsetStart.y + (e.clientY - state.dragStart.y);
       viewport.clampToBounds();
-      state.viewDirty = true;
       state.needsRender = true;
       if (state.tapStart) {
         const dx = e.clientX - state.tapStart.x;
@@ -130,11 +128,6 @@ export function createPointerControls({ canvas, state, config, viewport, actions
 
     if (e.type === "pointerleave" || e.type === "pointercancel") setHoverTile(null);
     else updateHoverFromEvent(e);
-
-    if (state.viewDirty && state.activePointers.size === 0) {
-      saveState();
-      state.viewDirty = false;
-    }
   }
 
   function onWheel(e) {

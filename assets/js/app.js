@@ -38,7 +38,7 @@ if (!localStorage.getItem(config.saveKey)) {
 }
 recalcPlacedCounts(world, crops);
 
-const viewport = createViewport({ canvas, ctx, state, config, saveState: persistence.save });
+const viewport = createViewport({ canvas, ctx, state, config });
 
 let ui;
 const onMoneyChanged = () => {
@@ -71,7 +71,16 @@ ui = createUIControls({
   resetFarm,
 });
 
-registerGameContext({ state, world, crops, stocks, sizes, config, refreshUI: ui.refreshAllUI });
+registerGameContext({
+  state,
+  world,
+  crops,
+  stocks,
+  sizes,
+  config,
+  refreshUI: ui.refreshAllUI,
+  openConfirmModal: ui.openConfirmModal,
+});
 
 const actions = createActions({
   state,
@@ -111,7 +120,6 @@ const pointerControls = createPointerControls({
   viewport,
   actions,
   openConfirmModal: ui.openConfirmModal,
-  saveState: persistence.save,
 });
 
 ui.bindUIEvents();

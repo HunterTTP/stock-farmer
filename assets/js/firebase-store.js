@@ -6,6 +6,12 @@ const db = getFirestore();
 const normalizeForRemote = (stateObject) => {
   if (!stateObject || typeof stateObject !== "object") return stateObject;
   const clone = { ...stateObject };
+  delete clone.scale;
+  delete clone.offsetX;
+  delete clone.offsetY;
+  delete clone.savedScaleFromState;
+  delete clone.savedOffsetX;
+  delete clone.savedOffsetY;
   if (Array.isArray(clone.plots)) {
     clone.plots = clone.plots.map(([key, value]) => ({
       key,

@@ -1,5 +1,6 @@
 export function createUIControls({ dom, state, crops, stocks, sizes, formatCurrency, cropImageSrc, onMoneyChanged, saveState, centerView, resetFarm }) {
   let pendingConfirmAction = null;
+  let pendingCancelAction = null;
   let sizeMenuVisible = false;
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
@@ -30,9 +31,10 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     dom.confirmModal.classList.add("hidden");
     document.body.classList.remove("overflow-hidden");
     pendingConfirmAction = null;
+    pendingCancelAction = null;
   }
 
-  function openConfirmModal(message, onConfirm, title = "Confirm") {
+  function openConfirmModal(message, onConfirm, title = "Confirm", onCancel = null) {
     if (!dom.confirmModal || !dom.confirmMessage || !dom.confirmConfirm || !dom.confirmCancel) {
       onConfirm();
       return;
@@ -40,6 +42,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (dom.confirmTitle) dom.confirmTitle.textContent = title;
     dom.confirmMessage.textContent = message;
     pendingConfirmAction = onConfirm;
+    pendingCancelAction = onCancel;
     dom.confirmModal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
     dom.confirmConfirm.focus();
@@ -305,6 +308,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
+        if (pendingCancelAction) pendingCancelAction();
         closeConfirmModal();
         closeOffcanvas();
       }
@@ -317,11 +321,21 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       });
     }
 
-    if (dom.confirmCancel) dom.confirmCancel.addEventListener("click", closeConfirmModal);
-    if (dom.confirmClose) dom.confirmClose.addEventListener("click", closeConfirmModal);
     if (dom.confirmConfirm) {
       dom.confirmConfirm.addEventListener("click", () => {
         if (pendingConfirmAction) pendingConfirmAction();
+        closeConfirmModal();
+      });
+    }
+    if (dom.confirmCancel) {
+      dom.confirmCancel.addEventListener("click", () => {
+        if (pendingCancelAction) pendingCancelAction();
+        closeConfirmModal();
+      });
+    }
+    if (dom.confirmClose) {
+      dom.confirmClose.addEventListener("click", () => {
+        if (pendingCancelAction) pendingCancelAction();
         closeConfirmModal();
       });
     }

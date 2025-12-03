@@ -1,6 +1,6 @@
 import { clampScale } from "../utils/helpers.js";
 
-export function createViewport({ canvas, ctx, state, config, saveState }) {
+export function createViewport({ canvas, ctx, state, config }) {
   function clampToBounds() {
     const rect = canvas.getBoundingClientRect();
     const worldWidth = config.gridCols * state.tileSize * state.scale;
@@ -15,7 +15,7 @@ export function createViewport({ canvas, ctx, state, config, saveState }) {
     state.offsetY = Math.min(maxOffsetY, Math.max(minOffsetY, state.offsetY));
   }
 
-  function centerView({ save = true } = {}) {
+  function centerView() {
     const rect = canvas.getBoundingClientRect();
     const worldWidth = config.gridCols * state.tileSize;
     const worldHeight = config.gridRows * state.tileSize;
@@ -29,7 +29,6 @@ export function createViewport({ canvas, ctx, state, config, saveState }) {
     state.offsetY = canvasCenterY - worldCenterY * state.scale;
     clampToBounds();
     state.needsRender = true;
-    if (save) saveState();
   }
 
   function resizeCanvas() {
@@ -53,7 +52,7 @@ export function createViewport({ canvas, ctx, state, config, saveState }) {
         state.offsetX = state.savedOffsetX;
         state.offsetY = state.savedOffsetY;
       } else {
-        centerView({ save: false });
+        centerView();
       }
       state.firstResizeDone = true;
     } else {
@@ -71,10 +70,7 @@ export function createViewport({ canvas, ctx, state, config, saveState }) {
     state.offsetY = cy - (cy - state.offsetY) * k;
     state.scale = newScale;
     clampToBounds();
-    state.viewDirty = true;
     state.needsRender = true;
-    saveState();
-    state.viewDirty = false;
   }
 
   function worldFromClient(clientX, clientY) {

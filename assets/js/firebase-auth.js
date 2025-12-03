@@ -81,10 +81,36 @@ const getRemoteFns = () => {
 
 const normalizeTimestamp = (value) => (Number.isFinite(value) ? value : 0);
 
+const stripViewFields = (data) => {
+  if (!data || typeof data !== "object") return data;
+  const clone = { ...data };
+  delete clone.scale;
+  delete clone.offsetX;
+  delete clone.offsetY;
+  delete clone.savedScaleFromState;
+  delete clone.savedOffsetX;
+  delete clone.savedOffsetY;
+  return clone;
+};
+
+const injectCurrentViewForLocal = (data) => {
+  if (!data || !gameContext?.state) return data;
+  const view = {
+    scale: gameContext.state.scale,
+    offsetX: gameContext.state.offsetX,
+    offsetY: gameContext.state.offsetY,
+    savedScaleFromState: gameContext.state.savedScaleFromState,
+    savedOffsetX: gameContext.state.savedOffsetX,
+    savedOffsetY: gameContext.state.savedOffsetY,
+  };
+  return { ...data, ...view };
+};
+
 const persistLocalSnapshot = (data) => {
   if (!gameContext?.config?.saveKey || !data) return;
   try {
-    localStorage.setItem(gameContext.config.saveKey, JSON.stringify(data));
+    const withView = injectCurrentViewForLocal(data);
+    localStorage.setItem(gameContext.config.saveKey, JSON.stringify(withView));
   } catch (error) {
     console.error("Local overwrite failed", error);
   }
@@ -93,7 +119,7 @@ const persistLocalSnapshot = (data) => {
 const applyStateFromSource = (data, overrideUpdatedAt = null) => {
   if (!gameContext || !data) return;
   const resolvedUpdatedAt = normalizeTimestamp(overrideUpdatedAt ?? data.updatedAt) || Date.now();
-  const payload = { ...data, updatedAt: resolvedUpdatedAt };
+  const payload = { ...injectCurrentViewForLocal(data), updatedAt: resolvedUpdatedAt };
   applyLoadedData(payload, gameContext);
   try {
     recalcPlacedCounts(gameContext.world, gameContext.crops);
@@ -129,14 +155,24 @@ const runCloudSave = async () => {
         remote?.remoteUpdatedAt ?? remoteState?.updatedAt
       );
       if (remoteState && remoteUpdatedAt > localBaseline) {
-        console.log("[cloud] remote newer than local, applying remote instead of saving", {
+        const shouldLoad = await promptRemoteConflict({
+          remoteState: stripViewFields(remoteState),
+          remoteUpdatedAt,
+          localUpdatedAt: localBaseline,
+        });
+        if (shouldLoad) {
+          console.log("[cloud] remote newer, user chose to load remote", { remoteUpdatedAt, localBaseline });
+          const cleanRemote = stripViewFields({ ...remoteState, updatedAt: remoteUpdatedAt });
+          applyStateFromSource(cleanRemote, remoteUpdatedAt);
+          continue;
+        }
+        console.log("[cloud] remote newer, user chose to keep local and overwrite cloud", {
           remoteUpdatedAt,
           localBaseline,
         });
-        applyStateFromSource({ ...remoteState, updatedAt: remoteUpdatedAt }, remoteUpdatedAt);
-        continue;
       }
-      await saveRemoteState(payload);
+      const payloadForRemote = stripViewFields(payload);
+      await saveRemoteState(payloadForRemote);
     }
   } catch (error) {
     console.error("Queued remote save failed", error);
@@ -148,7 +184,7 @@ const runCloudSave = async () => {
 
 const queueCloudSave = (stateData, immediate = false) => {
   if (!auth.currentUser || !stateData) return;
-  queuedCloudState = stateData;
+  queuedCloudState = stripViewFields(stateData);
   if (immediate) {
     runCloudSave();
     return;
@@ -164,6 +200,16 @@ const flushCloudSaveQueue = async () => {
     cloudSaveTimerId = null;
   }
   await runCloudSave();
+};
+
+const formatMoney = (value) => {
+  const num = Number.isFinite(value) ? value : 0;
+  return "$" + num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+};
+
+const formatTimestamp = (ms) => {
+  if (!Number.isFinite(ms) || ms <= 0) return "Unknown time";
+  return new Date(ms).toLocaleString();
 };
 
 const resetSyncTracking = () => {
@@ -188,12 +234,40 @@ const summarizeState = (data) => {
   const updatedAt = normalizeTimestamp(
     Number.isFinite(data?.remoteUpdatedAt) ? data.remoteUpdatedAt : target.updatedAt
   );
+  const money = Number.isFinite(target.totalMoney) ? target.totalMoney : 0;
   return {
     filled: Array.isArray(target.filled) ? target.filled.length : 0,
     plots: plots.length,
     sample,
     updatedAt: updatedAt || null,
+    money,
   };
+};
+
+const promptRemoteConflict = async ({ remoteState, remoteUpdatedAt, localUpdatedAt }) => {
+  const remoteSummary = summarizeState({ state: remoteState, remoteUpdatedAt });
+  const localSummary = {
+    money: Number.isFinite(gameContext?.state?.totalMoney) ? gameContext.state.totalMoney : 0,
+    updatedAt: localUpdatedAt || null,
+  };
+
+  const message =
+    `A newer cloud save was found (${formatTimestamp(remoteSummary.updatedAt)}; ` +
+    `Money: ${formatMoney(remoteSummary.money)}). ` +
+    `Load it? Cancel keeps your local progress (${formatMoney(localSummary.money)}) and will overwrite the cloud.`;
+
+  if (gameContext?.openConfirmModal) {
+    return new Promise((resolve) => {
+      gameContext.openConfirmModal(
+        message,
+        () => resolve(true),
+        "Cloud Save Found",
+        () => resolve(false)
+      );
+    });
+  }
+
+  return window.confirm(message);
 };
 
 const syncOnLogin = async () => {
@@ -208,17 +282,30 @@ const syncOnLogin = async () => {
     const remoteUpdatedAt = normalizeTimestamp(
       remote?.remoteUpdatedAt ?? (remoteState ? remoteState.updatedAt : null)
     );
-    if (remoteState && remoteUpdatedAt >= localUpdatedAt) {
-      const summary = summarizeState(remote);
-      console.log("[sync] applying remote state", { ...summary, localUpdatedAt });
-      const preparedRemote = { ...remoteState, updatedAt: remoteUpdatedAt || remoteState.updatedAt || Date.now() };
-      applyStateFromSource(preparedRemote, preparedRemote.updatedAt);
+    if (remoteState && remoteUpdatedAt > localUpdatedAt) {
+      const shouldLoad = await promptRemoteConflict({
+        remoteState: stripViewFields(remoteState),
+        remoteUpdatedAt,
+        localUpdatedAt,
+      });
+      if (shouldLoad) {
+        const summary = summarizeState({ state: remoteState, remoteUpdatedAt });
+        console.log("[sync] user chose to load remote state", { ...summary, localUpdatedAt });
+        const preparedRemote = { ...stripViewFields(remoteState), updatedAt: remoteUpdatedAt || remoteState.updatedAt || Date.now() };
+        applyStateFromSource(preparedRemote, preparedRemote.updatedAt);
+      } else {
+        const localData = buildSaveData(gameContext);
+        const summary = summarizeState(localData);
+        console.log("[sync] user kept local; overwriting cloud", { ...summary, remoteUpdatedAt });
+        persistLocalSnapshot(localData);
+        await saveRemoteState(stripViewFields(localData));
+      }
     } else {
       const localData = buildSaveData(gameContext);
       const summary = summarizeState(localData);
       console.log("[sync] pushing local to cloud", { ...summary, remoteUpdatedAt });
       persistLocalSnapshot(localData);
-      await saveRemoteState(localData);
+      await saveRemoteState(stripViewFields(localData));
     }
     console.log("[sync] syncOnLogin complete");
   } catch (error) {

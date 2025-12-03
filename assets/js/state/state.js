@@ -20,7 +20,6 @@ export function createInitialState(config) {
     savedScaleFromState: null,
     savedOffsetX: null,
     savedOffsetY: null,
-    viewDirty: false,
     totalMoney: 0,
     showStats: true,
     selectedCropKey: "wheat",
