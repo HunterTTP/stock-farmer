@@ -156,7 +156,7 @@ export function buildSaveData({ state, world, crops, sizes }) {
     return [key, cleaned];
   });
 
-  return {
+  const data = {
     totalMoney: state.totalMoney,
     filled: Array.from(world.filled),
     plots,
@@ -173,10 +173,22 @@ export function buildSaveData({ state, world, crops, sizes }) {
     sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
     cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
   };
+
+  console.log("[save] buildSaveData", {
+    filled: data.filled.length,
+    plots: data.plots.length,
+    sample: data.plots.length ? data.plots[0][0] : null,
+  });
+
+  return data;
 }
 
 export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
   if (!data || typeof data !== "object") return;
+  console.log("[load] applyLoadedData start", {
+    filled: Array.isArray(data.filled) ? data.filled.length : 0,
+    plots: Array.isArray(data.plots) ? data.plots.length : 0,
+  });
 
   if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
 
@@ -232,4 +244,8 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
   }
 
   state.needsRender = true;
+  console.log("[load] applyLoadedData done", {
+    filled: world.filled.size,
+    plots: world.plots.size,
+  });
 }

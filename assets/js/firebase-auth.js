@@ -71,10 +71,13 @@ const getRemoteFns = () => {
 };
 
 const summarizeState = (data) => {
-  if (!data || typeof data !== "object") return { filled: 0, plots: 0 };
+  if (!data || typeof data !== "object") return { filled: 0, plots: 0, sample: null };
+  const plots = Array.isArray(data.plots) ? data.plots : [];
+  const sample = plots.length ? plots[0]?.[0] || null : null;
   return {
     filled: Array.isArray(data.filled) ? data.filled.length : 0,
-    plots: Array.isArray(data.plots) ? data.plots.length : 0,
+    plots: plots.length,
+    sample,
   };
 };
 
