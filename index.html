@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <title>Stock Farmer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="images/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="512x512" href="images/logo/logo.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/main.css" />
   </head>
@@ -124,6 +127,9 @@
 
         <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-inner shadow-black/20 space-y-2">
           <p class="text-xs uppercase tracking-wide text-neutral-400 mb-2">Admin</p>
+          <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="installBtn" disabled>
+            Download App
+          </button>
           <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="resetSettingsBtn">
             Reset settings
           </button>
@@ -424,6 +430,7 @@
     </div>
 
     <script type="module" src="assets/js/firebase-auth.js"></script>
+    <script type="module" src="assets/js/pwa.js"></script>
     <script type="module" src="assets/js/app.js"></script>
   </body>
 </html>

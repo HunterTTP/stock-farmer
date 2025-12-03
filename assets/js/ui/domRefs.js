@@ -36,6 +36,7 @@ export function getDomRefs() {
     statTextAlpha: document.getElementById("statTextAlpha"),
     statBgAlpha: document.getElementById("statBgAlpha"),
     resetSettingsBtn: document.getElementById("resetSettingsBtn"),
+    installBtn: document.getElementById("installBtn"),
     authTrigger: document.getElementById("authTrigger"),
     logoutBtn: document.getElementById("logoutBtn"),
     offcanvasUsername: document.getElementById("offcanvasUsername"),
