@@ -8,15 +8,29 @@ function setInstallButton(enabled) {
   installBtn.classList.toggle("cursor-not-allowed", !enabled);
 }
 
+const isStandalone = () =>
+  window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+const hideInstallIfStandalone = () => {
+  if (!installBtn) return;
+  if (isStandalone()) {
+    installBtn.classList.add("hidden");
+  } else {
+    installBtn.classList.remove("hidden");
+  }
+};
+
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   deferredPrompt = event;
   setInstallButton(true);
+  hideInstallIfStandalone();
 });
 
 window.addEventListener("appinstalled", () => {
   deferredPrompt = null;
   setInstallButton(false);
+  hideInstallIfStandalone();
 });
 
 if (installBtn) {
@@ -34,6 +48,7 @@ if (installBtn) {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
+    hideInstallIfStandalone();
     navigator.serviceWorker
       .register("sw.js", { scope: "./" })
       .catch((err) => console.error("[pwa] sw register failed", err));

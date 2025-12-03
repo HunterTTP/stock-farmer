@@ -438,8 +438,68 @@ const ensureSessionWatch = (user) => {
     }
   });
 };
-const logOutAndReset = async () => {
-  console.log("[sync] logOutAndReset start");
+
+const deleteDatabase = (name) =>
+  new Promise((resolve) => {
+    try {
+      const request = indexedDB.deleteDatabase(name);
+      request.onsuccess = () => resolve();
+      request.onerror = () => resolve();
+      request.onblocked = () => resolve();
+    } catch (error) {
+      console.error("Delete database failed", error);
+      resolve();
+    }
+  });
+
+const clearClientCaches = async () => {
+  try {
+    if (typeof caches !== "undefined" && typeof caches.keys === "function") {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch (error) {
+    console.error("Cache clear failed", error);
+  }
+  try {
+    if (typeof indexedDB !== "undefined" && typeof indexedDB.databases === "function") {
+      const dbs = (await indexedDB.databases()) || [];
+      await Promise.all(
+        dbs.map((db) => (db && db.name ? deleteDatabase(db.name) : Promise.resolve()))
+      );
+    }
+  } catch (error) {
+    console.error("IndexedDB clear failed", error);
+  }
+  try {
+    if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((reg) => reg.unregister()));
+    }
+  } catch (error) {
+    console.error("Service worker unregister failed", error);
+  }
+};
+
+const clearWebStorage = (clearAll = false) => {
+  try {
+    if (clearAll) {
+      localStorage.clear();
+      sessionStorage.clear();
+    } else {
+      if (gameContext?.config?.saveKey)
+        localStorage.removeItem(gameContext.config.saveKey);
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(AUTH_MODAL_FLAG);
+    }
+  } catch (error) {
+    console.error("Local clear failed", error);
+  }
+};
+
+const logOutAndReset = async (options = {}) => {
+  const { clearCaches = false } = options || {};
+  console.log("[sync] logOutAndReset start", clearCaches ? "(clear caches)" : "");
   isLoggingOut = true;
   try {
     if (auth.currentUser && gameContext) {
@@ -453,13 +513,7 @@ const logOutAndReset = async () => {
     console.error("Final remote save failed", error);
   }
 
-  try {
-    if (gameContext?.config?.saveKey)
-      localStorage.removeItem(gameContext.config.saveKey);
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-  } catch (error) {
-    console.error("Local clear failed", error);
-  }
+  clearWebStorage(clearCaches);
 
   try {
     await signOut(auth);
@@ -469,6 +523,11 @@ const logOutAndReset = async () => {
 
   cleanupSessionWatch();
   resetSyncTracking();
+
+  if (clearCaches) {
+    await clearClientCaches();
+  }
+
   window.location.reload();
 };
 

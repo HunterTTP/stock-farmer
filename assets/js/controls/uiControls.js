@@ -1,13 +1,12 @@
-export function createUIControls({ dom, state, crops, stocks, sizes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm }) {
+export function createUIControls({ dom, state, crops, stocks, sizes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache }) {
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
   let openMenuKey = null;
-  const defaultConfirmBtnClass =
-    "py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none";
-  const defaultCancelBtnClass =
-    "w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none";
-  const blueConfirmBtnClass =
-    "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none";
+  const confirmVariantClasses = {
+    primary: "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none",
+    danger: "py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500 focus:outline-none",
+  };
+  const defaultCancelBtnClass = "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
   const modeOrder = ["plant", "harvest", "build"];
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
@@ -46,23 +45,16 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       onConfirm();
       return;
     }
-    const {
-      confirmText = "Yes",
-      cancelText = "No",
-      showCancel = true,
-      hideClose = false,
-      confirmVariant = "default",
-    } = options;
-    const confirmBaseClass =
-      confirmVariant === "blue" ? blueConfirmBtnClass : defaultConfirmBtnClass;
-    const confirmWidthClass = showCancel ? "w-1/2" : "w-full";
+    const { confirmText = "Confirm", cancelText = "Cancel", showCancel = true, hideClose = false, confirmVariant = "primary" } = options;
+    const confirmBaseClass = confirmVariantClasses[confirmVariant] || confirmVariantClasses.primary;
+    const confirmWidthClass = showCancel ? "w-full sm:w-1/2" : "w-full";
 
     if (dom.confirmTitle) dom.confirmTitle.textContent = title;
     dom.confirmMessage.textContent = message;
     dom.confirmConfirm.textContent = confirmText;
     dom.confirmConfirm.className = `${confirmWidthClass} ${confirmBaseClass}`;
     dom.confirmCancel.textContent = cancelText;
-    dom.confirmCancel.className = defaultCancelBtnClass + (showCancel ? "" : " hidden");
+    dom.confirmCancel.className = `${showCancel ? "w-full sm:w-1/2" : "hidden"} ${defaultCancelBtnClass}`;
     dom.confirmClose?.classList.toggle("hidden", hideClose);
     pendingConfirmAction = onConfirm;
     pendingCancelAction = onCancel;
@@ -166,8 +158,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
       const item = document.createElement("button");
       item.type = "button";
-      item.className =
-        "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      item.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
       if (!crop.unlocked && !canAffordUnlock) item.classList.add("opacity-50", "cursor-not-allowed");
       if (crop.id === state.selectedCropKey) item.classList.add("border-emerald-500", "bg-neutral-900/70");
 
@@ -245,8 +236,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     Object.values(stocks).forEach((stock) => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className =
-        "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm font-semibold border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      btn.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm font-semibold border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
       if (stock.symbol === state.selectedStockKey) btn.classList.add("border-emerald-500", "bg-neutral-900/70");
       btn.textContent = stock.symbol;
       btn.addEventListener("click", () => {
@@ -273,8 +263,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
       const row = document.createElement("button");
       row.type = "button";
-      row.className =
-        "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      row.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
       if (size.id === state.selectedSizeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
       if (locked && !canAffordUnlock) row.classList.add("opacity-50", "cursor-not-allowed");
 
@@ -317,7 +306,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
             },
             "Confirm Unlock",
             null,
-            { confirmVariant: "blue" }
+            { confirmVariant: "primary" }
           );
           return;
         }
@@ -523,13 +512,22 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
           },
           "Reset Settings",
           null,
-          { confirmVariant: "blue" }
+          { confirmVariant: "primary" }
         );
+      });
+    }
+    if (dom.clearCacheBtn && clearCache) {
+      dom.clearCacheBtn.addEventListener("click", () => {
+        openConfirmModal("Clear all cached data? If you are not logged in your progress will be lost.", clearCache, "Clear Cache", null, {
+          confirmText: "Yes",
+          cancelText: "No",
+          confirmVariant: "danger",
+        });
       });
     }
     if (dom.resetFarmBtn) {
       dom.resetFarmBtn.addEventListener("click", () => {
-        openConfirmModal("Reset your farm and start fresh? This clears all progress.", resetFarm, "Reset Farm");
+        openConfirmModal("Reset all progress and start fresh? This cannot be undone.", resetFarm, "Reset Progress", null, { confirmText: "Reset", cancelText: "Cancel", confirmVariant: "danger" });
       });
     }
 

@@ -11,7 +11,7 @@ import { createRenderer } from "./render/canvasRenderer.js";
 import { createPointerControls } from "./controls/pointerControls.js";
 import { createActions } from "./logic/actions.js";
 import { formatCurrency, createRandomStageBreakpoints } from "./utils/helpers.js";
-import { registerGameContext, queueCloudSave } from "./firebase-auth.js";
+import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -57,6 +57,10 @@ function resetFarm() {
   window.location.reload();
 }
 
+async function clearCacheAndLogout() {
+  await logOutAndReset({ clearCaches: true });
+}
+
 ui = createUIControls({
   dom,
   state,
@@ -68,6 +72,7 @@ ui = createUIControls({
   saveState: persistence.save,
   centerView: viewport.centerView,
   resetFarm,
+  clearCache: clearCacheAndLogout,
 });
 
 registerGameContext({
