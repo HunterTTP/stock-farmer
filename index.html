@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#000000" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="images/logo/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="512x512" href="images/logo/logo.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="images/logo/pwa-512.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/main.css" />
   </head>
@@ -68,9 +68,9 @@
           </div>
           <div class="space-y-2">
             <button id="authTrigger" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white focus:outline-none">
-              Sign in / Sign up
+              Log In
             </button>
-            <button id="logoutBtn" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-sky-600 hover:bg-sky-500 border-sky-500 text-white focus:outline-none hidden">Logout</button>
+            <button id="logoutBtn" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-sky-600 hover:bg-sky-500 border-sky-500 text-white focus:outline-none hidden">Log Out</button>
           </div>
         </div>
 
@@ -143,15 +143,12 @@
       </div>
     </div>
 
-    <div id="authModal" class="fixed inset-0 z-[60] hidden">
+    <div id="authModal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
       <div id="authModalOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
       <div class="relative z-10 flex min-h-full items-center justify-center px-4 py-6">
         <div class="w-full max-w-3xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
           <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
-            <div>
-              <p class="text-[11px] uppercase tracking-wide text-neutral-400">Account</p>
-              <h2 class="text-lg font-semibold text-white">Sign in or create account</h2>
-            </div>
+            <h2 id="authModalTitle" class="text-lg font-semibold text-white">Log In</h2>
             <button id="authModalClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none">
               <span class="sr-only">Close</span>
               <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -160,28 +157,43 @@
             </button>
           </div>
           <div class="px-5 pt-4 bg-neutral-950/80">
-            <div class="flex gap-2">
-              <button id="tab-login" class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-neutral-800 text-white border-neutral-700 shadow">Log in</button>
+            <div class="flex gap-2" role="tablist" aria-label="Authentication">
+              <button
+                id="tab-login"
+                class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-neutral-800 text-white border-neutral-700 shadow"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="panel-login"
+                tabindex="0">
+                Existing User
+              </button>
               <button
                 id="tab-signup"
-                class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-transparent text-neutral-400 border-neutral-800 hover:text-white hover:border-neutral-600">
-                Sign up
+                class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-transparent text-neutral-400 border-neutral-800 hover:text-white hover:border-neutral-600"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="panel-signup"
+                tabindex="-1">
+                Create Account
               </button>
             </div>
           </div>
           <div class="px-5 py-5 bg-neutral-950/80 max-h-[70vh] overflow-y-auto">
-            <div id="panel-login" class="space-y-3">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-white">Log in</h3>
-              </div>
-              <form id="login-form" class="space-y-3">
+            <div id="panel-login" class="space-y-4" role="tabpanel" aria-labelledby="tab-login" aria-hidden="false" tabindex="0">
+              <form id="login-form" class="space-y-3" autocomplete="on">
                 <div class="space-y-1">
                   <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-email">Email</label>
                   <input
                     id="login-email"
                     name="email"
                     type="email"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600"
+                    inputmode="email"
+                    autocomplete="username"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
                     placeholder="you@example.com"
                     required />
                 </div>
@@ -191,30 +203,31 @@
                     id="login-password"
                     name="password"
                     type="password"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600"
+                    autocomplete="current-password"
+                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
                     placeholder="********"
                     required />
                 </div>
-                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log in</button>
-                <p id="login-error" class="text-xs text-red-400 min-h-[1rem]"></p>
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log In</button>
+                <p id="login-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
                 <div class="flex items-center justify-between">
                   <button type="button" id="reset-password" class="text-xs text-sky-300 hover:text-sky-200">Forgot password?</button>
-                  <p id="reset-message" class="text-[11px] text-emerald-400"></p>
+                  <p id="reset-message" class="text-[11px] text-emerald-400" aria-live="polite"></p>
                 </div>
               </form>
             </div>
-            <div id="panel-signup" class="space-y-3 hidden">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-white">Create account</h3>
-              </div>
-              <form id="signup-form" class="space-y-3">
+            <div id="panel-signup" class="space-y-4 hidden" role="tabpanel" aria-labelledby="tab-signup" aria-hidden="true" tabindex="-1">
+              <form id="signup-form" class="space-y-3" autocomplete="on">
                 <div class="space-y-1">
                   <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="signup-username">Username</label>
                   <input
                     id="signup-username"
                     name="username"
                     type="text"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    autocomplete="username"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     placeholder="Farmer" />
                 </div>
                 <div class="space-y-1">
@@ -223,7 +236,11 @@
                     id="signup-email"
                     name="email"
                     type="email"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    inputmode="email"
+                    autocomplete="email"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     placeholder="you@example.com"
                     required />
                 </div>
@@ -233,12 +250,13 @@
                     id="signup-password"
                     name="password"
                     type="password"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    autocomplete="new-password"
+                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     placeholder="********"
                     required />
                 </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Sign up</button>
-                <p id="signup-error" class="text-xs text-red-400 min-h-[1rem]"></p>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Create Account</button>
+                <p id="signup-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
               </form>
             </div>
           </div>
@@ -285,11 +303,16 @@
             <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="reset-email">Email</label>
             <input
               id="reset-email"
+              name="email"
               type="email"
-              class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600"
+              inputmode="email"
+              autocomplete="email"
+              autocapitalize="none"
+              spellcheck="false"
+              class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
               placeholder="you@example.com" />
           </div>
-          <p id="reset-modal-status" class="text-xs min-h-[1rem] text-neutral-300"></p>
+          <p id="reset-modal-status" class="text-xs min-h-[1rem] text-neutral-300" aria-live="polite"></p>
         </div>
         <div class="px-5 pb-5 flex gap-2">
           <button id="resetSend" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Send reset email</button>
@@ -308,10 +331,10 @@
             </svg>
           </button>
         </div>
-        <div class="px-4 py-4 text-sm text-neutral-100 leading-relaxed">Log out?</div>
+        <div class="px-4 py-4 text-sm text-neutral-100 leading-relaxed">Log Out?</div>
         <div class="px-4 pb-4 flex gap-2">
-          <button id="logoutConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Yes</button>
-          <button id="logoutCancel" class="w-1/2 py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none">No</button>
+          <button id="logoutConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Log Out</button>
+          <button id="logoutCancel" class="w-1/2 py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none">Stay Signed In</button>
         </div>
       </div>
     </div>

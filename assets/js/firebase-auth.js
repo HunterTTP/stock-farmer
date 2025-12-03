@@ -76,7 +76,7 @@ const errorMessages = {
   "auth/invalid-email": "Please enter a valid email.",
   "auth/email-already-in-use": "That email is already registered.",
   "auth/weak-password": "Password must be stronger.",
-  "auth/user-not-found": "Account not found. Please sign up first.",
+  "auth/user-not-found": "Account not found. Please create an account first.",
   "auth/wrong-password": "Incorrect password. Please try again.",
 };
 
@@ -540,6 +540,7 @@ const initAuthUI = () => {
   const authModal = document.getElementById("authModal");
   const authModalOverlay = document.getElementById("authModalOverlay");
   const authModalClose = document.getElementById("authModalClose");
+  const authModalTitle = document.getElementById("authModalTitle");
   const tabLogin = document.getElementById("tab-login");
   const tabSignup = document.getElementById("tab-signup");
   const panelLogin = document.getElementById("panel-login");
@@ -567,6 +568,11 @@ const initAuthUI = () => {
   let authResolved = false;
   let lastKnownDisplayName = null;
 
+  const blurActiveElement = () => {
+    const active = document.activeElement;
+    if (active && typeof active.blur === "function") active.blur();
+  };
+
   const consumeAuthFlag = () => {
     try {
       const shouldOpen = sessionStorage.getItem(AUTH_MODAL_FLAG) === "1";
@@ -587,6 +593,7 @@ const initAuthUI = () => {
     if (!authModal) return;
     authModal.classList[open ? "remove" : "add"]("hidden");
     document.body.classList.toggle("overflow-hidden", open);
+    if (!open) blurActiveElement();
   };
 
   const closeModal = () => toggleModal(false);
@@ -594,18 +601,29 @@ const initAuthUI = () => {
     if (!logoutModal) return;
     logoutModal.classList[open ? "remove" : "add"]("hidden");
     document.body.classList.toggle("overflow-hidden", open);
+    if (!open) blurActiveElement();
   };
   const closeLogoutModal = () => toggleLogoutModal(false);
   const toggleResetModal = (open) => {
     if (!resetModal) return;
     resetModal.classList[open ? "remove" : "add"]("hidden");
     document.body.classList.toggle("overflow-hidden", open);
+    if (!open) blurActiveElement();
   };
   const closeResetModal = () => toggleResetModal(false);
 
   const switchTab = (target) => {
     if (!tabLogin || !tabSignup || !panelLogin || !panelSignup) return;
     const loginActive = target === "login";
+    if (authModalTitle) authModalTitle.textContent = "Log In";
+    tabLogin.setAttribute("aria-selected", loginActive ? "true" : "false");
+    tabSignup.setAttribute("aria-selected", loginActive ? "false" : "true");
+    tabLogin.tabIndex = loginActive ? 0 : -1;
+    tabSignup.tabIndex = loginActive ? -1 : 0;
+    panelLogin.setAttribute("aria-hidden", loginActive ? "false" : "true");
+    panelSignup.setAttribute("aria-hidden", loginActive ? "true" : "false");
+    panelLogin.tabIndex = loginActive ? 0 : -1;
+    panelSignup.tabIndex = loginActive ? -1 : 0;
     panelLogin.classList.toggle("hidden", !loginActive);
     panelSignup.classList.toggle("hidden", loginActive);
     tabLogin.classList.toggle("bg-neutral-800", loginActive);
