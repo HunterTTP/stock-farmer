@@ -91,11 +91,38 @@
               </svg>
             </button>
           </div>
-          <div class="grid gap-6 md:grid-cols-2 px-5 py-5 bg-neutral-950/80 max-h-[70vh] overflow-y-auto">
-            <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-white">Create account</h3>
+          <div class="px-5 pt-4 bg-neutral-950/80">
+            <div class="flex gap-2">
+              <button id="tab-login" class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-neutral-800 text-white border-neutral-700 shadow">Log in</button>
+              <button id="tab-signup" class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-transparent text-neutral-400 border-neutral-800 hover:text-white hover:border-neutral-600">Sign up</button>
+            </div>
           </div>
+          <div class="px-5 py-5 bg-neutral-950/80 max-h-[70vh] overflow-y-auto">
+            <div id="panel-login" class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-white">Log in</h3>
+              </div>
+              <form id="login-form" class="space-y-3">
+                <div class="space-y-1">
+                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-email">Email</label>
+                  <input id="login-email" name="email" type="email" class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600" placeholder="you@example.com" required />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-password">Password</label>
+                  <input id="login-password" name="password" type="password" class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600" placeholder="********" required />
+                </div>
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log in</button>
+                <p id="login-error" class="text-xs text-red-400 min-h-[1rem]"></p>
+                <div class="flex items-center justify-between">
+                  <button type="button" id="reset-password" class="text-xs text-sky-300 hover:text-sky-200">Forgot password?</button>
+                  <p id="reset-message" class="text-[11px] text-emerald-400"></p>
+                </div>
+              </form>
+            </div>
+            <div id="panel-signup" class="space-y-3 hidden">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-white">Create account</h3>
+              </div>
               <form id="signup-form" class="space-y-3">
                 <div class="space-y-1">
                   <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="signup-username">Username</label>
@@ -113,31 +140,9 @@
                 <p id="signup-error" class="text-xs text-red-400 min-h-[1rem]"></p>
               </form>
             </div>
-
-            <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h3 class="text-sm font-semibold text-white">Log in</h3>
-            </div>
-            <form id="login-form" class="space-y-3">
-              <div class="space-y-1">
-                <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-email">Email</label>
-                <input id="login-email" name="email" type="email" class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600" placeholder="you@example.com" required />
-              </div>
-                <div class="space-y-1">
-                <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-password">Password</label>
-                <input id="login-password" name="password" type="password" class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600" placeholder="********" required />
-              </div>
-              <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log in</button>
-              <p id="login-error" class="text-xs text-red-400 min-h-[1rem]"></p>
-              <div class="flex items-center justify-between">
-                <button type="button" id="reset-password" class="text-xs text-sky-300 hover:text-sky-200">Forgot password?</button>
-                <p id="reset-message" class="text-[11px] text-emerald-400"></p>
-              </div>
-            </form>
           </div>
         </div>
       </div>
-    </div>
     </div>
 
     <div id="confirmModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
@@ -155,6 +160,34 @@
         <div class="px-4 pb-4 flex gap-2">
           <button id="confirmConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Yes</button>
           <button id="confirmCancel" class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resetModal" class="fixed inset-0 z-[65] bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
+      <div class="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-neutral-400">Password reset</p>
+            <h3 class="text-lg font-semibold text-white">Send reset link</h3>
+          </div>
+          <button id="resetClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none">
+            <span class="sr-only">Close</span>
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div class="px-5 py-5 space-y-3">
+          <p class="text-sm text-neutral-300">Enter your account email address</p>
+          <div class="space-y-1">
+            <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="reset-email">Email</label>
+            <input id="reset-email" type="email" class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-600" placeholder="you@example.com" />
+          </div>
+          <p id="reset-modal-status" class="text-xs min-h-[1rem] text-neutral-300"></p>
+        </div>
+        <div class="px-5 pb-5 flex gap-2">
+          <button id="resetSend" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Send reset email</button>
         </div>
       </div>
     </div>
