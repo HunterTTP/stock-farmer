@@ -11,7 +11,7 @@ import { createRenderer } from "./render/canvasRenderer.js";
 import { createPointerControls } from "./controls/pointerControls.js";
 import { createActions } from "./logic/actions.js";
 import { formatCurrency, cropImageSrc, createRandomStageBreakpoints } from "./utils/helpers.js";
-import { registerGameContext } from "./firebase-auth.js";
+import { registerGameContext, queueCloudSave } from "./firebase-auth.js";
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -24,7 +24,11 @@ const assets = createBaseAssets(state);
 preloadCropImages(crops, state);
 
 const persistence = {
-  save: () => saveState({ state, world, crops, sizes, config }),
+  save: () => {
+    const data = saveState({ state, world, crops, sizes, config });
+    queueCloudSave(data);
+    return data;
+  },
   load: () => loadState({ state, world, crops, stocks, sizes, config }),
 };
 

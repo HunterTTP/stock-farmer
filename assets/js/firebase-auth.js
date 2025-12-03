@@ -23,6 +23,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+const CLOUD_SAVE_DEBOUNCE_MS = 400;
+
+let gameContext = null;
+let queuedCloudState = null;
+let cloudSaveTimerId = null;
+let cloudSaveInFlight = false;
+let loginSyncPromise = null;
+let loginSyncQueued = false;
+let lastSyncedUserId = null;
+
 const errorMessages = {
   "auth/invalid-email": "Please enter a valid email.",
   "auth/email-already-in-use": "That email is already registered.",
@@ -57,11 +67,10 @@ const logOut = () => {
   return signOut(auth);
 };
 
-let gameContext = null;
-
 const registerGameContext = (context) => {
   gameContext = context;
   console.log("[sync] registerGameContext");
+  if (auth.currentUser) requestLoginSync();
 };
 
 let remoteFnsPromise = null;
@@ -70,41 +79,145 @@ const getRemoteFns = () => {
   return remoteFnsPromise;
 };
 
+const normalizeTimestamp = (value) => (Number.isFinite(value) ? value : 0);
+
+const persistLocalSnapshot = (data) => {
+  if (!gameContext?.config?.saveKey || !data) return;
+  try {
+    localStorage.setItem(gameContext.config.saveKey, JSON.stringify(data));
+  } catch (error) {
+    console.error("Local overwrite failed", error);
+  }
+};
+
+const applyStateFromSource = (data, overrideUpdatedAt = null) => {
+  if (!gameContext || !data) return;
+  const resolvedUpdatedAt = normalizeTimestamp(overrideUpdatedAt ?? data.updatedAt) || Date.now();
+  const payload = { ...data, updatedAt: resolvedUpdatedAt };
+  applyLoadedData(payload, gameContext);
+  try {
+    recalcPlacedCounts(gameContext.world, gameContext.crops);
+  } catch (error) {
+    console.error("Recalc after load failed", error);
+  }
+  persistLocalSnapshot(payload);
+  if (gameContext.refreshUI) gameContext.refreshUI();
+};
+
+const runCloudSave = async () => {
+  if (cloudSaveInFlight) return;
+  if (cloudSaveTimerId) {
+    clearTimeout(cloudSaveTimerId);
+    cloudSaveTimerId = null;
+  }
+  if (!auth.currentUser || !queuedCloudState) return;
+  cloudSaveInFlight = true;
+  try {
+    const { saveRemoteState, loadRemoteState } = await getRemoteFns();
+    while (auth.currentUser && queuedCloudState) {
+      const payload = queuedCloudState;
+      queuedCloudState = null;
+      const localBaseline = normalizeTimestamp(payload?.previousUpdatedAt ?? payload?.updatedAt);
+      let remote = null;
+      try {
+        remote = await loadRemoteState();
+      } catch (error) {
+        console.error("Remote fetch during save failed", error);
+      }
+      const remoteState = remote?.state || null;
+      const remoteUpdatedAt = normalizeTimestamp(
+        remote?.remoteUpdatedAt ?? remoteState?.updatedAt
+      );
+      if (remoteState && remoteUpdatedAt > localBaseline) {
+        console.log("[cloud] remote newer than local, applying remote instead of saving", {
+          remoteUpdatedAt,
+          localBaseline,
+        });
+        applyStateFromSource({ ...remoteState, updatedAt: remoteUpdatedAt }, remoteUpdatedAt);
+        continue;
+      }
+      await saveRemoteState(payload);
+    }
+  } catch (error) {
+    console.error("Queued remote save failed", error);
+  } finally {
+    cloudSaveInFlight = false;
+    if (auth.currentUser && queuedCloudState) runCloudSave();
+  }
+};
+
+const queueCloudSave = (stateData, immediate = false) => {
+  if (!auth.currentUser || !stateData) return;
+  queuedCloudState = stateData;
+  if (immediate) {
+    runCloudSave();
+    return;
+  }
+  if (cloudSaveTimerId) clearTimeout(cloudSaveTimerId);
+  if (cloudSaveInFlight) return;
+  cloudSaveTimerId = setTimeout(runCloudSave, CLOUD_SAVE_DEBOUNCE_MS);
+};
+
+const flushCloudSaveQueue = async () => {
+  if (cloudSaveTimerId) {
+    clearTimeout(cloudSaveTimerId);
+    cloudSaveTimerId = null;
+  }
+  await runCloudSave();
+};
+
+const resetSyncTracking = () => {
+  queuedCloudState = null;
+  if (cloudSaveTimerId) {
+    clearTimeout(cloudSaveTimerId);
+    cloudSaveTimerId = null;
+  }
+  cloudSaveInFlight = false;
+  loginSyncPromise = null;
+  loginSyncQueued = false;
+  lastSyncedUserId = null;
+};
+
+const getLocalUpdatedAt = () => normalizeTimestamp(gameContext?.state?.lastSavedAt);
+
 const summarizeState = (data) => {
-  if (!data || typeof data !== "object") return { filled: 0, plots: 0, sample: null };
-  const plots = Array.isArray(data.plots) ? data.plots : [];
+  const target = data?.state && typeof data.state === "object" ? data.state : data;
+  if (!target || typeof target !== "object") return { filled: 0, plots: 0, sample: null, updatedAt: null };
+  const plots = Array.isArray(target.plots) ? target.plots : [];
   const sample = plots.length ? plots[0]?.[0] || null : null;
+  const updatedAt = normalizeTimestamp(
+    Number.isFinite(data?.remoteUpdatedAt) ? data.remoteUpdatedAt : target.updatedAt
+  );
   return {
-    filled: Array.isArray(data.filled) ? data.filled.length : 0,
+    filled: Array.isArray(target.filled) ? target.filled.length : 0,
     plots: plots.length,
     sample,
+    updatedAt: updatedAt || null,
   };
 };
 
 const syncOnLogin = async () => {
   if (!gameContext) return;
+  const localUpdatedAt = getLocalUpdatedAt();
   try {
-    console.log("[sync] syncOnLogin start");
+    const user = auth.currentUser;
+    console.log("[sync] syncOnLogin start", { uid: user ? user.uid : "guest", localUpdatedAt });
     const { loadRemoteState, saveRemoteState } = await getRemoteFns();
     const remote = await loadRemoteState();
-    if (remote) {
+    const remoteState = remote?.state || null;
+    const remoteUpdatedAt = normalizeTimestamp(
+      remote?.remoteUpdatedAt ?? (remoteState ? remoteState.updatedAt : null)
+    );
+    if (remoteState && remoteUpdatedAt >= localUpdatedAt) {
       const summary = summarizeState(remote);
-      console.log("[sync] remote data found", summary);
-      applyLoadedData(remote, gameContext);
-      try {
-        recalcPlacedCounts(gameContext.world, gameContext.crops);
-      } catch (error) {
-        console.error("Recalc after remote load failed", error);
-      }
-      try {
-        localStorage.setItem(gameContext.config.saveKey, JSON.stringify(remote));
-      } catch (error) {
-        console.error("Local overwrite failed", error);
-      }
-      if (gameContext.refreshUI) gameContext.refreshUI();
+      console.log("[sync] applying remote state", { ...summary, localUpdatedAt });
+      const preparedRemote = { ...remoteState, updatedAt: remoteUpdatedAt || remoteState.updatedAt || Date.now() };
+      applyStateFromSource(preparedRemote, preparedRemote.updatedAt);
     } else {
       const localData = buildSaveData(gameContext);
-      console.log("[sync] no remote data, pushing local", summarizeState(localData));
+      const summary = summarizeState(localData);
+      console.log("[sync] pushing local to cloud", { ...summary, remoteUpdatedAt });
+      persistLocalSnapshot(localData);
       await saveRemoteState(localData);
     }
     console.log("[sync] syncOnLogin complete");
@@ -113,14 +226,35 @@ const syncOnLogin = async () => {
   }
 };
 
+const requestLoginSync = (force = false) => {
+  const user = auth.currentUser;
+  if (!user || !gameContext) return null;
+  if (!force && lastSyncedUserId === user.uid && !loginSyncQueued && !loginSyncPromise) {
+    return loginSyncPromise;
+  }
+  if (loginSyncPromise) {
+    loginSyncQueued = true;
+    return loginSyncPromise;
+  }
+  loginSyncPromise = syncOnLogin().finally(() => {
+    lastSyncedUserId = user.uid;
+    const shouldRunAgain = loginSyncQueued;
+    loginSyncQueued = false;
+    loginSyncPromise = null;
+    if (shouldRunAgain) requestLoginSync(force);
+  });
+  return loginSyncPromise;
+};
+
 const logOutAndReset = async () => {
   console.log("[sync] logOutAndReset start");
   try {
     if (auth.currentUser && gameContext) {
       const localData = buildSaveData(gameContext);
+      persistLocalSnapshot(localData);
       console.log("[sync] final remote save", summarizeState(localData));
-      const { saveRemoteState } = await getRemoteFns();
-      await saveRemoteState(localData);
+      queueCloudSave(localData, true);
+      await flushCloudSaveQueue();
     }
   } catch (error) {
     console.error("Final remote save failed", error);
@@ -138,6 +272,7 @@ const logOutAndReset = async () => {
     console.error("Sign out failed", error);
   }
 
+  resetSyncTracking();
   window.location.reload();
 };
 
@@ -227,15 +362,16 @@ const initAuthUI = () => {
 
   onAuthStateChanged(auth, (user) => {
     console.log("[auth] state changed", user ? user.uid : "guest");
-    if (!authStateEl) return;
     if (user) {
       const name = user.displayName?.trim() || lastKnownDisplayName || user.email || "User";
-      setAuthStatus(name, false);
+      if (authStateEl) setAuthStatus(name, false);
       lastKnownDisplayName = name;
       if (authTrigger) authTrigger.classList.add("hidden");
+      if (gameContext && !loginSyncPromise && lastSyncedUserId !== user.uid) requestLoginSync();
     } else {
-      setAuthStatus("Guest", false);
+      if (authStateEl) setAuthStatus("Guest", false);
       if (authTrigger) authTrigger.classList.remove("hidden");
+      resetSyncTracking();
     }
     authResolved = true;
   });
@@ -303,7 +439,7 @@ const initAuthUI = () => {
         if (username) lastKnownDisplayName = username;
         setAuthStatus(username || email, true);
         signupForm.reset();
-        await syncOnLogin();
+        await requestLoginSync(true);
         closeModal();
       } catch (error) {
         setText(signupError, formatError(error));
@@ -322,7 +458,7 @@ const initAuthUI = () => {
       try {
         await signIn(email, password);
         loginForm.reset();
-        await syncOnLogin();
+        await requestLoginSync(true);
         closeModal();
       } catch (error) {
         setText(loginError, formatError(error));
@@ -378,4 +514,4 @@ const initAuthUI = () => {
 
 initAuthUI();
 
-export { auth, initAuthUI, signUp, signIn, logOut, registerGameContext, logOutAndReset };
+export { auth, initAuthUI, signUp, signIn, logOut, registerGameContext, logOutAndReset, queueCloudSave };

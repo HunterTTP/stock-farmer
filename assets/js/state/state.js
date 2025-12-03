@@ -30,6 +30,7 @@ export function createInitialState(config) {
     hoeSelected: false,
     hoeHoldTimeoutId: null,
     hoeHoldTriggered: false,
+    lastSavedAt: 0,
   };
 }
 
@@ -70,6 +71,7 @@ export function saveState({ state, world, crops, sizes, config }) {
   } catch (err) {
     console.error("Failed to save state", err);
   }
+  return data;
 }
 
 export function loadState({ state, world, crops, stocks, sizes, config }) {
@@ -84,6 +86,7 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
   try {
     const data = JSON.parse(raw);
     if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
+    if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
 
     if (Array.isArray(data.filled)) {
       world.filled.clear();
@@ -143,6 +146,8 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
 }
 
 export function buildSaveData({ state, world, crops, sizes }) {
+  const previousUpdatedAt = Number.isFinite(state.lastSavedAt) ? state.lastSavedAt : 0;
+  const updatedAt = Date.now();
   const plots = Array.from(world.plots.entries()).map(([key, value]) => {
     const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
     const cleaned = {
@@ -172,7 +177,11 @@ export function buildSaveData({ state, world, crops, sizes }) {
     cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
     sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
     cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
+    previousUpdatedAt,
+    updatedAt,
   };
+
+  state.lastSavedAt = updatedAt;
 
   console.log("[save] buildSaveData", {
     filled: data.filled.length,
@@ -191,6 +200,7 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
   });
 
   if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
+  if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
 
   if (Array.isArray(data.filled)) {
     world.filled.clear();
