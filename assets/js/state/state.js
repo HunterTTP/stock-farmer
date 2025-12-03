@@ -26,6 +26,7 @@ export function createInitialState(config) {
     showPctInfo: true,
     showTimerInfo: true,
     showSellInfo: true,
+    statBaseSize: 14,
     statTextAlpha: 1,
     statBgAlpha: 1,
     activeMode: "plant",
@@ -60,6 +61,7 @@ export function applyDefaultSelection(state) {
   state.showPctInfo = true;
   state.showTimerInfo = true;
   state.showSellInfo = true;
+  state.statBaseSize = 14;
   state.statTextAlpha = 1;
   state.statBgAlpha = 1;
 }
@@ -150,6 +152,7 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
     state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : state.showStats;
     state.showSellInfo = typeof data.showSellInfo === "boolean" ? data.showSellInfo : state.showStats;
     state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+    state.statBaseSize = typeof data.statBaseSize === "number" ? data.statBaseSize : 14;
     state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
     state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
@@ -206,6 +209,7 @@ export function buildSaveData({ state, world, crops, sizes }) {
     showPctInfo: state.showPctInfo,
     showTimerInfo: state.showTimerInfo,
     showSellInfo: state.showSellInfo,
+    statBaseSize: state.statBaseSize,
     statTextAlpha: state.statTextAlpha,
     statBgAlpha: state.statBgAlpha,
     scale: state.scale,
@@ -288,6 +292,7 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
   state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : state.showStats;
   state.showSellInfo = typeof data.showSellInfo === "boolean" ? data.showSellInfo : state.showStats;
   state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+  state.statBaseSize = typeof data.statBaseSize === "number" ? data.statBaseSize : 14;
   state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
   state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
   const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;

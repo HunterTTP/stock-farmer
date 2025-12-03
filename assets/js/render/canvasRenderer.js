@@ -131,7 +131,8 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
           const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
           const padBottom = Math.max(2, padTop * 0.5);
           const baseFont = Math.min(Math.max(tileScreenSize * 0.14, 8), Math.min(16, tileScreenSize * 0.24));
-          let fontSize = baseFont;
+          const userScale = Math.max(0.5, Math.min(2, (state.statBaseSize || 14) / 14));
+          let fontSize = Math.min(28, Math.max(6, baseFont * userScale));
           let spacing = Math.max(2, fontSize * 0.15);
           ctx.textAlign = "left";
           ctx.textBaseline = "top";
@@ -193,7 +194,8 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
         const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
         const padBottom = Math.max(2, padTop * 0.5);
         const baseFont = Math.min(Math.max(tileScreenSize * 0.14, 8), Math.min(16, tileScreenSize * 0.24));
-        let fontSize = baseFont;
+        const userScale = Math.max(0.5, Math.min(2, (state.statBaseSize || 14) / 14));
+        let fontSize = Math.min(28, Math.max(6, baseFont * userScale));
         let spacing = Math.max(2, fontSize * 0.15);
         ctx.textAlign = "left";
         ctx.textBaseline = "top";

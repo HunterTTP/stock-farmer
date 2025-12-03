@@ -76,6 +76,12 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (dom.showPctToggle) dom.showPctToggle.checked = !!state.showPctInfo;
     if (dom.showTimerToggle) dom.showTimerToggle.checked = !!state.showTimerInfo;
     if (dom.showSellToggle) dom.showSellToggle.checked = !!state.showSellInfo;
+    if (dom.statBaseSize) {
+      const val = Math.round(state.statBaseSize ?? 14);
+      dom.statBaseSize.value = val;
+      const label = document.getElementById("statSizeValue");
+      if (label) label.textContent = `${val}`;
+    }
     if (dom.statTextAlpha) {
       const pct = Math.round((state.statTextAlpha ?? 1) * 100);
       dom.statTextAlpha.value = pct;
@@ -475,7 +481,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       if (!input) return;
       const label = labelId ? document.getElementById(labelId) : null;
       input.addEventListener("input", () => {
-        const val = Math.max(20, Math.min(100, Number(input.value) || 100));
+        const val = Math.max(0, Math.min(100, Number(input.value) ?? 0));
         state[key] = val / 100;
         if (label) label.textContent = `${val}%`;
         state.needsRender = true;
@@ -484,6 +490,43 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     };
     bindAlpha(dom.statTextAlpha, "statTextAlpha", "statTextAlphaValue");
     bindAlpha(dom.statBgAlpha, "statBgAlpha", "statBgAlphaValue");
+
+    if (dom.statBaseSize) {
+      const label = document.getElementById("statSizeValue");
+      dom.statBaseSize.addEventListener("input", () => {
+        const raw = Number(dom.statBaseSize.value);
+        const val = Math.max(8, Math.min(24, Number.isFinite(raw) ? raw : 14));
+        state.statBaseSize = val;
+        if (label) label.textContent = `${val}`;
+        state.needsRender = true;
+        saveState();
+        updateHideButtonsUI();
+      });
+    }
+
+    if (dom.resetSettingsBtn) {
+      dom.resetSettingsBtn.addEventListener("click", () => {
+        openConfirmModal(
+          "Reset settings to defaults?",
+          () => {
+            state.showTickerInfo = true;
+            state.showPctInfo = true;
+            state.showTimerInfo = true;
+            state.showSellInfo = true;
+            state.statBaseSize = 14;
+            state.statTextAlpha = 1;
+            state.statBgAlpha = 1;
+            state.showStats = true;
+            updateHideButtonsUI();
+            state.needsRender = true;
+            saveState();
+          },
+          "Reset Settings",
+          null,
+          { confirmVariant: "blue" }
+        );
+      });
+    }
     if (dom.resetFarmBtn) {
       dom.resetFarmBtn.addEventListener("click", () => {
         openConfirmModal("Reset your farm and start fresh? This clears all progress.", resetFarm, "Reset Farm");

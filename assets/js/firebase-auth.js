@@ -472,6 +472,7 @@ const logOutAndReset = async () => {
 
 const initAuthUI = () => {
   const authStateEl = document.getElementById("auth-state");
+  const offcanvasUsername = document.getElementById("offcanvasUsername");
   const userBadge = document.getElementById("userBadge");
   const authTrigger = document.getElementById("authTrigger");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -576,6 +577,7 @@ const initAuthUI = () => {
         user.email ||
         "User";
       if (authStateEl) setAuthStatus(name, false);
+      if (offcanvasUsername) offcanvasUsername.textContent = name;
       lastKnownDisplayName = name;
       if (authTrigger) authTrigger.classList.add("hidden");
       if (logoutBtn) logoutBtn.classList.remove("hidden");
@@ -584,6 +586,7 @@ const initAuthUI = () => {
         requestLoginSync();
     } else {
       if (authStateEl) setAuthStatus("Guest", false);
+      if (offcanvasUsername) offcanvasUsername.textContent = "Guest";
       if (authTrigger) authTrigger.classList.remove("hidden");
       if (logoutBtn) logoutBtn.classList.add("hidden");
       cleanupSessionWatch();
