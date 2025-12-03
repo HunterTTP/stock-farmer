@@ -50,6 +50,8 @@ let hasSessionOwnership = false;
 let lastActiveSessionId = null;
 let isLoggingOut = false;
 const SESSION_STORAGE_KEY = "stock-farmer-session-id";
+let lastAuthUid = null;
+let initialAuthHandled = false;
 
 const sessionId = (() => {
   try {
@@ -570,6 +572,8 @@ const initAuthUI = () => {
   onAuthStateChanged(auth, (user) => {
     console.log("[auth] state changed", user ? user.uid : "guest");
     const shouldAutoOpenAuth = !user && !isLoggingOut && consumeAuthFlag();
+    const uid = user ? user.uid : null;
+    const shouldReload = initialAuthHandled && uid !== lastAuthUid;
     if (user) {
       const name =
         user.displayName?.trim() ||
@@ -595,6 +599,12 @@ const initAuthUI = () => {
         toggleModal(true);
         switchTab("login");
       }
+    }
+    lastAuthUid = uid;
+    if (!initialAuthHandled) initialAuthHandled = true;
+    if (shouldReload) {
+      setTimeout(() => window.location.reload(), 120);
+      return;
     }
     authResolved = true;
   });
