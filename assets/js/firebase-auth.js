@@ -49,10 +49,25 @@ let sessionPromptOpen = false;
 let hasSessionOwnership = false;
 let lastActiveSessionId = null;
 let isLoggingOut = false;
-const sessionId =
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : "sess-" + Math.random().toString(36).slice(2, 10);
+const SESSION_STORAGE_KEY = "stock-farmer-session-id";
+
+const sessionId = (() => {
+  try {
+    const existing = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing) return existing;
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : "sess-" + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem(SESSION_STORAGE_KEY, id);
+    return id;
+  } catch (error) {
+    console.error("Session id persistence failed", error);
+    return typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : "sess-" + Math.random().toString(36).slice(2, 10);
+  }
+})();
 const AUTH_MODAL_FLAG = "stockFarmer.authModalOpen";
 
 const errorMessages = {
@@ -439,6 +454,7 @@ const logOutAndReset = async () => {
   try {
     if (gameContext?.config?.saveKey)
       localStorage.removeItem(gameContext.config.saveKey);
+    localStorage.removeItem(SESSION_STORAGE_KEY);
   } catch (error) {
     console.error("Local clear failed", error);
   }
