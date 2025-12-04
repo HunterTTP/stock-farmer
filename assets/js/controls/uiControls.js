@@ -8,6 +8,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   };
   const defaultCancelBtnClass = "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
   const modeOrder = ["plant", "harvest", "build"];
+  let moneyChangeHideTimeout = null;
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
 
@@ -457,9 +458,35 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (dom.totalDisplay) dom.totalDisplay.textContent = formatCurrency(state.totalMoney, true);
   }
 
+  function showAggregateMoneyChange(amount) {
+    const el = dom.moneyChangeDisplay;
+    if (!el || amount === 0) return;
+    const isGain = amount >= 0;
+    const valueText = `${isGain ? "+" : "-"}${formatCurrency(Math.abs(amount), true)}`;
+    el.textContent = valueText;
+    el.classList.remove("hidden");
+    el.classList.remove("text-red-400");
+    el.classList.remove("text-emerald-300");
+    if (isGain) el.classList.add("text-emerald-300");
+    else el.classList.add("text-red-400");
+    requestAnimationFrame(() => {
+      el.classList.remove("opacity-0");
+      el.classList.add("opacity-100");
+    });
+    if (moneyChangeHideTimeout) clearTimeout(moneyChangeHideTimeout);
+    moneyChangeHideTimeout = setTimeout(() => {
+      el.classList.remove("opacity-100");
+      el.classList.add("opacity-0");
+      setTimeout(() => {
+        el.classList.add("hidden");
+      }, 200);
+    }, 2200);
+  }
+
   function refreshAllUI() {
     ensurePlantDefaults();
     updateTotalDisplay();
+    showAggregateMoneyChange(0);
     renderStockOptions();
     renderCropOptions();
     renderSizeMenu();
@@ -652,6 +679,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     updateTotalDisplay,
     updateHideButtonsUI,
     updateModeButtonsUI,
+    showAggregateMoneyChange,
     updateCropStockButtonUI: () => {
       renderCropOptions();
       renderStockOptions();

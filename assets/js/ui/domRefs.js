@@ -5,6 +5,7 @@ export function getDomRefs() {
     navOffcanvas: document.getElementById("navOffcanvas"),
     navOverlay: document.getElementById("navOverlay"),
     navClose: document.getElementById("navClose"),
+    moneyChangeDisplay: document.getElementById("moneyChangeDisplay"),
     recenterBtn: document.getElementById("recenterBtn"),
     modePlantBtn: document.getElementById("modePlantBtn"),
     modeHarvestBtn: document.getElementById("modeHarvestBtn"),

@@ -359,7 +359,10 @@
     <div class="canvas-wrapper">
       <canvas id="gridCanvas"></canvas>
       <div class="pointer-events-none absolute top-3 right-3 z-20">
-        <div id="totalDisplay" class="pointer-events-none select-none text-sm font-semibold px-4 py-3 rounded-lg bg-neutral-900/80 border border-neutral-800 text-white shadow-lg">$0.00</div>
+        <div class="flex items-center gap-2 rounded-lg shadow-lg px-3 py-2 bg-transparent border border-transparent">
+          <div id="moneyChangeDisplay" class="hidden pointer-events-none select-none text-sm font-semibold px-2 py-1 rounded-md border border-neutral-800 bg-neutral-800/90 opacity-0 transition-opacity duration-200"></div>
+          <div id="totalDisplay" class="pointer-events-none select-none text-sm font-semibold px-4 py-2 rounded-md bg-neutral-900/90 border border-neutral-800 text-white">$0.00</div>
+        </div>
       </div>
       <div class="pointer-events-none absolute inset-x-0 bottom-3 px-3 flex flex-col items-center gap-4 z-20">
         <div class="pointer-events-auto w-full max-w-xl flex flex-col items-center gap-3">

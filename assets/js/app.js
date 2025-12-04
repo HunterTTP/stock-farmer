@@ -98,6 +98,7 @@ const actions = createActions({
   createRandomStageBreakpoints,
   onMoneyChanged,
   renderCropOptions: ui.renderCropOptions,
+  showAggregateMoneyChange: ui.showAggregateMoneyChange,
   saveState: persistence.save,
   openConfirmModal: ui.openConfirmModal,
   showActionError: ui.showActionError,

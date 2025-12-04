@@ -9,6 +9,7 @@ export function createActions({
   createRandomStageBreakpoints,
   onMoneyChanged,
   renderCropOptions,
+  showAggregateMoneyChange,
   saveState,
   openConfirmModal,
   showActionError,
@@ -307,6 +308,7 @@ export function createActions({
   }
 
   function handleTap(clientX, clientY) {
+    const startMoney = state.totalMoney;
     const tile = tileFromClient(clientX, clientY);
     if (!tile) return;
     const sizeOption = currentSizeOption();
@@ -333,6 +335,10 @@ export function createActions({
       }
     }
     if (!hadSuccess && failure) showActionError(failure.reason, failure.x, failure.y);
+    const delta = state.totalMoney - startMoney;
+    if (delta !== 0 && typeof showAggregateMoneyChange === "function") {
+      showAggregateMoneyChange(delta);
+    }
   }
 
   return {
