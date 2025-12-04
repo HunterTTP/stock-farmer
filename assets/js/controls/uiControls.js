@@ -164,12 +164,15 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   function renderPlantCropMenu() {
     if (!dom.plantCropMenu) return;
     dom.plantCropMenu.innerHTML = "";
+    let chainLocked = false;
     Object.values(crops).forEach((crop) => {
       const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
+      const gatedLocked = !crop.unlocked && chainLocked;
       const item = document.createElement("button");
       item.type = "button";
       item.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
       if (!crop.unlocked && !canAffordUnlock) item.classList.add("opacity-50", "cursor-not-allowed");
+      if (gatedLocked) item.classList.add("opacity-50", "cursor-not-allowed");
       if (crop.id === state.selectedCropKey) item.classList.add("border-emerald-500", "bg-neutral-900/70");
 
       const img = document.createElement("img");
@@ -203,6 +206,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       }
 
       item.addEventListener("click", () => {
+        if (gatedLocked) return;
         if (!crop.unlocked) {
           if (crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost) {
             openConfirmModal(
@@ -232,6 +236,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       });
 
       dom.plantCropMenu.appendChild(item);
+      if (!crop.unlocked && !chainLocked) chainLocked = true;
     });
   }
 
@@ -268,14 +273,17 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   function renderSizeMenuFor(menuEl, variant = "text") {
     if (!menuEl) return;
     menuEl.innerHTML = "";
+    let chainLocked = false;
     Object.values(sizes).forEach((size) => {
       const locked = !size.unlocked;
       const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
+      const gatedLocked = locked && chainLocked;
       const row = document.createElement("button");
       row.type = "button";
       row.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
       if (size.id === state.selectedSizeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
       if (locked && !canAffordUnlock) row.classList.add("opacity-50", "cursor-not-allowed");
+      if (gatedLocked) row.classList.add("opacity-50", "cursor-not-allowed");
 
       const left = document.createElement("div");
       left.className = "flex items-center gap-2";
@@ -298,8 +306,9 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
         row.appendChild(cost);
       }
 
-      row.disabled = locked && !canAffordUnlock;
+      row.disabled = locked && (!canAffordUnlock || gatedLocked);
       row.addEventListener("click", () => {
+        if (gatedLocked) return;
         if (locked) {
           if (!canAffordUnlock) return;
           openConfirmModal(
@@ -328,6 +337,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       });
 
       menuEl.appendChild(row);
+      if (locked && !chainLocked) chainLocked = true;
     });
   }
 
