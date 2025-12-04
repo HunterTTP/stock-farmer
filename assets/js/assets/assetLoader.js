@@ -26,7 +26,7 @@ export function preloadCropImages(crops, state) {
       crop.growTimeMs = crop.growMinutes * 60 * 1000;
       crop.images = Array.from({ length: 4 }, (_, i) => {
         const img = new Image();
-        img.src = `images/${crop.id}/${crop.id}-phase-${i + 1}.png`;
+        img.src = `images/crops/${crop.id}/${crop.id}-phase-${i + 1}.png`;
         img.onload = () => (state.needsRender = true);
         return img;
       });

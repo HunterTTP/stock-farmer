@@ -9,7 +9,7 @@ export function formatCurrency(amount, allowCents = true) {
 export function cropImageSrc(cropId) {
   if (cropId === "grass") return "images/grass.jpg";
   if (cropId === "farmland") return "images/farmland.jpg";
-  if (cropId) return `images/${cropId}/${cropId}-phase-4.png`;
+  if (cropId) return `images/crops/${cropId}/${cropId}-phase-4.png`;
   return "images/grass.jpg";
 }
 

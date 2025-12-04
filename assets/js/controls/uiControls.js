@@ -11,6 +11,16 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
 
+  function formatGrowTime(minutes) {
+    if (!Number.isFinite(minutes)) return "";
+    if (minutes === 60) return "1hr";
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs > 0 && mins === 0) return `${hrs}hr`;
+    if (hrs > 0) return `${hrs}hr ${mins}m`;
+    return `${minutes}m`;
+  }
+
   function openOffcanvas() {
     if (!dom.navOffcanvas || !dom.navOverlay || !dom.navToggle) return;
     dom.navOffcanvas.classList.remove("translate-x-full");
@@ -148,7 +158,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (cropId === "grass") return "images/grass.jpg";
     if (cropId === "farmland") return "images/farmland.jpg";
     if (!cropId) return "images/farmland.jpg";
-    return `images/${cropId}/${cropId}-phase-4.png`;
+    return `images/crops/${cropId}/${cropId}-phase-4.png`;
   }
 
   function renderPlantCropMenu() {
@@ -179,7 +189,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       else if (crop.id === "farmland") meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
       else {
         const costText = typeof crop.placeCost === "number" && crop.placeCost > 0 ? formatCurrency(crop.placeCost) : "Free";
-        meta.textContent = `Cost ${costText} • Sell ${formatCurrency(crop.baseValue)} • ${crop.growMinutes}m`;
+        meta.textContent = `Cost ${costText} • Sell ${formatCurrency(crop.baseValue)} • ${formatGrowTime(crop.growMinutes)}`;
       }
       textWrap.appendChild(title);
       textWrap.appendChild(meta);
