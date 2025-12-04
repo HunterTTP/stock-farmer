@@ -50,6 +50,16 @@ export function createInitialWorld(config) {
   };
 }
 
+function isKeyInBounds(key, config) {
+  if (!config || typeof config.gridRows !== "number" || typeof config.gridCols !== "number") return true;
+  if (typeof key !== "string") return false;
+  const [rowStr, colStr] = key.split(",");
+  const row = parseInt(rowStr, 10);
+  const col = parseInt(colStr, 10);
+  if (!Number.isInteger(row) || !Number.isInteger(col)) return false;
+  return row >= 0 && row < config.gridRows && col >= 0 && col < config.gridCols;
+}
+
 export function applyDefaultSelection(state) {
   state.selectedCropKey = "wheat";
   state.previousCropKey = "wheat";
@@ -80,7 +90,7 @@ export function recalcPlacedCounts(world, crops) {
 }
 
 export function saveState({ state, world, crops, sizes, config }) {
-  const data = buildSaveData({ state, world, crops, sizes });
+  const data = buildSaveData({ state, world, crops, sizes, config });
   try {
     localStorage.setItem(config.saveKey, JSON.stringify(data));
   } catch (err) {
@@ -105,13 +115,15 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
 
     if (Array.isArray(data.filled)) {
       world.filled.clear();
-      data.filled.forEach((k) => world.filled.add(k));
+      data.filled.forEach((k) => {
+        if (isKeyInBounds(k, config)) world.filled.add(k);
+      });
     }
 
     if (Array.isArray(data.plots)) {
       world.plots.clear();
       data.plots.forEach(([key, value]) => {
-        world.plots.set(key, value);
+        if (isKeyInBounds(key, config)) world.plots.set(key, value);
       });
     }
 
@@ -178,25 +190,27 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
   }
 }
 
-export function buildSaveData({ state, world, crops, sizes }) {
+export function buildSaveData({ state, world, crops, sizes, config }) {
   const previousUpdatedAt = Number.isFinite(state.lastSavedAt) ? state.lastSavedAt : 0;
   const updatedAt = Date.now();
-  const plots = Array.from(world.plots.entries()).map(([key, value]) => {
-    const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
-    const cleaned = {
-      cropKey: value?.cropKey || null,
-      stockKey: value?.stockKey || null,
-      plantedAt: typeof value?.plantedAt === "number" ? value.plantedAt : Date.now(),
-      stockPriceAtPlant: typeof value?.stockPriceAtPlant === "number" ? value.stockPriceAtPlant : 0,
-      lockedStockPrice: value?.lockedStockPrice ?? null,
-      stageBreakpoints,
-    };
-    return [key, cleaned];
-  });
+  const plots = Array.from(world.plots.entries())
+    .filter(([key]) => isKeyInBounds(key, config))
+    .map(([key, value]) => {
+      const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
+      const cleaned = {
+        cropKey: value?.cropKey || null,
+        stockKey: value?.stockKey || null,
+        plantedAt: typeof value?.plantedAt === "number" ? value.plantedAt : Date.now(),
+        stockPriceAtPlant: typeof value?.stockPriceAtPlant === "number" ? value.stockPriceAtPlant : 0,
+        lockedStockPrice: value?.lockedStockPrice ?? null,
+        stageBreakpoints,
+      };
+      return [key, cleaned];
+    });
 
   const data = {
     totalMoney: state.totalMoney,
-    filled: Array.from(world.filled),
+    filled: Array.from(world.filled).filter((k) => isKeyInBounds(k, config)),
     plots,
     selectedCropKey: state.selectedCropKey,
     previousCropKey: state.previousCropKey,
@@ -233,7 +247,7 @@ export function buildSaveData({ state, world, crops, sizes }) {
   return data;
 }
 
-export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
+export function applyLoadedData(data, { state, world, crops, stocks, sizes, config }) {
   if (!data || typeof data !== "object") return;
   console.log("[load] applyLoadedData start", {
     filled: Array.isArray(data.filled) ? data.filled.length : 0,
@@ -245,13 +259,15 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes }) {
 
   if (Array.isArray(data.filled)) {
     world.filled.clear();
-    data.filled.forEach((k) => world.filled.add(k));
+    data.filled.forEach((k) => {
+      if (isKeyInBounds(k, config)) world.filled.add(k);
+    });
   }
 
   if (Array.isArray(data.plots)) {
     world.plots.clear();
     data.plots.forEach(([key, value]) => {
-      world.plots.set(key, value);
+      if (isKeyInBounds(key, config)) world.plots.set(key, value);
     });
   }
 
