@@ -21,6 +21,7 @@ export function createInitialState(config) {
     savedOffsetX: null,
     savedOffsetY: null,
     totalMoney: 0,
+    stockHoldings: {},
     showStats: false,
     showTimerInfo: false,
     showTickerInfo: false,
@@ -64,6 +65,7 @@ export function applyDefaultSelection(state) {
   state.selectedCropKey = "wheat";
   state.previousCropKey = "wheat";
   state.selectedStockKey = null;
+  state.stockHoldings = {};
   state.selectedSizeKey = "single";
   state.activeMode = "plant";
   state.hoeSelected = false;
@@ -117,6 +119,28 @@ function cleanPlotValue(value) {
   };
 }
 
+function clampShares(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.max(0, Math.floor(num));
+}
+
+function cleanStockHoldings(raw) {
+  const cleaned = {};
+  if (!raw || typeof raw !== "object") return cleaned;
+  Object.entries(raw).forEach(([sym, lots]) => {
+    if (!Array.isArray(lots)) return;
+    const filtered = lots
+      .map((lot) => ({
+        shares: clampShares(lot?.shares),
+        price: Number.isFinite(lot?.price) ? lot.price : 0,
+      }))
+      .filter((lot) => lot.shares > 0 && Number.isFinite(lot.price));
+    if (filtered.length) cleaned[sym] = filtered;
+  });
+  return cleaned;
+}
+
 export function loadState({ state, world, crops, sizes, config }) {
   let raw;
   try {
@@ -130,6 +154,7 @@ export function loadState({ state, world, crops, sizes, config }) {
     const data = JSON.parse(raw);
     if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
     if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
+    if (data.stockHoldings) state.stockHoldings = cleanStockHoldings(data.stockHoldings);
 
     if (Array.isArray(data.filled)) {
       world.filled.clear();
@@ -220,6 +245,7 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
 
   const data = {
     totalMoney: state.totalMoney,
+    stockHoldings: cleanStockHoldings(state.stockHoldings),
     filled: Array.from(world.filled).filter((k) => isKeyInBounds(k, config)),
     plots,
     selectedCropKey: state.selectedCropKey,
@@ -262,6 +288,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
 
   if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
   if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
+  if (data.stockHoldings) state.stockHoldings = cleanStockHoldings(data.stockHoldings);
 
   if (Array.isArray(data.filled)) {
     world.filled.clear();

@@ -11,6 +11,7 @@ import { createPointerControls } from "./controls/pointerControls.js";
 import { createActions } from "./logic/actions.js";
 import { formatCurrency, createRandomStageBreakpoints } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
+import { createTradeModal } from "./trading/tradeModal.js";
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -41,11 +42,14 @@ recalcPlacedCounts(world, crops);
 const viewport = createViewport({ canvas, ctx, state, config });
 
 let ui;
+let tradeModal;
 const onMoneyChanged = () => {
-  if (!ui) return;
-  ui.updateTotalDisplay();
-  ui.renderCropOptions();
-  ui.renderSizeMenu();
+  if (ui) {
+    ui.updateTotalDisplay();
+    ui.renderCropOptions();
+    ui.renderSizeMenu();
+  }
+  tradeModal?.refreshBalances();
 };
 
 function resetFarm() {
@@ -72,6 +76,12 @@ ui = createUIControls({
   centerView: viewport.centerView,
   resetFarm,
   clearCache: clearCacheAndLogout,
+});
+
+tradeModal = createTradeModal({
+  state,
+  onMoneyChanged,
+  saveState: persistence.save,
 });
 
 registerGameContext({

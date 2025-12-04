@@ -442,6 +442,153 @@
                 class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
                 Build
               </button>
+              <button
+                id="modeTradeBtn"
+                type="button"
+                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+                Trade
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tradeModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true" aria-labelledby="tradeModalTitle">
+      <div id="tradeOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div class="relative z-10 flex min-h-full items-center justify-center px-3 py-6">
+        <div class="w-full max-w-5xl md:max-w-6xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
+            <div>
+              <p class="text-[11px] uppercase tracking-wide text-neutral-400">Trading</p>
+              <h2 id="tradeModalTitle" class="text-lg font-semibold text-white">Market</h2>
+            </div>
+            <button id="tradeClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none border border-neutral-800">
+              <span class="sr-only">Close</span>
+              <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+          <div class="px-5 py-5 bg-neutral-950/80 space-y-3">
+            <div class="md:hidden flex rounded-full bg-neutral-900/80 p-1 text-[0.7rem]">
+              <button id="tradeTab" class="flex-1 text-center py-1.5 rounded-full font-semibold bg-neutral-800 text-white">Buy</button>
+              <button id="positionsTab" class="flex-1 text-center py-1.5 rounded-full font-semibold text-neutral-400">Sell</button>
+            </div>
+
+            <div class="mt-1 flex flex-col md:grid md:grid-cols-2 md:gap-3 md:items-stretch">
+              <section
+                id="tradeSection"
+                class="space-y-2 rounded-2xl bg-neutral-900/70 border border-neutral-800 p-3 md:flex-1 flex flex-col">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <h3 class="text-xs font-semibold text-white">Buy</h3>
+                  <div class="flex items-center gap-2">
+                    <div class="text-right flex flex-col items-end gap-0.5">
+                      <div class="text-[0.6rem] uppercase text-neutral-400">Wallet</div>
+                      <div class="flex items-center gap-1 leading-none">
+                        <div
+                          id="tradeMoneyChange"
+                          class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
+                        </div>
+                        <div class="text-xs font-semibold text-white" id="tradeWalletValue">$0.00</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <div class="rounded-lg bg-neutral-950/40 border border-neutral-800 max-h-48 overflow-y-auto offcanvas-scroll">
+                    <ul id="tickerList" class="divide-y divide-neutral-800 text-[0.75rem]"></ul>
+                  </div>
+
+                  <div class="space-y-1">
+                    <div class="text-[0.65rem] text-neutral-400">Shares</div>
+                    <div class="flex items-stretch gap-2">
+                      <button
+                        id="buyBtn"
+                        class="w-32 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 py-1.5 px-3 text-[0.75rem] font-semibold active:scale-[0.98] transition text-left">
+                        Buy
+                      </button>
+                      <div class="flex-1 flex items-center gap-1.5">
+                        <button
+                          id="decShares"
+                          class="rounded-xl border border-neutral-700 bg-neutral-950/60 px-2 py-1.5 text-[0.75rem] font-semibold active:scale-[0.97] transition">
+                          −
+                        </button>
+                        <input
+                          id="shareInput"
+                          type="text"
+                          readonly
+                          value="1"
+                          class="w-full text-center rounded-xl bg-neutral-950/60 border border-neutral-700 px-2 py-1.5 text-[0.75rem] select-none" />
+                        <button
+                          id="incShares"
+                          class="rounded-xl border border-neutral-700 bg-neutral-950/60 px-2 py-1.5 text-[0.75rem] font-semibold active:scale-[0.97] transition">
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p id="tradeMessage" class="text-[0.72rem] min-h-[1rem] text-neutral-400"></p>
+                </div>
+              </section>
+
+              <section
+                id="positionsSection"
+                class="space-y-2 rounded-2xl bg-neutral-900/70 border border-neutral-800 p-3 md:flex-1 flex flex-col hidden md:flex">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-xs font-semibold text-white">Sell</h3>
+                    <span id="holdingsSummary" class="text-[0.6rem] text-neutral-400">No positions</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="text-right flex flex-col items-end gap-0.5">
+                      <div class="text-[0.6rem] uppercase text-neutral-400">Investment</div>
+                      <div class="flex items-center gap-1 leading-none">
+                        <div
+                          id="tradeInvestChange"
+                          class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
+                        </div>
+                        <div id="investedValue" class="text-xs font-semibold text-white">$0.00</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex-1 flex flex-col">
+                  <div class="rounded-lg bg-neutral-950/40 border border-neutral-800 max-h-48 overflow-y-auto overflow-x-auto offcanvas-scroll">
+                    <table class="w-full min-w-full text-[0.75rem]">
+                      <thead class="text-neutral-400 text-[0.65rem] sticky top-0 z-10 bg-neutral-950">
+                        <tr class="border-b border-neutral-800">
+                          <th class="text-left px-2 py-1.5">Shares</th>
+                          <th class="text-left px-2 py-1.5">Ticker</th>
+                          <th class="text-left px-2 py-1.5">Cost</th>
+                          <th class="text-left px-2 py-1.5">Value</th>
+                          <th class="text-left px-2 py-1.5">P/L %</th>
+                          <th class="text-left px-2 py-1.5">P/L</th>
+                          <th class="text-left px-2 py-1.5">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="holdingsBody"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-1.5 text-[0.65rem]">
+                    <button
+                      id="prevPage"
+                      class="rounded-full border border-neutral-700 px-2 py-1 min-w-[3rem] text-center active:scale-[0.97] transition">
+                      Prev
+                    </button>
+                    <span id="pageInfo" class="text-neutral-400">Page 1 of 1</span>
+                    <button
+                      id="nextPage"
+                      class="rounded-full border border-neutral-700 px-2 py-1 min-w-[3rem] text-center active:scale-[0.97] transition">
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </div>
