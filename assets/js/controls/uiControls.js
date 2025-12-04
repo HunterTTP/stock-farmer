@@ -26,6 +26,10 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
 
   function formatGrowTime(minutes) {
     if (!Number.isFinite(minutes)) return "";
+    if (minutes > 0 && minutes < 1) {
+      const secs = Math.round(minutes * 60);
+      return `${secs}sec`;
+    }
     if (minutes === 60) return "1hr";
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;

@@ -148,10 +148,7 @@
                 step="1000"
                 class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 placeholder="$100000" />
-              <button
-                id="moneyCheatApply"
-                type="button"
-                class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold border border-emerald-500 focus:outline-none">
+              <button id="moneyCheatApply" type="button" class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold border border-emerald-500 focus:outline-none">
                 Apply
               </button>
             </div>
@@ -351,7 +348,9 @@
         <div class="px-4 py-4 text-sm text-neutral-100 leading-relaxed">Log Out?</div>
         <div class="px-4 pb-4 flex gap-2">
           <button id="logoutConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Log Out</button>
-          <button id="logoutCancel" class="w-1/2 py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none">Stay Signed In</button>
+          <button id="logoutCancel" class="w-1/2 py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none">
+            Stay Signed In
+          </button>
         </div>
       </div>
     </div>
@@ -359,8 +358,10 @@
     <div class="canvas-wrapper">
       <canvas id="gridCanvas"></canvas>
       <div class="pointer-events-none absolute top-3 right-3 z-20">
-        <div class="flex items-center gap-2 rounded-lg shadow-lg px-3 py-2 bg-transparent border border-transparent">
-          <div id="moneyChangeDisplay" class="hidden pointer-events-none select-none text-sm font-semibold px-2 py-1 rounded-md border border-neutral-800 bg-neutral-800/90 opacity-0 transition-opacity duration-200"></div>
+        <div class="flex items-center gap-2 rounded-lg px-3 py-2 bg-transparent border border-transparent">
+          <div
+            id="moneyChangeDisplay"
+            class="hidden pointer-events-none select-none text-sm font-semibold px-2 py-1 rounded-md border border-neutral-800 bg-neutral-800/90 opacity-0 transition-opacity duration-200"></div>
           <div id="totalDisplay" class="pointer-events-none select-none text-sm font-semibold px-4 py-2 rounded-md bg-neutral-900/90 border border-neutral-800 text-white">$0.00</div>
         </div>
       </div>
