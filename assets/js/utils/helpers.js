@@ -13,10 +13,20 @@ export function cropImageSrc(cropId) {
   return "images/grass.jpg";
 }
 
-export function createRandomStageBreakpoints() {
-  const a = Math.random() * 0.6 + 0.1;
-  const b = Math.random() * 0.2 + 0.75;
-  return [Math.min(a, b - 0.05), b];
+export function createRandomStageBreakpoints(growTimeMs) {
+  // First phase change should feel quick: anywhere from instant to within ~2 minutes.
+  const totalMs = Number.isFinite(growTimeMs) && growTimeMs > 0 ? growTimeMs : null;
+  const maxFirstMs = 2 * 60 * 1000;
+  const maxFirstFraction = totalMs ? Math.min(1, maxFirstMs / totalMs) : 0.25;
+  const cappedFirstFraction = Math.min(maxFirstFraction, 0.4);
+  const first = Math.random() * cappedFirstFraction;
+
+  // Later stages stay spaced out reasonably far apart.
+  const minSecond = Math.max(first + 0.1, 0.4);
+  const maxSecond = 0.95;
+  const second = Math.min(maxSecond, minSecond + Math.random() * (maxSecond - minSecond));
+
+  return [first, Math.max(second, first + 0.05)];
 }
 
 export function clampScale(scale, minScale, maxScale) {

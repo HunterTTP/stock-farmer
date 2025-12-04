@@ -276,7 +276,7 @@ export function createActions({
           plantedAt: Date.now(),
           stockPriceAtPlant: stock.price,
           lockedStockPrice: null,
-          stageBreakpoints: createRandomStageBreakpoints(),
+          stageBreakpoints: createRandomStageBreakpoints(crop.growTimeMs),
         });
         crop.placed += 1;
         state.needsRender = true;
