@@ -47,5 +47,8 @@ export function getDomRefs() {
     confirmConfirm: document.getElementById("confirmConfirm"),
     confirmClose: document.getElementById("confirmClose"),
     confirmTitle: document.getElementById("confirmTitle"),
+    moneyCheatCard: document.getElementById("moneyCheatCard"),
+    moneyCheatInput: document.getElementById("moneyCheatInput"),
+    moneyCheatApply: document.getElementById("moneyCheatApply"),
   };
 }

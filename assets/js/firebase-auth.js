@@ -610,6 +610,7 @@ const initAuthUI = () => {
   const signupPassword = document.getElementById("signup-password");
   const loginEmail = document.getElementById("login-email");
   const loginPassword = document.getElementById("login-password");
+  const devMoneyCard = document.getElementById("moneyCheatCard");
   let authResolved = false;
   let lastKnownDisplayName = null;
 
@@ -702,11 +703,13 @@ const initAuthUI = () => {
         lastKnownDisplayName ||
         user.email ||
         "User";
+      const isHunter = name?.trim().toLowerCase() === "hunterttp";
       if (authStateEl) setAuthStatus(name, false);
       if (offcanvasUsername) offcanvasUsername.textContent = name;
       lastKnownDisplayName = name;
       if (authTrigger) authTrigger.classList.add("hidden");
       if (logoutBtn) logoutBtn.classList.remove("hidden");
+      if (devMoneyCard) devMoneyCard.classList.toggle("hidden", !isHunter);
       shouldAutoClaimOnNextSnapshot = true;
       ensureSessionWatch(user);
       if (gameContext && !loginSyncPromise && lastSyncedUserId !== user.uid)
@@ -716,6 +719,7 @@ const initAuthUI = () => {
       if (offcanvasUsername) offcanvasUsername.textContent = "Guest";
       if (authTrigger) authTrigger.classList.remove("hidden");
       if (logoutBtn) logoutBtn.classList.add("hidden");
+      if (devMoneyCard) devMoneyCard.classList.add("hidden");
       cleanupSessionWatch();
       resetSyncTracking();
       if (shouldAutoOpenAuth) {

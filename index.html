@@ -139,6 +139,23 @@
           <button class="w-full border border-red-700 text-sm font-semibold px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center" id="resetFarmBtn">
             Reset Progress
           </button>
+          <div id="moneyCheatCard" class="hidden pt-2">
+            <div class="flex items-center gap-2">
+              <input
+                id="moneyCheatInput"
+                type="number"
+                min="0"
+                step="1000"
+                class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="$100000" />
+              <button
+                id="moneyCheatApply"
+                type="button"
+                class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold border border-emerald-500 focus:outline-none">
+                Apply
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

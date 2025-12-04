@@ -301,7 +301,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
 
       if (locked && typeof size.unlockCost === "number") {
         const cost = document.createElement("span");
-        cost.className = "text-[11px] font-semibold text-amber-300";
+        cost.className = "text-[11px] font-semibold text-amber-300 ml-3";
         cost.textContent = formatCurrency(size.unlockCost);
         row.appendChild(cost);
       }
@@ -548,6 +548,21 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (dom.resetFarmBtn) {
       dom.resetFarmBtn.addEventListener("click", () => {
         openConfirmModal("Reset all progress and start fresh? This cannot be undone.", resetFarm, "Reset Progress", null, { confirmText: "Reset", cancelText: "Cancel", confirmVariant: "danger" });
+      });
+    }
+
+    if (dom.moneyCheatApply && dom.moneyCheatInput) {
+      const applyMoney = () => {
+        const raw = Number(dom.moneyCheatInput.value);
+        if (!Number.isFinite(raw)) return;
+        const next = Math.max(0, Math.floor(raw));
+        state.totalMoney = next;
+        onMoneyChanged();
+        saveState();
+      };
+      dom.moneyCheatApply.addEventListener("click", applyMoney);
+      dom.moneyCheatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") applyMoney();
       });
     }
 
