@@ -703,13 +703,13 @@ const initAuthUI = () => {
         lastKnownDisplayName ||
         user.email ||
         "User";
-      const isHunter = name?.trim().toLowerCase() === "hunterttp";
+      const isAdmin = name?.trim().toLowerCase() === "admin";
       if (authStateEl) setAuthStatus(name, false);
       if (offcanvasUsername) offcanvasUsername.textContent = name;
       lastKnownDisplayName = name;
       if (authTrigger) authTrigger.classList.add("hidden");
       if (logoutBtn) logoutBtn.classList.remove("hidden");
-      if (devMoneyCard) devMoneyCard.classList.toggle("hidden", !isHunter);
+      if (devMoneyCard) devMoneyCard.classList.toggle("hidden", !isAdmin);
       shouldAutoClaimOnNextSnapshot = true;
       ensureSessionWatch(user);
       if (gameContext && !loginSyncPromise && lastSyncedUserId !== user.uid)
