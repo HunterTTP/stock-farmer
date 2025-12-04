@@ -49,6 +49,7 @@ let sessionPromptOpen = false;
 let hasSessionOwnership = false;
 let lastActiveSessionId = null;
 let isLoggingOut = false;
+let shouldAutoClaimOnNextSnapshot = false;
 const SESSION_STORAGE_KEY = "stock-farmer-session-id";
 let lastAuthUid = null;
 let initialAuthHandled = false;
@@ -254,6 +255,7 @@ const resetSyncTracking = () => {
   sessionPromptOpen = false;
   hasSessionOwnership = false;
   lastActiveSessionId = null;
+  shouldAutoClaimOnNextSnapshot = false;
 };
 
 const getLocalUpdatedAt = () =>
@@ -282,8 +284,9 @@ const summarizeState = (data) => {
 const syncOnLogin = async () => {
   if (!gameContext) return;
   const localUpdatedAt = getLocalUpdatedAt();
+  const user = auth.currentUser;
+  if (!user) return;
   try {
-    const user = auth.currentUser;
     console.log("[sync] syncOnLogin start", {
       uid: user ? user.uid : "guest",
       localUpdatedAt,
@@ -310,6 +313,11 @@ const syncOnLogin = async () => {
       persistLocalSnapshot(localData);
       await saveRemoteState(stripViewFields(localData));
     }
+    await claimSession(user);
+    hasSessionOwnership = true;
+    sessionPromptOpen = false;
+    shouldAutoClaimOnNextSnapshot = false;
+    runCloudSave();
     console.log("[sync] syncOnLogin complete");
   } catch (error) {
     console.error("Sync on login failed", error);
@@ -366,8 +374,7 @@ const handleForeignSession = (user) => {
   if (sessionPromptOpen) return;
   sessionPromptOpen = true;
   hasSessionOwnership = false;
-  const message =
-    "You're playing on another device. Take over here? This will sign out other sessions.";
+  const message = "You're playing on another device. Take over here? This will sign out other sessions.";
   const takeover = async () => {
     await claimSession(user);
     hasSessionOwnership = true;
@@ -397,7 +404,7 @@ const handleSessionMoved = () => {
   if (sessionPromptOpen) return;
   sessionPromptOpen = true;
   hasSessionOwnership = false;
-  const message = "Your game session has been moved to another device.";
+  const message = "You've logged in from a different device.";
   const confirm = async () => {
     try {
       sessionStorage.setItem(AUTH_MODAL_FLAG, "1");
@@ -436,6 +443,7 @@ const ensureSessionWatch = (user) => {
       await claimSession(user);
       hasSessionOwnership = true;
       sessionPromptOpen = false;
+      shouldAutoClaimOnNextSnapshot = false;
       runCloudSave();
       return;
     }
@@ -443,6 +451,7 @@ const ensureSessionWatch = (user) => {
     if (activeId === sessionId) {
       hasSessionOwnership = true;
       sessionPromptOpen = false;
+      shouldAutoClaimOnNextSnapshot = false;
       runCloudSave();
       return;
     }
@@ -451,9 +460,24 @@ const ensureSessionWatch = (user) => {
 
     if (prevActiveId === sessionId) {
       handleSessionMoved();
-    } else {
-      handleForeignSession(user);
+      shouldAutoClaimOnNextSnapshot = false;
+      return;
     }
+
+    if (shouldAutoClaimOnNextSnapshot) {
+      shouldAutoClaimOnNextSnapshot = false;
+      await claimSession(user);
+      hasSessionOwnership = true;
+      sessionPromptOpen = false;
+      if (gameContext) {
+        const localData = buildSaveData(gameContext);
+        persistLocalSnapshot(localData);
+        queueCloudSave(localData, true);
+      }
+      return;
+    }
+
+    handleForeignSession(user);
   });
 };
 
@@ -680,6 +704,7 @@ const initAuthUI = () => {
       lastKnownDisplayName = name;
       if (authTrigger) authTrigger.classList.add("hidden");
       if (logoutBtn) logoutBtn.classList.remove("hidden");
+      shouldAutoClaimOnNextSnapshot = true;
       ensureSessionWatch(user);
       if (gameContext && !loginSyncPromise && lastSyncedUserId !== user.uid)
         requestLoginSync();
