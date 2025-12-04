@@ -1,6 +1,5 @@
 import { config } from "./config.js";
 import { crops } from "./data/crops.js";
-import { stocks } from "./data/stocks.js";
 import { sizes } from "./data/sizes.js";
 import { createBaseAssets, preloadCropImages } from "./assets/assetLoader.js";
 import { createInitialState, createInitialWorld, applyDefaultSelection, loadState, saveState, recalcPlacedCounts } from "./state/state.js";
@@ -30,7 +29,7 @@ const persistence = {
     return data;
   },
   saveView: () => persistence.save({ skipRemote: true }),
-  load: () => loadState({ state, world, crops, stocks, sizes, config }),
+  load: () => loadState({ state, world, crops, sizes, config }),
 };
 
 persistence.load();
@@ -66,7 +65,6 @@ ui = createUIControls({
   dom,
   state,
   crops,
-  stocks,
   sizes,
   formatCurrency,
   onMoneyChanged,
@@ -80,7 +78,6 @@ registerGameContext({
   state,
   world,
   crops,
-  stocks,
   sizes,
   config,
   refreshUI: ui.refreshAllUI,
@@ -92,7 +89,6 @@ const actions = createActions({
   world,
   config,
   crops,
-  stocks,
   currentSizeOption: ui.currentSizeOption,
   formatCurrency,
   createRandomStageBreakpoints,
@@ -112,11 +108,9 @@ const renderer = createRenderer({
   world,
   config,
   crops,
-  stocks,
   assets,
   currentSizeOption: ui.currentSizeOption,
   computeHoverPreview: actions.computeHoverPreview,
-  saveState: persistence.save,
 });
 
 const pointerControls = createPointerControls({
@@ -135,17 +129,11 @@ pointerControls.bind();
 ui.refreshAllUI();
 viewport.resizeCanvas();
 renderer.loop();
-setInterval(updateStockPrices, 1000);
+setInterval(() => {
+  state.needsRender = true;
+}, 1000);
 
 window.addEventListener("resize", () => {
   viewport.resizeCanvas();
   state.needsRender = true;
 });
-
-function updateStockPrices() {
-  Object.values(stocks).forEach((s) => {
-    const factor = 1 + (Math.random() - 0.5) * 0.01;
-    s.price = Math.max(1, s.price * factor);
-  });
-  state.needsRender = true;
-}

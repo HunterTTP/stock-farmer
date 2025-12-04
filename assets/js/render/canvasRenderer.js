@@ -1,4 +1,4 @@
-export function createRenderer({ canvas, ctx, state, world, config, crops, stocks, assets, currentSizeOption, computeHoverPreview, saveState }) {
+export function createRenderer({ canvas, ctx, state, world, config, crops, assets, currentSizeOption, computeHoverPreview }) {
   function renderFloatingValue(anim, nowPerf, startRow, endRow, startCol, endCol) {
     const visibleDuration = 1000;
     const fadeDuration = 500;
@@ -18,9 +18,8 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
     const cy = cellY + (state.tileSize * state.scale) / 2;
 
     let alpha;
-    if (elapsed <= visibleDuration) {
-      alpha = 1;
-    } else {
+    if (elapsed <= visibleDuration) alpha = 1;
+    else {
       const fadeT = (elapsed - visibleDuration) / fadeDuration;
       alpha = 1 - Math.min(1, Math.max(0, fadeT));
     }
@@ -68,7 +67,6 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
     const endRow = Math.min(config.gridRows, Math.ceil(worldBottom / state.tileSize));
 
     const tileScreenSize = state.tileSize * state.scale;
-    const isZoomedOut = tileScreenSize < 72;
     const now = Date.now();
     const nowPerf = performance.now();
 
@@ -84,49 +82,30 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
         const plot = world.plots.get(key);
         if (!plot) continue;
         const crop = crops[plot.cropKey];
-        const stock = stocks[plot.stockKey];
-        if (!crop || !stock || !crop.images.length) continue;
+        if (!crop || !crop.images.length) continue;
 
         const elapsed = now - plot.plantedAt;
         const progress = Math.min(1, elapsed / crop.growTimeMs);
         const isReady = progress >= 1;
-        if (isReady && plot.lockedStockPrice == null) {
-          plot.lockedStockPrice = stock.price;
-          saveState();
-        }
 
-        const breakpoints = Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
+        const breakpoints =
+          Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
         let phaseIndex = 0;
         if (isReady) phaseIndex = 3;
         else if (progress >= breakpoints[1]) phaseIndex = 2;
         else if (progress >= breakpoints[0]) phaseIndex = 1;
 
         const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
-        const effectivePrice = isReady && plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
-        const pctChange = (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
-        const value = Math.max(0, crop.baseValue * (1 + pctChange));
-        const pctText = `${pctChange >= 0 ? "+" : ""}${(pctChange * 100).toFixed(1)}%`;
-        const valueText = "$" + value.toFixed(2);
-
         const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
         const secs = Math.ceil(remainingMs / 1000);
         const mins = Math.floor(secs / 60);
         const secPart = secs % 60;
         const timerText = mins + ":" + secPart.toString().padStart(2, "0");
 
-        let arrow = "";
-        if (pctChange > 0) arrow = "▲";
-        else if (pctChange < 0) arrow = "▼";
-
-        let stockColor = "white";
-        if (pctChange > 0) stockColor = "#22c55e";
-        else if (pctChange < 0) stockColor = "#ef4444";
-
         ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
 
-        if (isZoomedOut) {
-        const statsEnabled = state.showStats && (state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo);
-        if (statsEnabled && !isReady) {
+        const showTimer = state.showTimerInfo && !isReady;
+        if (showTimer) {
           ctx.save();
           const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
           const padBottom = Math.max(2, padTop * 0.5);
@@ -138,37 +117,16 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
           ctx.textBaseline = "top";
           ctx.font = `${fontSize}px system-ui`;
 
-          const availableWidth = tileScreenSize - padTop * 2;
-          const lines = [];
-          if (state.showTickerInfo) {
-            const base = `${plot.stockKey} ${arrow}`;
-            const pctLine = `${pctText}`;
-            const combined = state.showPctInfo ? `${base} ${pctLine}` : base;
-            const fitsCombined = ctx.measureText(combined).width <= availableWidth * 0.95;
-            if (fitsCombined) {
-              lines.push({ text: combined, color: stockColor });
-            } else {
-              lines.push({ text: base, color: stockColor });
-              if (state.showPctInfo) lines.push({ text: pctLine, color: stockColor });
-            }
-          } else if (state.showPctInfo) {
-            lines.push({ text: pctText, color: stockColor });
-          }
-          if (state.showSellInfo) lines.push({ text: valueText, color: "white" });
-          if (state.showTimerInfo) lines.push({ text: timerText, color: "white" });
-
-          if (lines.length) {
-            const availableHeight = Math.max(0, tileScreenSize - padTop - padBottom);
-            const maxFontToFit =
-              (availableHeight - spacing * Math.max(0, lines.length - 1)) / Math.max(1, lines.length);
-            if (maxFontToFit < fontSize) {
-              fontSize = Math.max(6, maxFontToFit);
-              spacing = Math.max(2, fontSize * 0.15);
-              ctx.font = `${fontSize}px system-ui`;
-            }
+          const lines = [{ text: timerText, color: "white" }];
+          const availableHeight = Math.max(0, tileScreenSize - padTop - padBottom);
+          const maxFontToFit = (availableHeight - spacing * Math.max(0, lines.length - 1)) / Math.max(1, lines.length);
+          if (maxFontToFit < fontSize) {
+            fontSize = Math.max(6, maxFontToFit);
+            spacing = Math.max(2, fontSize * 0.15);
+            ctx.font = `${fontSize}px system-ui`;
           }
 
-          const contentHeight = lines.length ? fontSize * lines.length + spacing * (lines.length - 1) : 0;
+          const contentHeight = fontSize * lines.length + spacing * (lines.length - 1);
           const bgHeight = Math.min(tileScreenSize, padTop + padBottom + contentHeight);
           const bgAlpha = Math.min(1, Math.max(0, state.statBgAlpha ?? 1));
           ctx.fillStyle = `rgba(0,0,0,${0.65 * bgAlpha})`;
@@ -185,67 +143,6 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, stock
           });
           ctx.restore();
         }
-        continue;
-      }
-
-      const statsEnabled = state.showStats && (state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo);
-      if (statsEnabled && !isReady) {
-        ctx.save();
-        const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
-        const padBottom = Math.max(2, padTop * 0.5);
-        const baseFont = Math.min(Math.max(tileScreenSize * 0.14, 8), Math.min(16, tileScreenSize * 0.24));
-        const userScale = Math.max(0.5, Math.min(2, (state.statBaseSize || 14) / 14));
-        let fontSize = Math.min(28, Math.max(6, baseFont * userScale));
-        let spacing = Math.max(2, fontSize * 0.15);
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.font = `${fontSize}px system-ui`;
-        const availableWidth = tileScreenSize - padTop * 2;
-        const lines = [];
-        if (state.showTickerInfo) {
-          const base = `${plot.stockKey} ${arrow}`;
-          const pctLine = `${pctText}`;
-          const combined = state.showPctInfo ? `${base} ${pctLine}` : base;
-          const fitsCombined = ctx.measureText(combined).width <= availableWidth * 0.95;
-          if (fitsCombined) {
-            lines.push({ text: combined, color: stockColor });
-          } else {
-            lines.push({ text: base, color: stockColor });
-            if (state.showPctInfo) lines.push({ text: pctLine, color: stockColor });
-          }
-        } else if (state.showPctInfo) {
-          lines.push({ text: pctText, color: stockColor });
-        }
-        if (state.showSellInfo) lines.push({ text: valueText, color: "white" });
-        if (state.showTimerInfo) lines.push({ text: timerText, color: "white" });
-        if (lines.length) {
-          const availableHeight = Math.max(0, tileScreenSize - padTop - padBottom);
-          const maxFontToFit =
-            (availableHeight - spacing * Math.max(0, lines.length - 1)) / Math.max(1, lines.length);
-          if (maxFontToFit < fontSize) {
-            fontSize = Math.max(6, maxFontToFit);
-            spacing = Math.max(2, fontSize * 0.15);
-            ctx.font = `${fontSize}px system-ui`;
-          }
-        }
-        const contentHeight = lines.length ? fontSize * lines.length + spacing * (lines.length - 1) : 0;
-        const bgHeight = Math.min(tileScreenSize, padTop + padBottom + contentHeight);
-
-        const bgAlpha = Math.min(1, Math.max(0, state.statBgAlpha ?? 1));
-        ctx.fillStyle = `rgba(0,0,0,${0.65 * bgAlpha})`;
-        ctx.fillRect(x, y, tileScreenSize, bgHeight);
-        ctx.textBaseline = "top";
-        let lineY = y + padTop;
-        const baseX = x + padTop;
-        const textAlpha = Math.min(1, Math.max(0, state.statTextAlpha ?? 1));
-        ctx.globalAlpha = textAlpha;
-        lines.forEach((line, idx) => {
-          ctx.fillStyle = line.color;
-          ctx.fillText(line.text, baseX, lineY);
-          if (idx < lines.length - 1) lineY += fontSize + spacing;
-        });
-        ctx.restore();
-      }
       }
     }
 

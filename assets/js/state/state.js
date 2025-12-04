@@ -22,9 +22,9 @@ export function createInitialState(config) {
     savedOffsetY: null,
     totalMoney: 0,
     showStats: false,
+    showTimerInfo: false,
     showTickerInfo: false,
     showPctInfo: false,
-    showTimerInfo: false,
     showSellInfo: false,
     statBaseSize: 14,
     statTextAlpha: 1,
@@ -32,7 +32,7 @@ export function createInitialState(config) {
     activeMode: "plant",
     selectedCropKey: "wheat",
     previousCropKey: "wheat",
-    selectedStockKey: "SP500",
+    selectedStockKey: null,
     selectedSizeKey: "single",
     hoeSelected: false,
     hoeHoldTimeoutId: null,
@@ -63,7 +63,7 @@ function isKeyInBounds(key, config) {
 export function applyDefaultSelection(state) {
   state.selectedCropKey = "wheat";
   state.previousCropKey = "wheat";
-  state.selectedStockKey = "SP500";
+  state.selectedStockKey = null;
   state.selectedSizeKey = "single";
   state.activeMode = "plant";
   state.hoeSelected = false;
@@ -107,7 +107,17 @@ export function saveState({ state, world, crops, sizes, config }) {
   return data;
 }
 
-export function loadState({ state, world, crops, stocks, sizes, config }) {
+function cleanPlotValue(value) {
+  const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
+  const plantedAt = typeof value?.plantedAt === "number" ? value.plantedAt : Date.now();
+  return {
+    cropKey: value?.cropKey || null,
+    plantedAt,
+    stageBreakpoints,
+  };
+}
+
+export function loadState({ state, world, crops, sizes, config }) {
   let raw;
   try {
     raw = localStorage.getItem(config.saveKey);
@@ -131,7 +141,7 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
     if (Array.isArray(data.plots)) {
       world.plots.clear();
       data.plots.forEach(([key, value]) => {
-        if (isKeyInBounds(key, config)) world.plots.set(key, value);
+        if (isKeyInBounds(key, config)) world.plots.set(key, cleanPlotValue(value));
       });
     }
 
@@ -160,18 +170,17 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
     }
 
     if (data.previousCropKey && crops[data.previousCropKey]) state.previousCropKey = data.previousCropKey;
-    if (data.selectedStockKey && stocks[data.selectedStockKey]) state.selectedStockKey = data.selectedStockKey;
+    if (data.selectedStockKey) state.selectedStockKey = null;
     if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
     else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
 
-    if (typeof data.showStats === "boolean") state.showStats = data.showStats;
     const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
-    state.showTickerInfo =
-      typeof data.showTickerInfo === "boolean" ? data.showTickerInfo : legacyStock ?? state.showStats;
-    state.showPctInfo = typeof data.showPctInfo === "boolean" ? data.showPctInfo : state.showStats;
-    state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : state.showStats;
-    state.showSellInfo = typeof data.showSellInfo === "boolean" ? data.showSellInfo : state.showStats;
-    state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+    const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
+    state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : !!legacyStats;
+    state.showTickerInfo = false;
+    state.showPctInfo = false;
+    state.showSellInfo = false;
+    state.showStats = !!state.showTimerInfo;
     state.statBaseSize = typeof data.statBaseSize === "number" ? data.statBaseSize : 14;
     state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
     state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
@@ -201,18 +210,11 @@ export function loadState({ state, world, crops, stocks, sizes, config }) {
 export function buildSaveData({ state, world, crops, sizes, config }) {
   const previousUpdatedAt = Number.isFinite(state.lastSavedAt) ? state.lastSavedAt : 0;
   const updatedAt = Date.now();
+  const showTimer = !!state.showTimerInfo;
   const plots = Array.from(world.plots.entries())
     .filter(([key]) => isKeyInBounds(key, config))
     .map(([key, value]) => {
-      const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
-      const cleaned = {
-        cropKey: value?.cropKey || null,
-        stockKey: value?.stockKey || null,
-        plantedAt: typeof value?.plantedAt === "number" ? value.plantedAt : Date.now(),
-        stockPriceAtPlant: typeof value?.stockPriceAtPlant === "number" ? value.stockPriceAtPlant : 0,
-        lockedStockPrice: value?.lockedStockPrice ?? null,
-        stageBreakpoints,
-      };
+      const cleaned = cleanPlotValue(value);
       return [key, cleaned];
     });
 
@@ -222,15 +224,11 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
     plots,
     selectedCropKey: state.selectedCropKey,
     previousCropKey: state.previousCropKey,
-    selectedStockKey: state.selectedStockKey,
     selectedSizeKey: state.selectedSizeKey,
     activeMode: state.activeMode,
     hoeSelected: state.activeMode === "harvest",
-    showStats: state.showStats,
-    showTickerInfo: state.showTickerInfo,
-    showPctInfo: state.showPctInfo,
-    showTimerInfo: state.showTimerInfo,
-    showSellInfo: state.showSellInfo,
+    showStats: showTimer,
+    showTimerInfo: showTimer,
     statBaseSize: state.statBaseSize,
     statTextAlpha: state.statTextAlpha,
     statBgAlpha: state.statBgAlpha,
@@ -255,7 +253,7 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
   return data;
 }
 
-export function applyLoadedData(data, { state, world, crops, stocks, sizes, config }) {
+export function applyLoadedData(data, { state, world, crops, sizes, config }) {
   if (!data || typeof data !== "object") return;
   console.log("[load] applyLoadedData start", {
     filled: Array.isArray(data.filled) ? data.filled.length : 0,
@@ -275,7 +273,7 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes, conf
   if (Array.isArray(data.plots)) {
     world.plots.clear();
     data.plots.forEach(([key, value]) => {
-      if (isKeyInBounds(key, config)) world.plots.set(key, value);
+      if (isKeyInBounds(key, config)) world.plots.set(key, cleanPlotValue(value));
     });
   }
 
@@ -304,18 +302,17 @@ export function applyLoadedData(data, { state, world, crops, stocks, sizes, conf
   }
 
   if (data.previousCropKey && crops[data.previousCropKey]) state.previousCropKey = data.previousCropKey;
-  if (data.selectedStockKey && stocks[data.selectedStockKey]) state.selectedStockKey = data.selectedStockKey;
+  state.selectedStockKey = null;
   if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
   else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
 
-  if (typeof data.showStats === "boolean") state.showStats = data.showStats;
   const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
-  state.showTickerInfo =
-    typeof data.showTickerInfo === "boolean" ? data.showTickerInfo : legacyStock ?? state.showStats;
-  state.showPctInfo = typeof data.showPctInfo === "boolean" ? data.showPctInfo : state.showStats;
-  state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : state.showStats;
-  state.showSellInfo = typeof data.showSellInfo === "boolean" ? data.showSellInfo : state.showStats;
-  state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+  const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
+  state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : !!legacyStats;
+  state.showTickerInfo = false;
+  state.showPctInfo = false;
+  state.showSellInfo = false;
+  state.showStats = !!state.showTimerInfo;
   state.statBaseSize = typeof data.statBaseSize === "number" ? data.statBaseSize : 14;
   state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
   state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;

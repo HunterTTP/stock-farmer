@@ -75,23 +75,11 @@
         </div>
 
         <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 space-y-3 shadow-inner shadow-black/20">
-          <p class="text-xs uppercase tracking-wide text-neutral-400">Stats</p>
+          <p class="text-xs uppercase tracking-wide text-neutral-400">Timer</p>
           <div class="flex flex-col gap-3 font-semibold">
             <label class="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950/70 cursor-pointer select-none">
-              <input id="showTickerToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
-              <span>Ticker</span>
-            </label>
-            <label class="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950/70 cursor-pointer select-none">
-              <input id="showPctToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
-              <span>Movement %</span>
-            </label>
-            <label class="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950/70 cursor-pointer select-none">
               <input id="showTimerToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
-              <span>Timer</span>
-            </label>
-            <label class="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950/70 cursor-pointer select-none">
-              <input id="showSellToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
-              <span>Sell Price</span>
+              <span>Show</span>
             </label>
           </div>
 
@@ -385,20 +373,6 @@
                 <div
                   id="plantCropMenu"
                   class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-72 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
-              </div>
-              <div class="relative">
-                <button
-                  id="plantStockButton"
-                  type="button"
-                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <span id="plantStockLabel" class="truncate flex-1 text-left">Stock</span>
-                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  id="plantStockMenu"
-                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
               </div>
               <div class="relative">
                 <button

@@ -1,4 +1,4 @@
-export function createUIControls({ dom, state, crops, stocks, sizes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache }) {
+export function createUIControls({ dom, state, crops, sizes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache }) {
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
   let openMenuKey = null;
@@ -110,10 +110,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   }
 
   function updateHideButtonsUI() {
-    if (dom.showTickerToggle) dom.showTickerToggle.checked = !!state.showTickerInfo;
-    if (dom.showPctToggle) dom.showPctToggle.checked = !!state.showPctInfo;
     if (dom.showTimerToggle) dom.showTimerToggle.checked = !!state.showTimerInfo;
-    if (dom.showSellToggle) dom.showSellToggle.checked = !!state.showSellInfo;
     if (dom.statBaseSize) {
       const val = Math.round(state.statBaseSize ?? 14);
       dom.statBaseSize.value = val;
@@ -142,10 +139,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
         state.selectedCropKey = firstUnlocked.id;
         state.previousCropKey = firstUnlocked.id;
       }
-    }
-    if (!state.selectedStockKey) {
-      const firstStock = Object.values(stocks)[0];
-      if (firstStock) state.selectedStockKey = firstStock.symbol;
     }
   }
 
@@ -183,7 +176,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     updateModeButtonsUI();
     renderSizeMenu();
     if (nextMode === "plant") renderCropOptions();
-    if (nextMode === "plant") renderStockOptions();
     if (nextMode === "build") renderBuildOptions();
     renderDropdownGroups();
     state.needsRender = true;
@@ -290,31 +282,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     updateSelectionLabels(now);
   }
 
-  function renderPlantStockMenu() {
-    if (!dom.plantStockMenu) return;
-    dom.plantStockMenu.innerHTML = "";
-    Object.values(stocks).forEach((stock) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm font-semibold border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (stock.symbol === state.selectedStockKey) btn.classList.add("border-emerald-500", "bg-neutral-900/70");
-      btn.textContent = stock.symbol;
-      btn.addEventListener("click", () => {
-        state.selectedStockKey = stock.symbol;
-        renderStockOptions();
-        state.needsRender = true;
-        closeAllMenus();
-        saveState();
-      });
-      dom.plantStockMenu.appendChild(btn);
-    });
-  }
-
-  function renderStockOptions() {
-    renderPlantStockMenu();
-    updateSelectionLabels();
-  }
-
   function renderSizeMenuFor(menuEl, variant = "text") {
     if (!menuEl) return;
     menuEl.innerHTML = "";
@@ -398,7 +365,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
 
   const menuMap = {
     plantCrop: () => ({ button: dom.plantCropButton, menu: dom.plantCropMenu }),
-    plantStock: () => ({ button: dom.plantStockButton, menu: dom.plantStockMenu }),
     plantSize: () => ({ button: dom.plantSizeButton, menu: dom.plantSizeMenu }),
     harvestSize: () => ({ button: dom.harvestSizeButton, menu: dom.harvestSizeMenu }),
   };
@@ -442,8 +408,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       dom.plantCropImage.src = cropThumbSrc(crop ? crop.id : null);
       dom.plantCropImage.alt = crop ? crop.name : "Crop";
     }
-    const stock = state.selectedStockKey ? stocks[state.selectedStockKey] : null;
-    if (dom.plantStockLabel) dom.plantStockLabel.textContent = stock ? stock.symbol : "Stock";
     const size = currentSizeOption();
     if (dom.plantSizeLabel) dom.plantSizeLabel.textContent = size ? size.name : "Size";
     if (dom.harvestSizeLabel) dom.harvestSizeLabel.textContent = size ? size.name : "Size";
@@ -491,7 +455,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     ensurePlantDefaults();
     updateTotalDisplay();
     showAggregateMoneyChange(0);
-    renderStockOptions();
     renderCropOptions();
     renderSizeMenu();
     renderBuildOptions();
@@ -559,16 +522,13 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       if (!input) return;
       input.addEventListener("change", () => {
         state[key] = !!input.checked;
-        state.showStats = state.showTickerInfo || state.showPctInfo || state.showTimerInfo || state.showSellInfo;
+        state.showStats = !!state.showTimerInfo;
         updateHideButtonsUI();
         state.needsRender = true;
         saveState();
       });
     };
-    bindShowToggle(dom.showTickerToggle, "showTickerInfo");
-    bindShowToggle(dom.showPctToggle, "showPctInfo");
     bindShowToggle(dom.showTimerToggle, "showTimerInfo");
-    bindShowToggle(dom.showSellToggle, "showSellInfo");
 
     const bindAlpha = (input, key, labelId) => {
       if (!input) return;
@@ -602,10 +562,7 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
         openConfirmModal(
           "Reset settings to defaults?",
           () => {
-            state.showTickerInfo = false;
-            state.showPctInfo = false;
             state.showTimerInfo = false;
-            state.showSellInfo = false;
             state.statBaseSize = 14;
             state.statTextAlpha = 1;
             state.statBgAlpha = 1;
@@ -655,7 +612,6 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (dom.modeBuildBtn) dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
 
     bindMenuToggle(dom.plantCropButton, "plantCrop");
-    bindMenuToggle(dom.plantStockButton, "plantStock");
     bindMenuToggle(dom.plantSizeButton, "plantSize");
     bindMenuToggle(dom.harvestSizeButton, "harvestSize");
 
@@ -684,16 +640,11 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     updateHideButtonsUI,
     updateModeButtonsUI,
     showAggregateMoneyChange,
-    updateCropStockButtonUI: () => {
-      renderCropOptions();
-      renderStockOptions();
-    },
     updateSizeButtonUI: () => {
       renderSizeMenu();
     },
     renderSizeMenu,
     renderCropOptions,
-    renderStockOptions,
     openConfirmModal,
     closeConfirmModal,
     openOffcanvas,

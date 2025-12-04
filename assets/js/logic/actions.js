@@ -3,7 +3,6 @@ export function createActions({
   world,
   config,
   crops,
-  stocks,
   currentSizeOption,
   formatCurrency,
   createRandomStageBreakpoints,
@@ -47,14 +46,12 @@ export function createActions({
     }
 
     const crop = cropSelection;
-    const stock = stocks[state.selectedStockKey];
     if (!crop || !crop.unlocked) return { type: "none", reason: "Crop locked" };
-    if (!stock) return { type: "none", reason: "Select a stock" };
     if (!world.filled.has(key)) return { type: "none", reason: "Need farmland first" };
     if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) return { type: "none", reason: "Crop limit reached" };
     const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
     if (plantCost > 0 && state.totalMoney < plantCost) return { type: "none", reason: "Not enough money" };
-    return { type: "plantCrop", cropKey: cropSelection.id, stockKey: state.selectedStockKey };
+    return { type: "plantCrop", cropKey: cropSelection.id };
   }
 
   function recomputeLastPlantedForCrop(cropKey) {
@@ -75,13 +72,10 @@ export function createActions({
       case "harvest": {
         const existingPlot = getPlot(key);
         const plotCrop = existingPlot ? crops[existingPlot.cropKey] : null;
-        const plotStock = existingPlot ? stocks[existingPlot.stockKey] : null;
-        if (!existingPlot || !plotCrop || !plotStock) return false;
+        if (!existingPlot || !plotCrop) return false;
         const ready = nowMs - existingPlot.plantedAt >= plotCrop.growTimeMs;
         if (!ready) return false;
-        const effectivePrice = existingPlot.lockedStockPrice != null ? existingPlot.lockedStockPrice : plotStock.price;
-        const pctChange = (effectivePrice - existingPlot.stockPriceAtPlant) / existingPlot.stockPriceAtPlant;
-        const value = Math.max(0, plotCrop.baseValue * (1 + pctChange));
+        const value = Math.max(0, plotCrop.baseValue);
         previewState.money += value;
         if (typeof previewState.placed[plotCrop.id] === "number" && previewState.placed[plotCrop.id] > 0) previewState.placed[plotCrop.id] -= 1;
         previewState.plotsRemoved.add(key);
@@ -107,8 +101,7 @@ export function createActions({
       }
       case "plantCrop": {
         const crop = crops[action.cropKey];
-        const stock = stocks[action.stockKey];
-        if (!crop || !stock || !crop.unlocked) return false;
+        if (!crop || !crop.unlocked) return false;
         if (getPlot(key) || !getFilled(key)) return false;
         if (typeof crop.limit === "number" && crop.limit >= 0 && previewState.placed[crop.id] >= crop.limit) return false;
         const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
@@ -162,11 +155,8 @@ export function createActions({
     const plot = world.plots.get(key);
     if (!plot) return;
     const crop = crops[plot.cropKey];
-    const stock = stocks[plot.stockKey];
-    if (!crop || !stock) return;
-    const effectivePrice = plot.lockedStockPrice != null ? plot.lockedStockPrice : stock.price;
-    const pctChange = (effectivePrice - plot.stockPriceAtPlant) / plot.stockPriceAtPlant;
-    const value = Math.max(0, crop.baseValue * (1 + pctChange));
+    if (!crop) return;
+    const value = Math.max(0, crop.baseValue);
     world.harvestAnimations.push({ key, value, start: performance.now() });
     if (typeof crop.placed === "number" && crop.placed > 0) crop.placed -= 1;
     state.totalMoney += value;
@@ -271,11 +261,8 @@ export function createActions({
       }
       case "plantCrop": {
         const cropKey = resolvedAction && resolvedAction.cropKey ? resolvedAction.cropKey : state.selectedCropKey;
-        const stockKey = resolvedAction && resolvedAction.stockKey ? resolvedAction.stockKey : state.selectedStockKey;
         const crop = crops[cropKey];
-        const stock = stocks[stockKey];
         if (!crop || !crop.unlocked) return { success: false, reason: "Crop locked" };
-        if (!stock) return { success: false, reason: "Select a stock" };
         if (world.plots.has(key)) return { success: false, reason: "Tile already planted" };
         if (!world.filled.has(key)) return { success: false, reason: "Need farmland first" };
         if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) return { success: false, reason: "Crop limit reached" };
@@ -289,10 +276,7 @@ export function createActions({
         const plantedAt = Date.now();
         world.plots.set(key, {
           cropKey,
-          stockKey,
           plantedAt,
-          stockPriceAtPlant: stock.price,
-          lockedStockPrice: null,
           stageBreakpoints: createRandomStageBreakpoints(crop.growTimeMs),
         });
         crop.placed += 1;
