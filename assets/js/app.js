@@ -24,11 +24,12 @@ const assets = createBaseAssets(state);
 preloadCropImages(crops, state);
 
 const persistence = {
-  save: () => {
+  save: (options = {}) => {
     const data = saveState({ state, world, crops, sizes, config });
-    queueCloudSave(data);
+    if (!options.skipRemote) queueCloudSave(data);
     return data;
   },
+  saveView: () => persistence.save({ skipRemote: true }),
   load: () => loadState({ state, world, crops, stocks, sizes, config }),
 };
 
@@ -125,6 +126,7 @@ const pointerControls = createPointerControls({
   actions,
   openConfirmModal: ui.openConfirmModal,
   saveState: persistence.save,
+  saveViewState: persistence.saveView,
 });
 
 ui.bindUIEvents();

@@ -1,6 +1,6 @@
 import { clampScale } from "../utils/helpers.js";
 
-export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState }) {
+export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState, saveViewState }) {
   function cancelHoeHold() {
     if (state.hoeHoldTimeoutId) {
       clearTimeout(state.hoeHoldTimeoutId);
@@ -8,13 +8,15 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     }
   }
 
+  const persistView = saveViewState || saveState;
+
   let viewSaveTimerId = null;
   function queueViewSave() {
-    if (!saveState) return;
+    if (!persistView) return;
     if (viewSaveTimerId) clearTimeout(viewSaveTimerId);
     viewSaveTimerId = setTimeout(() => {
       viewSaveTimerId = null;
-      saveState();
+      persistView();
     }, 250);
   }
 
