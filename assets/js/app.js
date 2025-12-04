@@ -58,7 +58,7 @@ function resetFarm() {
 }
 
 async function clearCacheAndLogout() {
-  await logOutAndReset({ clearCaches: true });
+  await logOutAndReset({ clearCaches: true, showAuthOnReload: true });
 }
 
 ui = createUIControls({

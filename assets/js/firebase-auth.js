@@ -406,13 +406,8 @@ const handleSessionMoved = () => {
   hasSessionOwnership = false;
   const message = "You've logged in from a different device.";
   const confirm = async () => {
-    try {
-      sessionStorage.setItem(AUTH_MODAL_FLAG, "1");
-    } catch (error) {
-      console.error("Failed to mark auth modal flag", error);
-    }
     sessionPromptOpen = false;
-    await logOutAndReset();
+    await logOutAndReset({ showAuthOnReload: true });
   };
   if (gameContext?.openConfirmModal) {
     gameContext.openConfirmModal(message, confirm, "Session Moved", null, {
@@ -540,7 +535,7 @@ const clearWebStorage = (clearAll = false) => {
 };
 
 const logOutAndReset = async (options = {}) => {
-  const { clearCaches = false } = options || {};
+  const { clearCaches = false, showAuthOnReload = false } = options || {};
   console.log("[sync] logOutAndReset start", clearCaches ? "(clear caches)" : "");
   isLoggingOut = true;
   try {
@@ -556,6 +551,14 @@ const logOutAndReset = async (options = {}) => {
   }
 
   clearWebStorage(clearCaches);
+
+  if (showAuthOnReload) {
+    try {
+      sessionStorage.setItem(AUTH_MODAL_FLAG, "1");
+    } catch (error) {
+      console.error("Failed to mark auth modal flag", error);
+    }
+  }
 
   try {
     await signOut(auth);
