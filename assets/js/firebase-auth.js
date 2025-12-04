@@ -142,12 +142,30 @@ const stripViewFields = (data) => {
 const injectCurrentViewForLocal = (data) => {
   if (!data || !gameContext?.state) return data;
   const view = {
-    scale: gameContext.state.scale,
-    offsetX: gameContext.state.offsetX,
-    offsetY: gameContext.state.offsetY,
-    savedScaleFromState: gameContext.state.savedScaleFromState,
-    savedOffsetX: gameContext.state.savedOffsetX,
-    savedOffsetY: gameContext.state.savedOffsetY,
+    scale:
+      data.scale ??
+      gameContext.state.savedScaleFromState ??
+      gameContext.state.scale,
+    offsetX:
+      data.offsetX ??
+      gameContext.state.savedOffsetX ??
+      gameContext.state.offsetX,
+    offsetY:
+      data.offsetY ??
+      gameContext.state.savedOffsetY ??
+      gameContext.state.offsetY,
+    savedScaleFromState:
+      data.savedScaleFromState ??
+      gameContext.state.savedScaleFromState ??
+      gameContext.state.scale,
+    savedOffsetX:
+      data.savedOffsetX ??
+      gameContext.state.savedOffsetX ??
+      gameContext.state.offsetX,
+    savedOffsetY:
+      data.savedOffsetY ??
+      gameContext.state.savedOffsetY ??
+      gameContext.state.offsetY,
   };
   return { ...data, ...view };
 };

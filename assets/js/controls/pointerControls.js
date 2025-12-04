@@ -1,11 +1,21 @@
 import { clampScale } from "../utils/helpers.js";
 
-export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal }) {
+export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState }) {
   function cancelHoeHold() {
     if (state.hoeHoldTimeoutId) {
       clearTimeout(state.hoeHoldTimeoutId);
       state.hoeHoldTimeoutId = null;
     }
+  }
+
+  let viewSaveTimerId = null;
+  function queueViewSave() {
+    if (!saveState) return;
+    if (viewSaveTimerId) clearTimeout(viewSaveTimerId);
+    viewSaveTimerId = setTimeout(() => {
+      viewSaveTimerId = null;
+      saveState();
+    }, 250);
   }
 
   function updatePointer(e) {
@@ -89,6 +99,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         state.scale = newScale;
         viewport.clampToBounds();
         state.needsRender = true;
+        queueViewSave();
       }
     } else if (state.isDragging) {
       e.preventDefault();
@@ -96,6 +107,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.offsetY = state.dragOffsetStart.y + (e.clientY - state.dragStart.y);
       viewport.clampToBounds();
       state.needsRender = true;
+      queueViewSave();
       if (state.tapStart) {
         const dx = e.clientX - state.tapStart.x;
         const dy = e.clientY - state.tapStart.y;
@@ -128,6 +140,9 @@ export function createPointerControls({ canvas, state, config, viewport, actions
 
     if (e.type === "pointerleave" || e.type === "pointercancel") setHoverTile(null);
     else updateHoverFromEvent(e);
+
+    // Ensure final view after gesture ends is persisted
+    queueViewSave();
   }
 
   function onWheel(e) {
@@ -137,6 +152,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     const cy = rect.height / 2;
     const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
     viewport.zoomAt(factor, cx, cy);
+    queueViewSave();
   }
 
   function bind() {

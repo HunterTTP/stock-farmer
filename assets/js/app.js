@@ -124,6 +124,7 @@ const pointerControls = createPointerControls({
   viewport,
   actions,
   openConfirmModal: ui.openConfirmModal,
+  saveState: persistence.save,
 });
 
 ui.bindUIEvents();
