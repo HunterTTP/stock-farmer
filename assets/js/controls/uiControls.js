@@ -11,6 +11,18 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
 
+  function formatDurationMs(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    const parts = [];
+    if (hrs > 0) parts.push(`${hrs}hr`);
+    if (hrs > 0 || mins > 0) parts.push(`${mins}m`);
+    parts.push(`${secs}s`);
+    return parts.join(" ");
+  }
+
   function formatGrowTime(minutes) {
     if (!Number.isFinite(minutes)) return "";
     if (minutes === 60) return "1hr";
@@ -19,6 +31,25 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     if (hrs > 0 && mins === 0) return `${hrs}hr`;
     if (hrs > 0) return `${hrs}hr ${mins}m`;
     return `${minutes}m`;
+  }
+
+  function formatHarvestText(crop, plantedAt, nowMs) {
+    if (!crop || !Number.isFinite(plantedAt)) return null;
+    const growMs = Number.isFinite(crop.growTimeMs) ? crop.growTimeMs : Number.isFinite(crop.growMinutes) ? crop.growMinutes * 60 * 1000 : null;
+    if (!growMs || growMs <= 0) return "Ready";
+    const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
+    if (remainingMs <= 0) return "Ready";
+    return formatDurationMs(remainingMs);
+  }
+
+  function getCropStatus(crop, nowMs) {
+    if (!crop) return null;
+    if (!crop.placed || crop.placed <= 0) return null;
+    const plantedAt = Number.isFinite(crop.lastPlantedAt) ? crop.lastPlantedAt : null;
+    if (!plantedAt || plantedAt <= 0) return null;
+    const harvestText = formatHarvestText(crop, plantedAt, nowMs);
+    if (!harvestText) return null;
+    return { count: crop.placed, harvestText };
   }
 
   function openOffcanvas() {
@@ -161,8 +192,9 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     return `images/crops/${cropId}/${cropId}-phase-4.png`;
   }
 
-  function renderPlantCropMenu() {
+  function renderPlantCropMenu(nowMs) {
     if (!dom.plantCropMenu) return;
+    const now = Number.isFinite(nowMs) ? nowMs : Date.now();
     dom.plantCropMenu.innerHTML = "";
     let chainLocked = false;
     Object.values(crops).forEach((crop) => {
@@ -192,9 +224,16 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       else if (crop.id === "farmland") meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
       else {
         const costText = typeof crop.placeCost === "number" && crop.placeCost > 0 ? formatCurrency(crop.placeCost) : "Free";
-        meta.textContent = `Cost ${costText} • Sell ${formatCurrency(crop.baseValue)} • ${formatGrowTime(crop.growMinutes)}`;
+        meta.textContent = `Cost ${costText} - Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       }
       textWrap.appendChild(title);
+      const status = crop.id === "grass" || crop.id === "farmland" ? null : getCropStatus(crop, now);
+      if (status) {
+        const statusLine = document.createElement("div");
+        statusLine.className = "text-[11px] text-sky-300 truncate";
+        statusLine.textContent = `Planted: ${status.count} - Harvest: ${status.harvestText}`;
+        textWrap.appendChild(statusLine);
+      }
       textWrap.appendChild(meta);
       item.appendChild(textWrap);
 
@@ -241,8 +280,9 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
   }
 
   function renderCropOptions() {
-    renderPlantCropMenu();
-    updateSelectionLabels();
+    const now = Date.now();
+    renderPlantCropMenu(now);
+    updateSelectionLabels(now);
   }
 
   function renderPlantStockMenu() {
@@ -372,14 +412,27 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
     const shouldOpen = openMenuKey !== key;
     closeAllMenus();
     if (shouldOpen) {
+      if (key === "plantCrop") renderCropOptions();
       entry.menu.classList.remove("hidden");
       openMenuKey = key;
     }
   }
 
-  function updateSelectionLabels() {
+  function updateSelectionLabels(nowMs) {
+    const now = Number.isFinite(nowMs) ? nowMs : Date.now();
     const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
-    if (dom.plantCropLabel) dom.plantCropLabel.textContent = crop ? crop.name : "Crop";
+    const cropStatus = crop ? getCropStatus(crop, now) : null;
+    if (dom.plantCropLabel) {
+      dom.plantCropLabel.classList.remove("truncate");
+      dom.plantCropLabel.classList.add("whitespace-normal");
+      const base = crop ? crop.name : "Crop";
+      if (cropStatus) {
+        dom.plantCropLabel.innerHTML = `<span class="block leading-tight">${base}</span><span class="block text-[11px] text-sky-300 leading-tight">Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}</span>`;
+      } else {
+        dom.plantCropLabel.textContent = base;
+      }
+      dom.plantCropLabel.title = cropStatus ? `${base} - Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}` : "";
+    }
     if (dom.plantCropImage) {
       dom.plantCropImage.src = cropThumbSrc(crop ? crop.id : null);
       dom.plantCropImage.alt = crop ? crop.name : "Crop";
@@ -518,14 +571,14 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
         openConfirmModal(
           "Reset settings to defaults?",
           () => {
-            state.showTickerInfo = true;
-            state.showPctInfo = true;
-            state.showTimerInfo = true;
-            state.showSellInfo = true;
+            state.showTickerInfo = false;
+            state.showPctInfo = false;
+            state.showTimerInfo = false;
+            state.showSellInfo = false;
             state.statBaseSize = 14;
             state.statTextAlpha = 1;
             state.statBgAlpha = 1;
-            state.showStats = true;
+            state.showStats = false;
             updateHideButtonsUI();
             state.needsRender = true;
             saveState();
@@ -584,6 +637,13 @@ export function createUIControls({ dom, state, crops, stocks, sizes, formatCurre
       if (!inside) closeAllMenus();
     });
   }
+
+  // Keep the selected crop label (and open dropdown) fresh every second.
+  setInterval(() => {
+    const now = Date.now();
+    updateSelectionLabels(now);
+    if (openMenuKey === "plantCrop") renderPlantCropMenu(now);
+  }, 1000);
 
   return {
     bindUIEvents,

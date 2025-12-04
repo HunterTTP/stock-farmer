@@ -56,6 +56,18 @@ export function createActions({
     return { type: "plantCrop", cropKey: cropSelection.id, stockKey: state.selectedStockKey };
   }
 
+  function recomputeLastPlantedForCrop(cropKey) {
+    const crop = crops[cropKey];
+    if (!crop) return;
+    let latest = null;
+    world.plots.forEach((plot) => {
+      if (plot?.cropKey !== cropKey) return;
+      const plantedAt = Number(plot?.plantedAt);
+      if (Number.isFinite(plantedAt) && (latest === null || plantedAt > latest)) latest = plantedAt;
+    });
+    crop.lastPlantedAt = latest;
+  }
+
   function simulateTileActionForPreview(action, key, previewState, nowMs, getFilled, getPlot) {
     if (!action || action.type === "none") return false;
     switch (action.type) {
@@ -160,6 +172,7 @@ export function createActions({
     onMoneyChanged();
     world.plots.delete(key);
     state.needsRender = true;
+    recomputeLastPlantedForCrop(crop.id);
     saveState();
   }
 
@@ -170,6 +183,8 @@ export function createActions({
     if (crop && typeof crop.placed === "number" && crop.placed > 0) crop.placed -= 1;
     world.plots.delete(key);
     state.needsRender = true;
+    if (crop) recomputeLastPlantedForCrop(crop.id);
+    renderCropOptions();
     saveState();
   }
 
@@ -270,15 +285,18 @@ export function createActions({
           onMoneyChanged();
           world.costAnimations.push({ key, value: -plantCost, start: performance.now() });
         }
+        const plantedAt = Date.now();
         world.plots.set(key, {
           cropKey,
           stockKey,
-          plantedAt: Date.now(),
+          plantedAt,
           stockPriceAtPlant: stock.price,
           lockedStockPrice: null,
           stageBreakpoints: createRandomStageBreakpoints(crop.growTimeMs),
         });
         crop.placed += 1;
+        crop.lastPlantedAt = plantedAt;
+        renderCropOptions();
         state.needsRender = true;
         saveState();
         return { success: true };

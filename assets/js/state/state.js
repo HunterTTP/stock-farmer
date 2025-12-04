@@ -21,11 +21,11 @@ export function createInitialState(config) {
     savedOffsetX: null,
     savedOffsetY: null,
     totalMoney: 0,
-    showStats: true,
-    showTickerInfo: true,
-    showPctInfo: true,
-    showTimerInfo: true,
-    showSellInfo: true,
+    showStats: false,
+    showTickerInfo: false,
+    showPctInfo: false,
+    showTimerInfo: false,
+    showSellInfo: false,
     statBaseSize: 14,
     statTextAlpha: 1,
     statBgAlpha: 1,
@@ -67,10 +67,11 @@ export function applyDefaultSelection(state) {
   state.selectedSizeKey = "single";
   state.activeMode = "plant";
   state.hoeSelected = false;
-  state.showTickerInfo = true;
-  state.showPctInfo = true;
-  state.showTimerInfo = true;
-  state.showSellInfo = true;
+  state.showTickerInfo = false;
+  state.showPctInfo = false;
+  state.showTimerInfo = false;
+  state.showSellInfo = false;
+  state.showStats = false;
   state.statBaseSize = 14;
   state.statTextAlpha = 1;
   state.statBgAlpha = 1;
@@ -79,13 +80,20 @@ export function applyDefaultSelection(state) {
 export function recalcPlacedCounts(world, crops) {
   Object.values(crops).forEach((c) => {
     c.placed = 0;
+    c.lastPlantedAt = null;
   });
   if (crops.farmland) {
     crops.farmland.placed = world.filled.size;
   }
   world.plots.forEach((plot) => {
     const crop = crops[plot.cropKey];
-    if (crop) crop.placed += 1;
+    if (crop) {
+      crop.placed += 1;
+      const plantedAt = Number(plot?.plantedAt);
+      if (Number.isFinite(plantedAt) && (crop.lastPlantedAt === null || plantedAt > crop.lastPlantedAt)) {
+        crop.lastPlantedAt = plantedAt;
+      }
+    }
   });
 }
 
