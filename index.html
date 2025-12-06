@@ -414,11 +414,17 @@
                   id="buildSelectButton"
                   type="button"
                   class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <span id="buildSelectLabel" class="truncate flex-1 text-left">Coming soon..</span>
+                  <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
+                    <img id="buildSelectImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800" alt="Build" />
+                    <span id="buildSelectLabel" class="truncate flex-1 text-left">Coming soon..</span>
+                  </div>
                   <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </button>
+                <div
+                  id="buildSelectMenu"
+                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
               </div>
             </div>
           </div>

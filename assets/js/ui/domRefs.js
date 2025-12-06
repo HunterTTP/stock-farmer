@@ -25,6 +25,8 @@ export function getDomRefs() {
     harvestSizeMenu: document.getElementById("harvestSizeMenu"),
     buildSelectButton: document.getElementById("buildSelectButton"),
     buildSelectLabel: document.getElementById("buildSelectLabel"),
+    buildSelectImage: document.getElementById("buildSelectImage"),
+    buildSelectMenu: document.getElementById("buildSelectMenu"),
     resetFarmBtn: document.getElementById("resetFarmBtn"),
     showTimerToggle: document.getElementById("showTimerToggle"),
     statBaseSize: document.getElementById("statBaseSize"),

@@ -1,8 +1,9 @@
-export function createUIControls({
+﻿export function createUIControls({
   dom,
   state,
   crops,
   sizes,
+  buildings,
   formatCurrency,
   onMoneyChanged,
   saveState,
@@ -189,6 +190,13 @@ export function createUIControls({
     }
   }
 
+  function ensureBuildDefaults() {
+    if (state.selectedBuildKey === "destroy") return;
+    if (state.selectedBuildKey && buildings?.[state.selectedBuildKey]) return;
+    const first = Object.values(buildings || {}).find((b) => b && b.unlocked);
+    state.selectedBuildKey = first ? first.id : "destroy";
+  }
+
   function updateModeButtonsUI() {
     const active = state.activeMode || "plant";
     const entries = [
@@ -220,6 +228,7 @@ export function createUIControls({
   function setActiveMode(nextMode) {
     if (!modeOrder.includes(nextMode)) return;
     if (nextMode === "plant") ensurePlantDefaults();
+    if (nextMode === "build") ensureBuildDefaults();
     state.activeMode = nextMode;
     state.hoeSelected = nextMode === "harvest";
     closeAllMenus();
@@ -433,8 +442,102 @@ export function createUIControls({
   }
 
   function renderBuildOptions() {
-    if (dom.buildSelectLabel)
-      dom.buildSelectLabel.textContent = "Coming soon..";
+    ensureBuildDefaults();
+    if (!dom.buildSelectMenu) {
+      updateBuildLabel();
+      return;
+    }
+    dom.buildSelectMenu.innerHTML = "";
+
+    const setSelected = (id) => {
+      state.selectedBuildKey = id;
+      updateBuildLabel();
+      state.needsRender = true;
+      closeAllMenus();
+      saveState();
+    };
+
+    const renderRow = (item) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className =
+        "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (item.id === state.selectedBuildKey)
+        row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      const thumbWrap = document.createElement("div");
+      thumbWrap.className = "w-8 h-8 rounded-sm border border-neutral-800 bg-neutral-900/60 flex items-center justify-center overflow-hidden";
+      const thumb = document.createElement("img");
+      thumb.src = item.image || "images/farmland.jpg";
+      thumb.alt = item.name;
+      thumb.className = "max-w-full max-h-full object-contain";
+      thumbWrap.appendChild(thumb);
+      row.appendChild(thumbWrap);
+
+      const text = document.createElement("div");
+      text.className = "flex-1 min-w-0";
+      const title = document.createElement("div");
+      title.className = "text-sm font-semibold text-white truncate";
+      title.textContent = item.name;
+      const meta = document.createElement("div");
+      meta.className = "text-[11px] text-neutral-400 truncate";
+      meta.textContent =
+        item.id === "destroy"
+          ? "Remove and refund"
+          : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      text.appendChild(title);
+      text.appendChild(meta);
+      row.appendChild(text);
+
+      row.addEventListener("click", () => setSelected(item.id));
+      return row;
+    };
+
+    const destroyOption = renderRow({
+      id: "destroy",
+      name: "Destroy",
+      width: 1,
+      height: 1,
+      cost: 0,
+      image:
+        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>",
+    });
+    dom.buildSelectMenu.appendChild(destroyOption);
+
+    Object.values(buildings || {})
+      .slice()
+      .sort((a, b) => {
+        const costA = Number.isFinite(a?.cost) ? a.cost : 0;
+        const costB = Number.isFinite(b?.cost) ? b.cost : 0;
+        return costA - costB;
+      })
+      .forEach((b) => {
+      if (!b) return;
+      dom.buildSelectMenu.appendChild(renderRow(b));
+    });
+
+    updateBuildLabel();
+  }
+
+  function updateBuildLabel() {
+    if (dom.buildSelectLabel) {
+      if (state.selectedBuildKey === "destroy") {
+        dom.buildSelectLabel.textContent = "Destroy";
+      } else {
+        const selected = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
+        dom.buildSelectLabel.textContent = selected ? selected.name : "Select";
+      }
+    }
+    if (dom.buildSelectImage) {
+      if (state.selectedBuildKey === "destroy") {
+        dom.buildSelectImage.src =
+          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>";
+        dom.buildSelectImage.alt = "Destroy";
+      } else {
+        const selected = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
+        dom.buildSelectImage.src = selected?.image || "images/farmland.jpg";
+        dom.buildSelectImage.alt = selected?.name || "Build";
+      }
+    }
   }
 
   const menuMap = {
@@ -444,6 +547,7 @@ export function createUIControls({
       button: dom.harvestSizeButton,
       menu: dom.harvestSizeMenu,
     }),
+    buildSelect: () => ({ button: dom.buildSelectButton, menu: dom.buildSelectMenu }),
   };
 
   function closeAllMenus() {
@@ -461,6 +565,7 @@ export function createUIControls({
     closeAllMenus();
     if (shouldOpen) {
       if (key === "plantCrop") renderCropOptions();
+      if (key === "buildSelect") renderBuildOptions();
       entry.menu.classList.remove("hidden");
       openMenuKey = key;
     }
@@ -492,8 +597,8 @@ export function createUIControls({
       dom.plantSizeLabel.textContent = size ? size.name : "Size";
     if (dom.harvestSizeLabel)
       dom.harvestSizeLabel.textContent = size ? size.name : "Size";
-    if (dom.buildSelectLabel)
-      dom.buildSelectLabel.textContent = "Coming soon..";
+    ensureBuildDefaults();
+    updateBuildLabel();
   }
 
   function bindMenuToggle(button, key) {
@@ -539,6 +644,7 @@ export function createUIControls({
 
   function refreshAllUI() {
     ensurePlantDefaults();
+    ensureBuildDefaults();
     updateTotalDisplay();
     showAggregateMoneyChange(0);
     renderCropOptions();
@@ -725,6 +831,7 @@ export function createUIControls({
     bindMenuToggle(dom.plantCropButton, "plantCrop");
     bindMenuToggle(dom.plantSizeButton, "plantSize");
     bindMenuToggle(dom.harvestSizeButton, "harvestSize");
+    bindMenuToggle(dom.buildSelectButton, "buildSelect");
 
     document.addEventListener("click", (e) => {
       const target = e.target;
@@ -766,3 +873,5 @@ export function createUIControls({
     showActionError,
   };
 }
+
+

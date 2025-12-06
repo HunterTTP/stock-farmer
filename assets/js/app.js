@@ -1,6 +1,7 @@
 import { config } from "./config.js";
 import { crops } from "./data/crops.js";
 import { sizes } from "./data/sizes.js";
+import { buildings } from "./data/buildings.js";
 import { createBaseAssets, preloadCropImages } from "./assets/assetLoader.js";
 import { createInitialState, createInitialWorld, applyDefaultSelection, loadState, saveState, recalcPlacedCounts } from "./state/state.js";
 import { getDomRefs } from "./ui/domRefs.js";
@@ -70,6 +71,7 @@ ui = createUIControls({
   state,
   crops,
   sizes,
+  buildings,
   formatCurrency,
   onMoneyChanged,
   saveState: persistence.save,
@@ -89,6 +91,7 @@ registerGameContext({
   world,
   crops,
   sizes,
+  buildings,
   config,
   refreshUI: ui.refreshAllUI,
   openConfirmModal: ui.openConfirmModal,
@@ -99,6 +102,7 @@ const actions = createActions({
   world,
   config,
   crops,
+  buildings,
   currentSizeOption: ui.currentSizeOption,
   formatCurrency,
   onMoneyChanged,

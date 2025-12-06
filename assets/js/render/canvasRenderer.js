@@ -1,6 +1,16 @@
 import { getStageBreakpoints } from "../utils/helpers.js";
 
 export function createRenderer({ canvas, ctx, state, world, config, crops, assets, currentSizeOption, computeHoverPreview }) {
+  const buildingImageCache = new Map();
+
+  const getBuildingImage = (src) => {
+    if (!src) return null;
+    if (buildingImageCache.has(src)) return buildingImageCache.get(src);
+    const img = new Image();
+    img.src = src;
+    buildingImageCache.set(src, img);
+    return img;
+  };
   function renderFloatingValue(anim, nowPerf, startRow, endRow, startCol, endCol) {
     const visibleDuration = 1000;
     const fadeDuration = 500;
@@ -171,6 +181,36 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
       ctx.lineTo(state.offsetX + endCol * state.tileSize * state.scale, y);
     }
     ctx.stroke();
+
+    if (world.structures && typeof world.structures.forEach === "function") {
+      world.structures.forEach((struct) => {
+        if (!struct) return;
+        const left = struct.col;
+        const top = struct.row;
+        const right = struct.col + struct.width;
+        const bottom = struct.row + struct.height;
+        if (right < startCol || left > endCol || bottom < startRow || top > endRow) return;
+        const img = getBuildingImage(struct.image);
+        const x = state.offsetX + left * state.tileSize * state.scale;
+        const y = state.offsetY + top * state.tileSize * state.scale;
+        const targetW = struct.width * state.tileSize * state.scale;
+        const targetH = struct.height * state.tileSize * state.scale;
+        if (img && img.complete) {
+          const naturalW = img.naturalWidth || targetW;
+          const naturalH = img.naturalHeight || targetH;
+          const scale = Math.min(targetW / naturalW, targetH / naturalH);
+          const drawW = naturalW * scale;
+          const drawH = naturalH * scale;
+          const drawX = x + (targetW - drawW) / 2;
+          const drawY = y + (targetH - drawH) / 2;
+          ctx.drawImage(img, drawX, drawY, drawW, drawH);
+        } else if (img) {
+          img.onload = () => {
+            state.needsRender = true;
+          };
+        }
+      });
+    }
 
     if (state.hoverTile) {
       const sizeOption = currentSizeOption();

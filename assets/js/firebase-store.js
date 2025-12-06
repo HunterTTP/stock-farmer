@@ -18,6 +18,12 @@ const normalizeForRemote = (stateObject) => {
       data: value,
     }));
   }
+  if (Array.isArray(clone.structures)) {
+    clone.structures = clone.structures.map(([key, value]) => ({
+      key,
+      data: value,
+    }));
+  }
   return clone;
 };
 
@@ -26,6 +32,9 @@ const denormalizeFromRemote = (stateObject) => {
   const clone = { ...stateObject };
   if (Array.isArray(clone.plots) && clone.plots.length && clone.plots[0] && !Array.isArray(clone.plots[0])) {
     clone.plots = clone.plots.map((entry) => [entry.key, entry.data]);
+  }
+  if (Array.isArray(clone.structures) && clone.structures.length && clone.structures[0] && !Array.isArray(clone.structures[0])) {
+    clone.structures = clone.structures.map((entry) => [entry.key, entry.data]);
   }
   return clone;
 };

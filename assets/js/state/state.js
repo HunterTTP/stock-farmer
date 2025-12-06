@@ -39,6 +39,7 @@ export function createInitialState(config) {
     hoeHoldTimeoutId: null,
     hoeHoldTriggered: false,
     lastSavedAt: 0,
+    selectedBuildKey: null,
   };
 }
 
@@ -48,6 +49,8 @@ export function createInitialWorld(config) {
     filled: new Set(config.defaultFilled),
     harvestAnimations: [],
     costAnimations: [],
+    structures: new Map(),
+    structureTiles: new Map(),
   };
 }
 
@@ -67,6 +70,7 @@ export function applyDefaultSelection(state) {
   state.selectedStockKey = null;
   state.stockHoldings = {};
   state.selectedSizeKey = "single";
+  state.selectedBuildKey = null;
   state.activeMode = "plant";
   state.hoeSelected = false;
   state.showTickerInfo = false;
@@ -117,6 +121,33 @@ function cleanPlotValue(value) {
   };
 }
 
+function isFootprintInBounds(row, col, width, height, config) {
+  if (!config || typeof config.gridRows !== "number" || typeof config.gridCols !== "number") return true;
+  if (![row, col, width, height].every(Number.isInteger)) return false;
+  if (width <= 0 || height <= 0) return false;
+  return row >= 0 && col >= 0 && row + height <= config.gridRows && col + width <= config.gridCols;
+}
+
+function cleanStructureValue(value, config) {
+  if (!value || typeof value !== "object") return null;
+  const row = Number.isInteger(value.row) ? value.row : null;
+  const col = Number.isInteger(value.col) ? value.col : null;
+  const width = Number.isInteger(value.width) ? value.width : null;
+  const height = Number.isInteger(value.height) ? value.height : null;
+  if (row === null || col === null || width === null || height === null) return null;
+  if (!isFootprintInBounds(row, col, width, height, config)) return null;
+  return {
+    id: typeof value.id === "string" ? value.id : null,
+    name: typeof value.name === "string" ? value.name : "",
+    row,
+    col,
+    width,
+    height,
+    cost: Number.isFinite(value.cost) ? value.cost : 0,
+    image: typeof value.image === "string" ? value.image : "",
+  };
+}
+
 function clampShares(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
@@ -150,6 +181,8 @@ export function loadState({ state, world, crops, sizes, config }) {
   if (!raw) return;
   try {
     const data = JSON.parse(raw);
+    if (world.structures && typeof world.structures.clear === "function") world.structures.clear();
+    if (world.structureTiles && typeof world.structureTiles.clear === "function") world.structureTiles.clear();
     if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
     if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
     if (data.stockHoldings) state.stockHoldings = cleanStockHoldings(data.stockHoldings);
@@ -181,6 +214,22 @@ export function loadState({ state, world, crops, sizes, config }) {
       });
     }
 
+    if (Array.isArray(data.structures)) {
+      world.structures.clear();
+      world.structureTiles.clear();
+      data.structures.forEach(([key, value]) => {
+        const cleaned = cleanStructureValue({ ...(value || {}), key }, config);
+        if (!cleaned) return;
+        const structKey = key || `${cleaned.row},${cleaned.col}`;
+        world.structures.set(structKey, cleaned);
+        for (let r = 0; r < cleaned.height; r++) {
+          for (let c = 0; c < cleaned.width; c++) {
+            world.structureTiles.set(`${cleaned.row + r},${cleaned.col + c}`, structKey);
+          }
+        }
+      });
+    }
+
     if (data.cropLimits) {
       Object.entries(data.cropLimits).forEach(([id, limit]) => {
         if (crops[id] && typeof limit === "number") crops[id].limit = limit;
@@ -196,6 +245,7 @@ export function loadState({ state, world, crops, sizes, config }) {
     if (data.selectedStockKey) state.selectedStockKey = null;
     if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
     else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
+    if (typeof data.selectedBuildKey === "string") state.selectedBuildKey = data.selectedBuildKey;
 
     const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
     const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
@@ -262,8 +312,12 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
     cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
     sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
     cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
+    structures: Array.from(world.structures.entries())
+      .map(([key, value]) => [key, cleanStructureValue({ ...value, key }, config)])
+      .filter(([, value]) => !!value),
     previousUpdatedAt,
     updatedAt,
+    selectedBuildKey: state.selectedBuildKey || null,
   };
 
   state.lastSavedAt = updatedAt;
@@ -279,6 +333,8 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
 
 export function applyLoadedData(data, { state, world, crops, sizes, config }) {
   if (!data || typeof data !== "object") return;
+  if (world.structures && typeof world.structures.clear === "function") world.structures.clear();
+  if (world.structureTiles && typeof world.structureTiles.clear === "function") world.structureTiles.clear();
   console.log("[load] applyLoadedData start", {
     filled: Array.isArray(data.filled) ? data.filled.length : 0,
     plots: Array.isArray(data.plots) ? data.plots.length : 0,
@@ -299,6 +355,22 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
     world.plots.clear();
     data.plots.forEach(([key, value]) => {
       if (isKeyInBounds(key, config)) world.plots.set(key, cleanPlotValue(value));
+    });
+  }
+
+  if (Array.isArray(data.structures)) {
+    world.structures.clear();
+    world.structureTiles.clear();
+    data.structures.forEach(([key, value]) => {
+      const cleaned = cleanStructureValue({ ...(value || {}), key }, config);
+      if (!cleaned) return;
+      const structKey = key || `${cleaned.row},${cleaned.col}`;
+      world.structures.set(structKey, cleaned);
+      for (let r = 0; r < cleaned.height; r++) {
+        for (let c = 0; c < cleaned.width; c++) {
+          world.structureTiles.set(`${cleaned.row + r},${cleaned.col + c}`, structKey);
+        }
+      }
     });
   }
 
@@ -330,6 +402,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
   state.selectedStockKey = null;
   if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
   else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
+  if (typeof data.selectedBuildKey === "string") state.selectedBuildKey = data.selectedBuildKey;
 
   const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
   const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
