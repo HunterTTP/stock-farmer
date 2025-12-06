@@ -205,13 +205,26 @@ const scheduleCloudSave = (delayMs) => {
   cloudSaveTimerId = setTimeout(runCloudSave, delayMs);
 };
 
-const showSaveFailureAndLogout = async (message) => {
+const formatDevInfo = (data) => {
+  if (!data) return "";
+  if (typeof data === "string") return data;
+  try {
+    return JSON.stringify(data, Object.keys(data).slice(0, 10));
+  } catch (error) {
+    return String(data);
+  }
+};
+
+const showSaveFailureAndLogout = async (message, devDetails = null) => {
   if (saveFailurePromptOpen) return;
   saveFailurePromptOpen = true;
   const logout = async () => {
     await logOutAndReset({ showAuthOnReload: true, skipRemoteSave: true });
   };
-  const details = message || "We could not save your game to the cloud. Please log in again.";
+  const devInfo = formatDevInfo(devDetails);
+  const details =
+    (message || "We could not save your game to the cloud. Please log in again.") +
+    (devInfo ? `\n\nDev info: ${devInfo}` : "");
   if (gameContext?.openConfirmModal) {
     gameContext.openConfirmModal(
       details,
@@ -290,7 +303,10 @@ const runCloudSave = async () => {
           consecutiveSaveFailures += 1;
           if (!queuedCloudState) queuedCloudState = payload;
           if (consecutiveSaveFailures >= SAVE_RETRY_LIMIT) {
-            await showSaveFailureAndLogout(result?.error?.message || result?.reason || "Failed to save to cloud.");
+            await showSaveFailureAndLogout(
+              result?.error?.message || result?.reason || "Failed to save to cloud.",
+              { reason: result?.reason, code: result?.error?.code, message: result?.error?.message }
+            );
             shouldBail = true;
             break;
           }
@@ -307,7 +323,7 @@ const runCloudSave = async () => {
         consecutiveSaveFailures += 1;
         if (!queuedCloudState) queuedCloudState = payload;
         if (consecutiveSaveFailures >= SAVE_RETRY_LIMIT) {
-          await showSaveFailureAndLogout(error?.message || "Failed to save to cloud.");
+          await showSaveFailureAndLogout(error?.message || "Failed to save to cloud.", { message: error?.message, stack: error?.stack });
           shouldBail = true;
           break;
         }
@@ -323,7 +339,7 @@ const runCloudSave = async () => {
     console.error("Queued remote save failed", error);
     consecutiveSaveFailures += 1;
     if (consecutiveSaveFailures >= SAVE_RETRY_LIMIT) {
-      await showSaveFailureAndLogout(error?.message || "Failed to save to cloud.");
+      await showSaveFailureAndLogout(error?.message || "Failed to save to cloud.", { message: error?.message, stack: error?.stack });
       shouldBail = true;
     } else {
       rescheduleDelay = Math.min(
