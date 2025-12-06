@@ -1,633 +1,610 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Stock Farmer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="images/logo/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="512x512" href="images/logo/pwa-512.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/main.css" />
-  </head>
-  <body class="bg-black text-white">
-    <nav class="bg-neutral-900 text-white">
-      <div class="flex flex-wrap items-center gap-3 px-5 py-3 relative">
-        <a class="text-base font-semibold whitespace-nowrap" href="#">Stock Farmer</a>
 
-        <div class="ml-auto flex items-center gap-3">
-          <div class="flex items-center gap-3 bg-neutral-900/80 border border-neutral-800 rounded-full px-4 py-2 shadow-lg">
-            <button id="userBadge" type="button" class="flex items-center gap-2 text-sm font-semibold text-white whitespace-nowrap focus:outline-none">
-              <svg class="h-5 w-5 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" />
-              </svg>
-              <span id="auth-state">Guest</span>
-            </button>
-          </div>
-          <button
-            id="navToggle"
-            class="inline-flex items-center justify-center p-3 rounded-md border border-gray-500 hover:bg-neutral-800 focus:outline-none"
-            type="button"
-            aria-controls="navOffcanvas"
-            aria-expanded="false">
-            <span class="sr-only">Open controls</span>
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none">
-              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+<head>
+  <meta charset="utf-8" />
+  <title>Stock Farmer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="images/logo/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="512x512" href="images/logo/pwa-512.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+
+<body class="bg-black text-white">
+  <nav class="bg-neutral-900 text-white">
+    <div class="flex flex-wrap items-center gap-3 px-5 py-3 relative">
+      <a class="text-base font-semibold whitespace-nowrap" href="#">Stock Farmer</a>
+
+      <div class="ml-auto flex items-center gap-3">
+        <div
+          class="flex items-center gap-3 bg-neutral-900/80 border border-neutral-800 rounded-full px-4 py-2 shadow-lg">
+          <button id="userBadge" type="button"
+            class="flex items-center gap-2 text-sm font-semibold text-white whitespace-nowrap focus:outline-none">
+            <svg class="h-5 w-5 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.6">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" />
             </svg>
+            <span id="auth-state">Guest</span>
           </button>
         </div>
-      </div>
-    </nav>
-
-    <div id="navOverlay" class="fixed inset-0 bg-black/50 hidden z-30"></div>
-
-    <div id="navOffcanvas" class="fixed inset-y-0 right-0 w-72 max-w-full bg-neutral-950 text-white shadow-2xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
-        <h5 class="text-base font-semibold" id="navOffcanvasLabel">Settings</h5>
-        <button id="navClose" class="p-2 rounded-lg hover:bg-neutral-900 focus:outline-none border border-neutral-800">
-          <span class="sr-only">Close</span>
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        <button id="navToggle"
+          class="inline-flex items-center justify-center p-3 rounded-md border border-gray-500 hover:bg-neutral-800 focus:outline-none"
+          type="button" aria-controls="navOffcanvas" aria-expanded="false">
+          <span class="sr-only">Open controls</span>
+          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none">
+            <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
           </svg>
         </button>
       </div>
-      <div class="flex-1 p-5 text-sm text-neutral-200 space-y-4 overflow-y-auto bg-neutral-950/95 offcanvas-scroll">
-        <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 space-y-3 shadow-inner shadow-black/20">
-          <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center h-10 w-10 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300">
-              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" />
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <p id="offcanvasUsername" class="text-sm font-semibold text-white truncate">Guest</p>
-            </div>
-          </div>
-          <div class="space-y-2">
-            <button id="authTrigger" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white focus:outline-none">
-              Log In
-            </button>
-            <button id="logoutBtn" class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-sky-600 hover:bg-sky-500 border-sky-500 text-white focus:outline-none hidden">Log Out</button>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 space-y-3 shadow-inner shadow-black/20">
-          <p class="text-xs uppercase tracking-wide text-neutral-400">Timer</p>
-          <div class="flex flex-col gap-3 font-semibold">
-            <label class="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950/70 cursor-pointer select-none">
-              <input id="showTimerToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
-              <span>Show</span>
-            </label>
-          </div>
-
-          <div class="space-y-3">
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[11px] text-neutral-300">
-                <span>Text Size</span>
-                <span id="statSizeValue" class="font-semibold">14</span>
-              </div>
-              <input id="statBaseSize" type="range" min="8" max="24" value="14" class="w-full accent-emerald-500" />
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[11px] text-neutral-300">
-                <span>Text Opacity</span>
-                <span id="statTextAlphaValue" class="font-semibold">100%</span>
-              </div>
-              <input id="statTextAlpha" type="range" min="0" max="100" value="100" class="w-full accent-emerald-500" />
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[11px] text-neutral-300">
-                <span>Background Opacity</span>
-                <span id="statBgAlphaValue" class="font-semibold">100%</span>
-              </div>
-              <input id="statBgAlpha" type="range" min="0" max="100" value="100" class="w-full accent-emerald-500" />
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-inner shadow-black/20 space-y-2">
-          <p class="text-xs uppercase tracking-wide text-neutral-400 mb-2">View</p>
-          <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="recenterBtn">Recenter</button>
-        </div>
-
-        <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-inner shadow-black/20 space-y-2">
-          <p class="text-xs uppercase tracking-wide text-neutral-400 mb-2">Admin</p>
-          <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="installBtn" disabled>
-            Install App
-          </button>
-          <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="resetSettingsBtn">
-            Reset Settings
-          </button>
-          <button class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center" id="clearCacheBtn">
-            Clear Cache
-          </button>
-          <button class="w-full border border-red-700 text-sm font-semibold px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center" id="resetFarmBtn">
-            Reset Progress
-          </button>
-          <div id="moneyCheatCard" class="hidden pt-2">
-            <div class="flex items-center gap-2">
-              <input
-                id="moneyCheatInput"
-                type="number"
-                min="0"
-                step="1000"
-                class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="$100000" />
-              <button id="moneyCheatApply" type="button" class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold border border-emerald-500 focus:outline-none">
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
+  </nav>
 
-    <div id="authModal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-      <div id="authModalOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-      <div class="relative z-10 flex min-h-full items-center justify-center px-4 py-6">
-        <div class="w-full max-w-3xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
-          <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
-            <h2 id="authModalTitle" class="text-lg font-semibold text-white">Log In</h2>
-            <button id="authModalClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none">
-              <span class="sr-only">Close</span>
-              <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
-              </svg>
-            </button>
-          </div>
-          <div class="px-5 pt-4 bg-neutral-950/80">
-            <div class="flex gap-2" role="tablist" aria-label="Authentication">
-              <button
-                id="tab-login"
-                class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-neutral-800 text-white border-neutral-700 shadow"
-                type="button"
-                role="tab"
-                aria-selected="true"
-                aria-controls="panel-login"
-                tabindex="0">
-                Existing User
-              </button>
-              <button
-                id="tab-signup"
-                class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-transparent text-neutral-400 border-neutral-800 hover:text-white hover:border-neutral-600"
-                type="button"
-                role="tab"
-                aria-selected="false"
-                aria-controls="panel-signup"
-                tabindex="-1">
-                Create Account
-              </button>
-            </div>
-          </div>
-          <div class="px-5 py-5 bg-neutral-950/80 max-h-[70vh] overflow-y-auto">
-            <div id="panel-login" class="space-y-4" role="tabpanel" aria-labelledby="tab-login" aria-hidden="false" tabindex="0">
-              <form id="login-form" class="space-y-3" autocomplete="on">
-                <div class="space-y-1">
-                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-email">Email</label>
-                  <input
-                    id="login-email"
-                    name="email"
-                    type="email"
-                    inputmode="email"
-                    autocomplete="username"
-                    autocapitalize="none"
-                    spellcheck="false"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
-                    placeholder="you@example.com"
-                    required />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-password">Password</label>
-                  <input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
-                    placeholder="********"
-                    required />
-                </div>
-                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log In</button>
-                <p id="login-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
-                <div class="flex items-center justify-between">
-                  <button type="button" id="reset-password" class="text-xs text-sky-300 hover:text-sky-200">Forgot password?</button>
-                  <p id="reset-message" class="text-[11px] text-emerald-400" aria-live="polite"></p>
-                </div>
-              </form>
-            </div>
-            <div id="panel-signup" class="space-y-4 hidden" role="tabpanel" aria-labelledby="tab-signup" aria-hidden="true" tabindex="-1">
-              <form id="signup-form" class="space-y-3" autocomplete="on">
-                <div class="space-y-1">
-                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="signup-username">Username</label>
-                  <input
-                    id="signup-username"
-                    name="username"
-                    type="text"
-                    autocomplete="username"
-                    autocapitalize="none"
-                    spellcheck="false"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    placeholder="Farmer" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="signup-email">Email</label>
-                  <input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    inputmode="email"
-                    autocomplete="email"
-                    autocapitalize="none"
-                    spellcheck="false"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    placeholder="you@example.com"
-                    required />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="signup-password">Password</label>
-                  <input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    autocomplete="new-password"
-                    class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    placeholder="********"
-                    required />
-                </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Create Account</button>
-                <p id="signup-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div id="navOverlay" class="fixed inset-0 bg-black/50 hidden z-30"></div>
+
+  <div id="navOffcanvas"
+    class="fixed inset-y-0 right-0 w-72 max-w-full bg-neutral-950 text-white shadow-2xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
+      <h5 class="text-base font-semibold" id="navOffcanvasLabel">Settings</h5>
+      <button id="navClose" class="p-2 rounded-lg hover:bg-neutral-900 focus:outline-none border border-neutral-800">
+        <span class="sr-only">Close</span>
+        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+      </button>
     </div>
-
-    <div id="confirmModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
-      <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-          <h3 id="confirmTitle" class="text-sm font-semibold text-white">Confirm</h3>
-          <button id="confirmClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
-            <span class="sr-only">Close</span>
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    <div class="flex-1 p-5 text-sm text-neutral-200 space-y-4 overflow-y-auto bg-neutral-950/95 offcanvas-scroll">
+      <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 space-y-3 shadow-inner shadow-black/20">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex items-center justify-center h-10 w-10 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" />
             </svg>
-          </button>
+          </div>
+          <div class="min-w-0">
+            <p id="offcanvasUsername" class="text-sm font-semibold text-white truncate">Guest</p>
+          </div>
         </div>
-        <div id="confirmMessage" class="px-4 py-4 text-sm text-neutral-100 leading-relaxed"></div>
-        <div class="px-4 pb-4 flex gap-2">
-          <button id="confirmConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Yes</button>
-          <button id="confirmCancel" class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">No</button>
+        <div class="space-y-2">
+          <button id="authTrigger"
+            class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white focus:outline-none">
+            Log In
+          </button>
+          <button id="logoutBtn"
+            class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-sky-600 hover:bg-sky-500 border-sky-500 text-white focus:outline-none hidden">Log
+            Out</button>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 space-y-3 shadow-inner shadow-black/20">
+        <p class="text-xs uppercase tracking-wide text-neutral-400">Timer</p>
+        <div class="flex flex-col gap-3 font-semibold">
+          <label
+            class="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950/70 cursor-pointer select-none">
+            <input id="showTimerToggle" type="checkbox"
+              class="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-emerald-500 focus:outline-none" />
+            <span>Show</span>
+          </label>
+        </div>
+
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-300">
+              <span>Text Size</span>
+              <span id="statSizeValue" class="font-semibold">14</span>
+            </div>
+            <input id="statBaseSize" type="range" min="8" max="24" value="14" class="w-full accent-emerald-500" />
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-300">
+              <span>Text Opacity</span>
+              <span id="statTextAlphaValue" class="font-semibold">100%</span>
+            </div>
+            <input id="statTextAlpha" type="range" min="0" max="100" value="100" class="w-full accent-emerald-500" />
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-300">
+              <span>Background Opacity</span>
+              <span id="statBgAlphaValue" class="font-semibold">100%</span>
+            </div>
+            <input id="statBgAlpha" type="range" min="0" max="100" value="100" class="w-full accent-emerald-500" />
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-inner shadow-black/20 space-y-2">
+        <p class="text-xs uppercase tracking-wide text-neutral-400 mb-2">View</p>
+        <button
+          class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center"
+          id="recenterBtn">Recenter</button>
+      </div>
+
+      <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-inner shadow-black/20 space-y-2">
+        <p class="text-xs uppercase tracking-wide text-neutral-400 mb-2">Admin</p>
+        <button
+          class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center"
+          id="installBtn" disabled>
+          Install App
+        </button>
+        <button
+          class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center"
+          id="resetSettingsBtn">
+          Reset Settings
+        </button>
+        <button
+          class="w-full border border-gray-500 text-sm font-semibold px-3 py-2 rounded-md hover:bg-neutral-800 flex items-center justify-center text-center"
+          id="clearCacheBtn">
+          Clear Cache
+        </button>
+        <button
+          class="w-full border border-red-700 text-sm font-semibold px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center"
+          id="resetFarmBtn">
+          Reset Progress
+        </button>
+        <div id="moneyCheatCard" class="hidden pt-2">
+          <div class="flex items-center gap-2">
+            <input id="moneyCheatInput" type="number" min="0" step="1000"
+              class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="$100000" />
+            <button id="moneyCheatApply" type="button"
+              class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold border border-emerald-500 focus:outline-none">
+              Apply
+            </button>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div id="resetModal" class="fixed inset-0 z-[65] bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
-      <div class="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+  <div id="authModal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true"
+    aria-labelledby="authModalTitle">
+    <div id="authModalOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center px-4 py-6">
+      <div class="w-full max-w-3xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
-          <div>
-            <p class="text-[11px] uppercase tracking-wide text-neutral-400">Password reset</p>
-            <h3 class="text-lg font-semibold text-white">Send reset link</h3>
-          </div>
-          <button id="resetClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none">
+          <h2 id="authModalTitle" class="text-lg font-semibold text-white">Log In</h2>
+          <button id="authModalClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none">
             <span class="sr-only">Close</span>
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
             </svg>
           </button>
         </div>
-        <div class="px-5 py-5 space-y-3">
-          <p class="text-sm text-neutral-300">Enter your account email address</p>
-          <div class="space-y-1">
-            <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="reset-email">Email</label>
-            <input
-              id="reset-email"
-              name="email"
-              type="email"
-              inputmode="email"
-              autocomplete="email"
-              autocapitalize="none"
-              spellcheck="false"
-              class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
-              placeholder="you@example.com" />
+        <div class="px-5 pt-4 bg-neutral-950/80">
+          <div class="flex gap-2" role="tablist" aria-label="Authentication">
+            <button id="tab-login"
+              class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-neutral-800 text-white border-neutral-700 shadow"
+              type="button" role="tab" aria-selected="true" aria-controls="panel-login" tabindex="0">
+              Existing User
+            </button>
+            <button id="tab-signup"
+              class="flex-1 text-sm font-semibold rounded-md px-3 py-2 border transition-colors bg-transparent text-neutral-400 border-neutral-800 hover:text-white hover:border-neutral-600"
+              type="button" role="tab" aria-selected="false" aria-controls="panel-signup" tabindex="-1">
+              Create Account
+            </button>
           </div>
-          <p id="reset-modal-status" class="text-xs min-h-[1rem] text-neutral-300" aria-live="polite"></p>
         </div>
-        <div class="px-5 pb-5 flex gap-2">
-          <button id="resetSend" class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Send reset email</button>
+        <div class="px-5 py-5 bg-neutral-950/80 max-h-[70vh] overflow-y-auto">
+          <div id="panel-login" class="space-y-4" role="tabpanel" aria-labelledby="tab-login" aria-hidden="false"
+            tabindex="0">
+            <form id="login-form" class="space-y-3" autocomplete="on">
+              <div class="space-y-1">
+                <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="login-email">Email</label>
+                <input id="login-email" name="email" type="email" inputmode="email" autocomplete="username"
+                  autocapitalize="none" spellcheck="false"
+                  class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
+                  placeholder="you@example.com" required />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[11px] uppercase tracking-wide text-neutral-400"
+                  for="login-password">Password</label>
+                <input id="login-password" name="password" type="password" autocomplete="current-password"
+                  class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
+                  placeholder="********" required />
+              </div>
+              <button type="submit"
+                class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log
+                In</button>
+              <p id="login-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
+              <div class="flex items-center justify-between">
+                <button type="button" id="reset-password" class="text-xs text-sky-300 hover:text-sky-200">Forgot
+                  password?</button>
+                <p id="reset-message" class="text-[11px] text-emerald-400" aria-live="polite"></p>
+              </div>
+            </form>
+          </div>
+          <div id="panel-signup" class="space-y-4 hidden" role="tabpanel" aria-labelledby="tab-signup"
+            aria-hidden="true" tabindex="-1">
+            <form id="signup-form" class="space-y-3" autocomplete="on">
+              <div class="space-y-1">
+                <label class="text-[11px] uppercase tracking-wide text-neutral-400"
+                  for="signup-username">Username</label>
+                <input id="signup-username" name="username" type="text" autocomplete="username" autocapitalize="none"
+                  spellcheck="false"
+                  class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  placeholder="Farmer" />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="signup-email">Email</label>
+                <input id="signup-email" name="email" type="email" inputmode="email" autocomplete="email"
+                  autocapitalize="none" spellcheck="false"
+                  class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  placeholder="you@example.com" required />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[11px] uppercase tracking-wide text-neutral-400"
+                  for="signup-password">Password</label>
+                <input id="signup-password" name="password" type="password" autocomplete="new-password"
+                  class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  placeholder="********" required />
+              </div>
+              <button type="submit"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Create
+                Account</button>
+              <p id="signup-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
+            </form>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div id="logoutModal" class="fixed inset-0 z-[65] bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
-      <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-          <h3 class="text-sm font-semibold text-white">Confirm</h3>
-          <button id="logoutClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
+  <div id="confirmModal"
+    class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
+    <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <h3 id="confirmTitle" class="text-sm font-semibold text-white">Confirm</h3>
+        <button id="confirmClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
+          <span class="sr-only">Close</span>
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div id="confirmMessage" class="px-4 py-4 text-sm text-neutral-100 leading-relaxed"></div>
+      <div class="px-4 pb-4 flex gap-2">
+        <button id="confirmConfirm"
+          class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Yes</button>
+        <button id="confirmCancel"
+          class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">No</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resetModal"
+    class="fixed inset-0 z-[65] bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
+    <div class="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide text-neutral-400">Password reset</p>
+          <h3 class="text-lg font-semibold text-white">Send reset link</h3>
+        </div>
+        <button id="resetClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none">
+          <span class="sr-only">Close</span>
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div class="px-5 py-5 space-y-3">
+        <p class="text-sm text-neutral-300">Enter your account email address</p>
+        <div class="space-y-1">
+          <label class="text-[11px] uppercase tracking-wide text-neutral-400" for="reset-email">Email</label>
+          <input id="reset-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none"
+            spellcheck="false"
+            class="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-sky-600"
+            placeholder="you@example.com" />
+        </div>
+        <p id="reset-modal-status" class="text-xs min-h-[1rem] text-neutral-300" aria-live="polite"></p>
+      </div>
+      <div class="px-5 pb-5 flex gap-2">
+        <button id="resetSend"
+          class="w-full bg-sky-600 hover:bg-sky-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Send
+          reset email</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="logoutModal"
+    class="fixed inset-0 z-[65] bg-black/70 backdrop-blur-sm flex items-center justify-center px-3 py-6 hidden">
+    <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <h3 class="text-sm font-semibold text-white">Confirm</h3>
+        <button id="logoutClose" class="p-1 rounded-md hover:bg-neutral-800 focus:outline-none">
+          <span class="sr-only">Close</span>
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div class="px-4 py-4 text-sm text-neutral-100 leading-relaxed">Log Out?</div>
+      <div class="px-4 pb-4 flex gap-2">
+        <button id="logoutConfirm"
+          class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Log
+          Out</button>
+        <button id="logoutCancel"
+          class="w-1/2 py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none">
+          Stay Signed In
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-wrapper">
+    <canvas id="gridCanvas"></canvas>
+    <div class="pointer-events-none absolute top-3 right-3 z-20">
+      <div class="flex items-center gap-2 rounded-lg px-3 py-2 bg-transparent border border-transparent">
+        <div id="moneyChangeDisplay"
+          class="hidden pointer-events-none select-none text-sm font-semibold px-2 py-1 rounded-md border border-neutral-800 bg-neutral-800/90 opacity-0 transition-opacity duration-200">
+        </div>
+        <div id="totalDisplay"
+          class="pointer-events-none select-none text-sm font-semibold px-4 py-2 rounded-md bg-neutral-900/90 border border-neutral-800 text-white">
+          $0.00</div>
+      </div>
+    </div>
+    <div class="pointer-events-none absolute inset-x-0 bottom-3 px-3 flex flex-col items-center gap-4 z-20">
+      <div class="pointer-events-auto w-full max-w-xl flex flex-col items-center gap-3">
+        <div class="flex flex-wrap justify-center gap-2">
+          <div id="plantDropdowns" class="flex flex-wrap justify-center gap-2 items-center">
+            <div class="relative">
+              <button id="plantCropButton" type="button"
+                class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
+                <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
+                  <img id="plantCropImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800"
+                    alt="Crop" />
+                  <span id="plantCropLabel" class="truncate">Crop</span>
+                </div>
+                <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div id="plantCropMenu"
+                class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-72 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+              </div>
+            </div>
+            <div class="relative">
+              <button id="plantSizeButton" type="button"
+                class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
+                <span id="plantSizeLabel" class="truncate flex-1 text-left">Size</span>
+                <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div id="plantSizeMenu"
+                class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+              </div>
+            </div>
+          </div>
+          <div id="harvestDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
+            <div class="relative">
+              <button id="harvestSizeButton" type="button"
+                class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
+                <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
+                  <img src="images/hoe/hoe-phase-1.png" alt="Hoe" class="w-5 h-5 object-contain" />
+                  <span id="harvestSizeLabel" class="truncate">1x1</span>
+                </div>
+                <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div id="harvestSizeMenu"
+                class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+              </div>
+            </div>
+          </div>
+          <div id="buildDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
+            <div class="relative">
+              <button id="buildSelectButton" type="button"
+                class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
+                <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
+                  <img id="buildSelectImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800"
+                    alt="Build" />
+                  <span id="buildSelectLabel" class="truncate flex-1 text-left">Coming soon..</span>
+                </div>
+                <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div id="buildSelectMenu"
+                class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+              </div>
+            </div>
+          </div>
+          <div id="landscapeDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
+            <div class="relative">
+              <button id="landscapeSelectButton" type="button"
+                class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
+                <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
+                  <img id="landscapeSelectImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800"
+                    alt="Landscape" />
+                  <span id="landscapeSelectLabel" class="truncate flex-1 text-left">Select</span>
+                </div>
+                <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div id="landscapeSelectMenu"
+                class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="w-full max-w-xl">
+          <div class="flex items-center justify-center gap-3 flex-wrap">
+            <button id="modePlantBtn" type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Plant
+            </button>
+            <button id="modeHarvestBtn" type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Harvest
+            </button>
+            <button id="modeLandscapeBtn" type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Landscape
+            </button>
+            <button id="modeBuildBtn" type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Build
+            </button>
+            <button id="modeTradeBtn" type="button"
+              class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+              Trade
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tradeModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true"
+    aria-labelledby="tradeModalTitle">
+    <div id="tradeOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center px-3 py-6">
+      <div
+        class="w-full max-w-5xl md:max-w-6xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-neutral-400">Trading</p>
+            <h2 id="tradeModalTitle" class="text-lg font-semibold text-white">Market</h2>
+          </div>
+          <button id="tradeClose"
+            class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none border border-neutral-800">
             <span class="sr-only">Close</span>
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
             </svg>
           </button>
         </div>
-        <div class="px-4 py-4 text-sm text-neutral-100 leading-relaxed">Log Out?</div>
-        <div class="px-4 pb-4 flex gap-2">
-          <button id="logoutConfirm" class="w-1/2 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 focus:outline-none">Log Out</button>
-          <button id="logoutCancel" class="w-1/2 py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none">
-            Stay Signed In
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="canvas-wrapper">
-      <canvas id="gridCanvas"></canvas>
-      <div class="pointer-events-none absolute top-3 right-3 z-20">
-        <div class="flex items-center gap-2 rounded-lg px-3 py-2 bg-transparent border border-transparent">
-          <div
-            id="moneyChangeDisplay"
-            class="hidden pointer-events-none select-none text-sm font-semibold px-2 py-1 rounded-md border border-neutral-800 bg-neutral-800/90 opacity-0 transition-opacity duration-200"></div>
-          <div id="totalDisplay" class="pointer-events-none select-none text-sm font-semibold px-4 py-2 rounded-md bg-neutral-900/90 border border-neutral-800 text-white">$0.00</div>
-        </div>
-      </div>
-      <div class="pointer-events-none absolute inset-x-0 bottom-3 px-3 flex flex-col items-center gap-4 z-20">
-        <div class="pointer-events-auto w-full max-w-xl flex flex-col items-center gap-3">
-          <div class="flex flex-wrap justify-center gap-2">
-            <div id="plantDropdowns" class="flex flex-wrap justify-center gap-2 items-center">
-              <div class="relative">
-                <button
-                  id="plantCropButton"
-                  type="button"
-                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
-                    <img id="plantCropImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800" alt="Crop" />
-                    <span id="plantCropLabel" class="truncate">Crop</span>
-                  </div>
-                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  id="plantCropMenu"
-                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-72 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
-              </div>
-              <div class="relative">
-                <button
-                  id="plantSizeButton"
-                  type="button"
-                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <span id="plantSizeLabel" class="truncate flex-1 text-left">Size</span>
-                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  id="plantSizeMenu"
-                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
-              </div>
-            </div>
-            <div id="harvestDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
-              <div class="relative">
-                <button
-                  id="harvestSizeButton"
-                  type="button"
-                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
-                    <img src="images/hoe/hoe-phase-1.png" alt="Hoe" class="w-5 h-5 object-contain" />
-                    <span id="harvestSizeLabel" class="truncate">1x1</span>
-                  </div>
-                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  id="harvestSizeMenu"
-                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
-              </div>
-            </div>
-            <div id="buildDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
-              <div class="relative">
-                <button
-                  id="buildSelectButton"
-                  type="button"
-                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
-                    <img id="buildSelectImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800" alt="Build" />
-                    <span id="buildSelectLabel" class="truncate flex-1 text-left">Coming soon..</span>
-                  </div>
-                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  id="buildSelectMenu"
-                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
-              </div>
-            </div>
-            <div id="landscapeDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
-              <div class="relative">
-                <button
-                  id="landscapeSelectButton"
-                  type="button"
-                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
-                  <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
-                    <img id="landscapeSelectImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800" alt="Landscape" />
-                    <span id="landscapeSelectLabel" class="truncate flex-1 text-left">Select</span>
-                  </div>
-                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  id="landscapeSelectMenu"
-                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
-              </div>
-            </div>
+        <div class="px-5 py-5 bg-neutral-950/80 space-y-3">
+          <div class="md:hidden flex rounded-full bg-neutral-900/80 p-1 text-[0.7rem]">
+            <button id="tradeTab"
+              class="flex-1 text-center py-1.5 rounded-full font-semibold bg-neutral-800 text-white">Buy</button>
+            <button id="positionsTab"
+              class="flex-1 text-center py-1.5 rounded-full font-semibold text-neutral-400">Sell</button>
           </div>
-          <div class="w-full max-w-xl">
-            <div class="flex items-center justify-center gap-3 flex-wrap">
-              <button
-                id="modePlantBtn"
-                type="button"
-                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
-                Plant
-              </button>
-              <button
-                id="modeHarvestBtn"
-                type="button"
-                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
-                Harvest
-              </button>
-              <button
-                id="modeBuildBtn"
-                type="button"
-                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
-                Build
-              </button>
-              <button
-                id="modeLandscapeBtn"
-                type="button"
-                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
-                Landscape
-              </button>
-              <button
-                id="modeTradeBtn"
-                type="button"
-                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
-                Trade
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div id="tradeModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true" aria-labelledby="tradeModalTitle">
-      <div id="tradeOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-      <div class="relative z-10 flex min-h-full items-center justify-center px-3 py-6">
-        <div class="w-full max-w-5xl md:max-w-6xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
-          <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-950/60">
-            <div>
-              <p class="text-[11px] uppercase tracking-wide text-neutral-400">Trading</p>
-              <h2 id="tradeModalTitle" class="text-lg font-semibold text-white">Market</h2>
-            </div>
-            <button id="tradeClose" class="p-2 rounded-full hover:bg-neutral-800 text-neutral-300 focus:outline-none border border-neutral-800">
-              <span class="sr-only">Close</span>
-              <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
-              </svg>
-            </button>
-          </div>
-          <div class="px-5 py-5 bg-neutral-950/80 space-y-3">
-            <div class="md:hidden flex rounded-full bg-neutral-900/80 p-1 text-[0.7rem]">
-              <button id="tradeTab" class="flex-1 text-center py-1.5 rounded-full font-semibold bg-neutral-800 text-white">Buy</button>
-              <button id="positionsTab" class="flex-1 text-center py-1.5 rounded-full font-semibold text-neutral-400">Sell</button>
-            </div>
-
-            <div class="mt-1 flex flex-col md:grid md:grid-cols-2 md:gap-3 md:items-stretch">
-              <section
-                id="tradeSection"
-                class="space-y-2 rounded-2xl bg-neutral-900/70 border border-neutral-800 p-3 md:flex-1 flex flex-col">
-                <div class="flex items-center justify-between gap-2 mb-1">
-                  <h3 class="text-xs font-semibold text-white">Buy</h3>
-                  <div class="flex items-center gap-2">
-                    <div class="text-right flex flex-col items-end gap-0.5">
-                      <div class="text-[0.6rem] uppercase text-neutral-400">Wallet</div>
-                      <div class="flex items-center gap-1 leading-none">
-                        <div
-                          id="tradeMoneyChange"
-                          class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
-                        </div>
-                        <div class="text-xs font-semibold text-white" id="tradeWalletValue">$0.00</div>
+          <div class="mt-1 flex flex-col md:grid md:grid-cols-2 md:gap-3 md:items-stretch">
+            <section id="tradeSection"
+              class="space-y-2 rounded-2xl bg-neutral-900/70 border border-neutral-800 p-3 md:flex-1 flex flex-col">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <h3 class="text-xs font-semibold text-white">Buy</h3>
+                <div class="flex items-center gap-2">
+                  <div class="text-right flex flex-col items-end gap-0.5">
+                    <div class="text-[0.6rem] uppercase text-neutral-400">Wallet</div>
+                    <div class="flex items-center gap-1 leading-none">
+                      <div id="tradeMoneyChange"
+                        class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
                       </div>
+                      <div class="text-xs font-semibold text-white" id="tradeWalletValue">$0.00</div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div class="space-y-2">
-                  <div class="rounded-lg bg-neutral-950/40 border border-neutral-800 max-h-48 overflow-y-auto offcanvas-scroll">
-                    <ul id="tickerList" class="divide-y divide-neutral-800 text-[0.75rem]"></ul>
-                  </div>
+              <div class="space-y-2">
+                <div
+                  class="rounded-lg bg-neutral-950/40 border border-neutral-800 max-h-48 overflow-y-auto offcanvas-scroll">
+                  <ul id="tickerList" class="divide-y divide-neutral-800 text-[0.75rem]"></ul>
+                </div>
 
-                  <div class="space-y-1">
-                    <div class="text-[0.65rem] text-neutral-400">Shares</div>
-                    <div class="flex items-stretch gap-2">
-                      <button
-                        id="buyBtn"
-                        class="w-32 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 py-1.5 px-3 text-[0.75rem] font-semibold active:scale-[0.98] transition text-left">
-                        Buy
+                <div class="space-y-1">
+                  <div class="text-[0.65rem] text-neutral-400">Shares</div>
+                  <div class="flex items-stretch gap-2">
+                    <button id="buyBtn"
+                      class="w-32 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 py-1.5 px-3 text-[0.75rem] font-semibold active:scale-[0.98] transition text-left">
+                      Buy
+                    </button>
+                    <div class="flex-1 flex items-center gap-1.5">
+                      <button id="decShares"
+                        class="rounded-xl border border-neutral-700 bg-neutral-950/60 px-2 py-1.5 text-[0.75rem] font-semibold active:scale-[0.97] transition">
+                        −
                       </button>
-                      <div class="flex-1 flex items-center gap-1.5">
-                        <button
-                          id="decShares"
-                          class="rounded-xl border border-neutral-700 bg-neutral-950/60 px-2 py-1.5 text-[0.75rem] font-semibold active:scale-[0.97] transition">
-                          −
-                        </button>
-                        <input
-                          id="shareInput"
-                          type="text"
-                          readonly
-                          value="1"
-                          class="w-full text-center rounded-xl bg-neutral-950/60 border border-neutral-700 px-2 py-1.5 text-[0.75rem] select-none" />
-                        <button
-                          id="incShares"
-                          class="rounded-xl border border-neutral-700 bg-neutral-950/60 px-2 py-1.5 text-[0.75rem] font-semibold active:scale-[0.97] transition">
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p id="tradeMessage" class="text-[0.72rem] min-h-[1rem] text-neutral-400"></p>
-                </div>
-              </section>
-
-              <section
-                id="positionsSection"
-                class="space-y-2 rounded-2xl bg-neutral-900/70 border border-neutral-800 p-3 md:flex-1 flex flex-col hidden md:flex">
-                <div class="flex items-center justify-between gap-2 mb-1">
-                  <div class="flex items-center gap-2">
-                    <h3 class="text-xs font-semibold text-white">Sell</h3>
-                    <span id="holdingsSummary" class="text-[0.6rem] text-neutral-400">No positions</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <div class="text-right flex flex-col items-end gap-0.5">
-                      <div class="text-[0.6rem] uppercase text-neutral-400">Investment</div>
-                      <div class="flex items-center gap-1 leading-none">
-                        <div
-                          id="tradeInvestChange"
-                          class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
-                        </div>
-                        <div id="investedValue" class="text-xs font-semibold text-white">$0.00</div>
-                      </div>
+                      <input id="shareInput" type="text" readonly value="1"
+                        class="w-full text-center rounded-xl bg-neutral-950/60 border border-neutral-700 px-2 py-1.5 text-[0.75rem] select-none" />
+                      <button id="incShares"
+                        class="rounded-xl border border-neutral-700 bg-neutral-950/60 px-2 py-1.5 text-[0.75rem] font-semibold active:scale-[0.97] transition">
+                        +
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <div class="flex-1 flex flex-col">
-                  <div class="rounded-lg bg-neutral-950/40 border border-neutral-800 max-h-48 overflow-y-auto overflow-x-auto offcanvas-scroll">
-                    <table class="w-full min-w-full text-[0.75rem]">
-                      <thead class="text-neutral-400 text-[0.65rem] sticky top-0 z-10 bg-neutral-950">
-                        <tr class="border-b border-neutral-800">
-                          <th class="text-left px-2 py-1.5">Shares</th>
-                          <th class="text-left px-2 py-1.5">Ticker</th>
-                          <th class="text-left px-2 py-1.5">Cost</th>
-                          <th class="text-left px-2 py-1.5">Value</th>
-                          <th class="text-left px-2 py-1.5">P/L %</th>
-                          <th class="text-left px-2 py-1.5">P/L</th>
-                          <th class="text-left px-2 py-1.5">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody id="holdingsBody"></tbody>
-                    </table>
-                  </div>
+                <p id="tradeMessage" class="text-[0.72rem] min-h-[1rem] text-neutral-400"></p>
+              </div>
+            </section>
 
-                  <div class="flex items-center justify-between pt-1.5 text-[0.65rem]">
-                    <button
-                      id="prevPage"
-                      class="rounded-full border border-neutral-700 px-2 py-1 min-w-[3rem] text-center active:scale-[0.97] transition">
-                      Prev
-                    </button>
-                    <span id="pageInfo" class="text-neutral-400">Page 1 of 1</span>
-                    <button
-                      id="nextPage"
-                      class="rounded-full border border-neutral-700 px-2 py-1 min-w-[3rem] text-center active:scale-[0.97] transition">
-                      Next
-                    </button>
+            <section id="positionsSection"
+              class="space-y-2 rounded-2xl bg-neutral-900/70 border border-neutral-800 p-3 md:flex-1 flex flex-col hidden md:flex">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-xs font-semibold text-white">Sell</h3>
+                  <span id="holdingsSummary" class="text-[0.6rem] text-neutral-400">No positions</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="text-right flex flex-col items-end gap-0.5">
+                    <div class="text-[0.6rem] uppercase text-neutral-400">Investment</div>
+                    <div class="flex items-center gap-1 leading-none">
+                      <div id="tradeInvestChange"
+                        class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
+                      </div>
+                      <div id="investedValue" class="text-xs font-semibold text-white">$0.00</div>
+                    </div>
                   </div>
                 </div>
-              </section>
-            </div>
+              </div>
+
+              <div class="flex-1 flex flex-col">
+                <div
+                  class="rounded-lg bg-neutral-950/40 border border-neutral-800 max-h-48 overflow-y-auto overflow-x-auto offcanvas-scroll">
+                  <table class="w-full min-w-full text-[0.75rem]">
+                    <thead class="text-neutral-400 text-[0.65rem] sticky top-0 z-10 bg-neutral-950">
+                      <tr class="border-b border-neutral-800">
+                        <th class="text-left px-2 py-1.5">Shares</th>
+                        <th class="text-left px-2 py-1.5">Ticker</th>
+                        <th class="text-left px-2 py-1.5">Cost</th>
+                        <th class="text-left px-2 py-1.5">Value</th>
+                        <th class="text-left px-2 py-1.5">P/L %</th>
+                        <th class="text-left px-2 py-1.5">P/L</th>
+                        <th class="text-left px-2 py-1.5">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="holdingsBody"></tbody>
+                  </table>
+                </div>
+
+                <div class="flex items-center justify-between pt-1.5 text-[0.65rem]">
+                  <button id="prevPage"
+                    class="rounded-full border border-neutral-700 px-2 py-1 min-w-[3rem] text-center active:scale-[0.97] transition">
+                    Prev
+                  </button>
+                  <span id="pageInfo" class="text-neutral-400">Page 1 of 1</span>
+                  <button id="nextPage"
+                    class="rounded-full border border-neutral-700 px-2 py-1 min-w-[3rem] text-center active:scale-[0.97] transition">
+                    Next
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <script type="module" src="assets/js/firebase-auth.js"></script>
-    <script type="module" src="assets/js/pwa.js"></script>
-    <script type="module" src="assets/js/app.js"></script>
-  </body>
+  <script type="module" src="assets/js/firebase-auth.js"></script>
+  <script type="module" src="assets/js/pwa.js"></script>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+
 </html>

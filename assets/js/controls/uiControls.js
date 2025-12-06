@@ -204,8 +204,6 @@
   }
 
   function cropThumbSrc(cropId) {
-    if (cropId === "grass") return "images/grass.jpg";
-    if (cropId === "farmland") return "images/farmland.jpg";
     if (!cropId) return "images/farmland.jpg";
     return `images/crops/${cropId}/${cropId}-phase-4.png`;
   }
@@ -238,14 +236,9 @@
       title.textContent = crop.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      if (crop.id === "grass") meta.textContent = "Free";
-      else if (crop.id === "farmland") meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
-      else {
-        const costText = typeof crop.placeCost === "number" && crop.placeCost > 0 ? formatCurrency(crop.placeCost) : "Free";
-        meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
-      }
+      meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       textWrap.appendChild(title);
-      const status = crop.id === "grass" || crop.id === "farmland" ? null : getCropStatus(crop, now);
+      const status = getCropStatus(crop, now);
       if (status) {
         const statusLine = document.createElement("div");
         statusLine.className = "text-[11px] text-sky-300 truncate";
@@ -509,7 +502,15 @@
       title.textContent = item.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      if (item.id === "sell") {
+        meta.textContent = "Remove and refund";
+      } else if (item.isFarmland) {
+        const farmlandPlaced = state.farmlandPlaced || 0;
+        meta.textContent = farmlandPlaced < 4 ? "Free" : formatCurrency(25);
+      } else {
+        const costValue = item.cost || 0;
+        meta.textContent = costValue === 0 ? "Free" : formatCurrency(costValue);
+      }
       text.appendChild(title);
       text.appendChild(meta);
       row.appendChild(text);
@@ -520,7 +521,7 @@
 
     const sellOption = renderRow({
       id: "sell",
-      name: "Sell",
+      name: "Destroy",
       width: 1,
       height: 1,
       cost: 0,
@@ -529,12 +530,6 @@
     dom.landscapeSelectMenu.appendChild(sellOption);
 
     Object.values(landscapes || {})
-      .slice()
-      .sort((a, b) => {
-        const costA = Number.isFinite(a?.cost) ? a.cost : 0;
-        const costB = Number.isFinite(b?.cost) ? b.cost : 0;
-        return costA - costB;
-      })
       .forEach((landscape) => {
         if (!landscape) return;
         dom.landscapeSelectMenu.appendChild(renderRow(landscape));
@@ -546,7 +541,7 @@
   function updateLandscapeLabel() {
     if (dom.landscapeSelectLabel) {
       if (state.selectedLandscapeKey === "sell") {
-        dom.landscapeSelectLabel.textContent = "Sell";
+        dom.landscapeSelectLabel.textContent = "Destroy";
       } else {
         const selected = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
         dom.landscapeSelectLabel.textContent = selected ? selected.name : "Select";
@@ -555,7 +550,7 @@
     if (dom.landscapeSelectImage) {
       if (state.selectedLandscapeKey === "sell") {
         dom.landscapeSelectImage.src = sellIconSrc;
-        dom.landscapeSelectImage.alt = "Sell";
+        dom.landscapeSelectImage.alt = "Destroy";
       } else {
         const selected = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
         dom.landscapeSelectImage.src = selected?.image || "images/farmland.jpg";

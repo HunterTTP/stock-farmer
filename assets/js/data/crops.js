@@ -1,26 +1,4 @@
 export const crops = {
-  grass: {
-    id: "grass",
-    name: "Grass",
-    growMinutes: 0,
-    baseValue: 0,
-    unlocked: true,
-    unlockCost: 0,
-    images: [],
-    limit: -1,
-    placed: 0,
-  },
-  farmland: {
-    id: "farmland",
-    name: "Farmland",
-    growMinutes: 0,
-    baseValue: 0,
-    unlocked: true,
-    unlockCost: 0,
-    images: [],
-    limit: -1,
-    placed: 0,
-  },
   wheat: {
     id: "wheat",
     name: "Wheat",

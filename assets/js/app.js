@@ -41,7 +41,7 @@ persistence.load();
 if (!localStorage.getItem(config.saveKey)) {
   applyDefaultSelection(state);
 }
-recalcPlacedCounts(world, crops);
+recalcPlacedCounts(world, crops, state);
 
 const viewport = createViewport({ canvas, ctx, state, config });
 

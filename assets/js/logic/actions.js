@@ -20,7 +20,7 @@ export function createActions({
   const getPlacementSource = (kind, id) =>
     kind === "landscape" ? landscapes?.[id] : buildings?.[id];
 
-  const canPlaceStructure = (row, col, building) => {
+  const canPlaceStructure = (row, col, building, opts = {}) => {
     if (!building) return false;
     const width = Number.isInteger(building.width) ? building.width : 0;
     const height = Number.isInteger(building.height) ? building.height : 0;
@@ -30,7 +30,8 @@ export function createActions({
       for (let c = 0; c < width; c++) {
         const key = `${row + r},${col + c}`;
         if (world.structureTiles.has(key)) return false;
-        if (world.plots.has(key)) return false;
+        if (!opts.allowFilled && world.plots.has(key)) return false;
+        if (building.isFarmland && (world.filled.has(key) || world.plots.has(key))) return false;
       }
     }
     return true;
@@ -68,13 +69,53 @@ export function createActions({
       if (selectionKey === "sell") {
         const structKey = getStructureAtKey(key);
         const struct = structKey ? world.structures.get(structKey) : null;
+        if (isLandscapeMode && !struct && world.filled.has(key)) {
+          return { type: "removeFarmland" };
+        }
         if (!struct || getStructKind(struct) !== kind) return { type: "none", reason: `No ${kind} here` };
         return { type: "destroyStructure", structKey, kind };
       }
       const selection = selectionKey ? getPlacementSource(kind, selectionKey) : null;
       if (!selection) return { type: "none", reason: `Select a ${kind}` };
       if (!selection.unlocked) return { type: "none", reason: `${kind === "landscape" ? "Landscape" : "Building"} locked` };
-      if (!canPlaceStructure(row, col, selection)) return { type: "none", reason: "Not enough space" };
+
+      if (world.plots.has(key)) return { type: "none", reason: "Crop growing here" };
+
+      if (isLandscapeMode && selection.isGrass) {
+        if (!world.filled.has(key)) return { type: "none", reason: "No farmland here" };
+        return { type: "removeFarmland" };
+      }
+
+      if (isLandscapeMode && selection.isFarmland) {
+        if (world.plots.has(key)) return { type: "none", reason: "Crop growing here" };
+        const existingStructKeyForFarmland = getStructureAtKey(key);
+        const existingStructForFarmland = existingStructKeyForFarmland ? world.structures.get(existingStructKeyForFarmland) : null;
+        if (existingStructForFarmland && getStructKind(existingStructForFarmland) === "landscape") {
+          return { type: "replaceLandscapeWithFarmland", oldStructKey: existingStructKeyForFarmland };
+        }
+        if (world.filled.has(key)) return { type: "none", reason: "Already farmland" };
+        if (world.structureTiles.has(key)) return { type: "none", reason: "Structure here" };
+        const farmlandPlaced = state.farmlandPlaced || 0;
+        const cost = farmlandPlaced < 4 ? 0 : 25;
+        if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
+        return { type: "placeFarmland" };
+      }
+
+      const existingStructKeyForReplace = getStructureAtKey(key);
+      const existingStructForReplace = existingStructKeyForReplace ? world.structures.get(existingStructKeyForReplace) : null;
+      if (existingStructForReplace && getStructKind(existingStructForReplace) === "landscape") {
+        const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
+        if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
+        return { type: "replaceLandscape", oldStructKey: existingStructKeyForReplace, structureId: selection.id, kind, row, col };
+      }
+
+      const allowFilled = isLandscapeMode && (selection.lowColor || selection.highColor);
+      if (!canPlaceStructure(row, col, selection, { allowFilled })) {
+        if (allowFilled && world.filled.has(key) && !world.structureTiles.has(key) && !world.plots.has(key)) {
+          return { type: "placeStructureOverFarmland", structureId: selection.id, kind, row, col };
+        }
+        return { type: "none", reason: "Not enough space" };
+      }
       const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
       if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
       return { type: "placeStructure", structureId: selection.id, kind, row, col };
@@ -92,15 +133,6 @@ export function createActions({
     if (existingPlot) return { type: "none", reason: "Already planted" };
     const cropSelection = state.selectedCropKey ? crops[state.selectedCropKey] : null;
     if (!cropSelection) return { type: "none", reason: "Select a crop" };
-    if (cropSelection.id === "grass") return { type: "removeFarmland" };
-    if (cropSelection.id === "farmland") {
-      const farmlandCrop = crops.farmland;
-      if (!farmlandCrop) return { type: "none", reason: "Missing farmland crop" };
-      if (world.plots.has(key) || world.filled.has(key)) return { type: "none", reason: "Tile occupied" };
-      const cost = farmlandCrop.placed < 4 ? 0 : 25;
-      if (cost > 0 && state.totalMoney < cost) return { type: "none", reason: "Not enough money" };
-      return { type: "placeFarmland" };
-    }
 
     const crop = cropSelection;
     if (!crop || !crop.unlocked) return { type: "none", reason: "Crop locked" };
@@ -141,19 +173,19 @@ export function createActions({
       case "removeFarmland": {
         if (getFilled(key)) {
           previewState.filledRemovals.add(key);
-          if (typeof previewState.placed.farmland === "number" && previewState.placed.farmland > 0) previewState.placed.farmland -= 1;
+          if (typeof previewState.farmlandPlaced === "number" && previewState.farmlandPlaced > 0) previewState.farmlandPlaced -= 1;
           return true;
         }
         return false;
       }
       case "placeFarmland": {
         if (getFilled(key) || getPlot(key)) return false;
-        const farmlandPlaced = typeof previewState.placed.farmland === "number" ? previewState.placed.farmland : 0;
+        const farmlandPlaced = typeof previewState.farmlandPlaced === "number" ? previewState.farmlandPlaced : 0;
         const farmlandCost = farmlandPlaced < 4 ? 0 : 25;
         if (previewState.money < farmlandCost) return false;
         previewState.money -= farmlandCost;
         previewState.filledAdds.add(key);
-        previewState.placed.farmland = farmlandPlaced + 1;
+        previewState.farmlandPlaced = farmlandPlaced + 1;
         return true;
       }
       case "plantCrop": {
@@ -184,7 +216,7 @@ export function createActions({
       const width = Number.isInteger(selection?.width) && selection.width > 0 ? selection.width : fallbackSize;
       const height = Number.isInteger(selection?.height) && selection.height > 0 ? selection.height : fallbackSize;
       const action = determineActionForTile(baseRow, baseCol, nowMs);
-      const allowed = action?.type === "placeStructure" || action?.type === "destroyStructure";
+      const allowed = action?.type === "placeStructure" || action?.type === "destroyStructure" || action?.type === "placeFarmland" || action?.type === "removeFarmland" || action?.type === "placeStructureOverFarmland" || action?.type === "replaceLandscape" || action?.type === "replaceLandscapeWithFarmland";
       for (let dr = 0; dr < height; dr++) {
         for (let dc = 0; dc < width; dc++) {
           results.push({ row: baseRow + dr, col: baseCol + dc, allowed });
@@ -199,7 +231,7 @@ export function createActions({
     Object.values(crops).forEach((c) => {
       placed[c.id] = typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
     });
-    const previewState = { money: state.totalMoney, placed, filledAdds: new Set(), filledRemovals: new Set(), plotsRemoved: new Set() };
+    const previewState = { money: state.totalMoney, placed, farmlandPlaced: state.farmlandPlaced || 0, filledAdds: new Set(), filledRemovals: new Set(), plotsRemoved: new Set() };
     const getFilled = (key) => {
       if (previewState.filledAdds.has(key)) return true;
       if (previewState.filledRemovals.has(key)) return false;
@@ -281,8 +313,8 @@ export function createActions({
       (state.activeMode === "build"
         ? "building"
         : state.activeMode === "landscape"
-        ? "landscape"
-        : null);
+          ? "landscape"
+          : null);
     if (!activeKind) return [];
     const targets = new Set();
     const selectedKey =
@@ -390,10 +422,9 @@ export function createActions({
       }
       case "removeFarmland": {
         const hadFarmland = world.filled.delete(key);
-        if (hadFarmland && crops.farmland) {
-          const f = crops.farmland;
-          const previousPlaced = f.placed || 0;
-          if (typeof f.placed === "number" && f.placed > 0) f.placed -= 1;
+        if (hadFarmland) {
+          const previousPlaced = state.farmlandPlaced || 0;
+          if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
           if (previousPlaced > 4) {
             state.totalMoney += 25;
             onMoneyChanged();
@@ -406,10 +437,10 @@ export function createActions({
         return { success: hadFarmland, reason: hadFarmland ? undefined : "No farmland here" };
       }
       case "placeFarmland": {
-        const farmlandCrop = crops.farmland;
-        if (!farmlandCrop) return { success: false, reason: "Missing farmland crop" };
         if (world.plots.has(key) || world.filled.has(key)) return { success: false, reason: "Tile occupied" };
-        const cost = farmlandCrop.placed < 4 ? 0 : 25;
+        if (world.structureTiles.has(key)) return { success: false, reason: "Structure here" };
+        const farmlandPlaced = state.farmlandPlaced || 0;
+        const cost = farmlandPlaced < 4 ? 0 : 25;
         if (cost > 0) {
           if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)} to place` };
           state.totalMoney -= cost;
@@ -417,7 +448,7 @@ export function createActions({
           world.costAnimations.push({ key, value: -cost, start: performance.now() });
         }
         world.filled.add(key);
-        farmlandCrop.placed += 1;
+        state.farmlandPlaced = farmlandPlaced + 1;
         state.needsRender = true;
         renderCropOptions();
         saveState();
@@ -449,20 +480,35 @@ export function createActions({
         saveState();
         return { success: true };
       }
-      case "placeStructure": {
+      case "placeStructure":
+      case "placeStructureOverFarmland": {
+        const isOverFarmland = resolvedAction.type === "placeStructureOverFarmland";
         const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
         const selectionId =
           resolvedAction && resolvedAction.structureId
             ? resolvedAction.structureId
             : kind === "landscape"
-            ? state.selectedLandscapeKey
-            : state.selectedBuildKey;
+              ? state.selectedLandscapeKey
+              : state.selectedBuildKey;
         const selection = selectionId ? getPlacementSource(kind, selectionId) : null;
         if (!selection) return { success: false, reason: `Select a ${kind}` };
         if (!selection.unlocked) return { success: false, reason: `${kind === "landscape" ? "Landscape" : "Building"} locked` };
-        if (!canPlaceStructure(row, col, selection)) return { success: false, reason: "Not enough space" };
+        const allowFilled = isOverFarmland || (kind === "landscape" && (selection.lowColor || selection.highColor));
+        if (!canPlaceStructure(row, col, selection, { allowFilled })) return { success: false, reason: "Not enough space" };
         const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
         if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)}` };
+
+        if (isOverFarmland && world.filled.has(key)) {
+          world.filled.delete(key);
+          const previousPlaced = state.farmlandPlaced || 0;
+          if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
+          if (previousPlaced > 4) {
+            state.totalMoney += 25;
+            onMoneyChanged();
+            world.costAnimations.push({ key, value: 25, start: performance.now() });
+          }
+        }
+
         const structKey = `${row},${col}`;
         const stored = {
           id: selection.id,
@@ -498,6 +544,87 @@ export function createActions({
           onMoneyChanged();
         }
         state.needsRender = true;
+        saveState();
+        return { success: true };
+      }
+      case "replaceLandscape": {
+        const kind = "landscape";
+        const oldStructKey = resolvedAction?.oldStructKey;
+        const oldStruct = oldStructKey ? world.structures.get(oldStructKey) : null;
+        const selectionId = resolvedAction?.structureId || state.selectedLandscapeKey;
+        const selection = selectionId ? getPlacementSource(kind, selectionId) : null;
+        if (!selection) return { success: false, reason: "Select a landscape" };
+        if (!selection.unlocked) return { success: false, reason: "Landscape locked" };
+        const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
+        if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)}` };
+
+        let farmlandRefund = 0;
+        if (oldStruct) {
+          const wasFarmlandId = oldStruct.id === "farmland";
+          if (wasFarmlandId) {
+            const previousPlaced = state.farmlandPlaced || 0;
+            if (previousPlaced > 4) farmlandRefund = 25;
+          }
+          removeStructure(oldStructKey, kind);
+        }
+
+        const structKey = `${row},${col}`;
+        const stored = {
+          id: selection.id,
+          kind,
+          name: selection.name,
+          row,
+          col,
+          width: selection.width,
+          height: selection.height,
+          cost,
+          image: "",
+        };
+        world.structures.set(structKey, stored);
+        for (let r = 0; r < selection.height; r++) {
+          for (let c = 0; c < selection.width; c++) {
+            world.structureTiles.set(`${row + r},${col + c}`, structKey);
+          }
+        }
+        state.totalMoney -= cost;
+        if (farmlandRefund > 0) {
+          state.totalMoney += farmlandRefund;
+          world.costAnimations.push({ key, value: farmlandRefund, start: performance.now() });
+        }
+        onMoneyChanged();
+        state.needsRender = true;
+        saveState();
+        return { success: true };
+      }
+      case "replaceLandscapeWithFarmland": {
+        const oldStructKey = resolvedAction?.oldStructKey;
+        const oldStruct = oldStructKey ? world.structures.get(oldStructKey) : null;
+        if (!oldStruct) return { success: false, reason: "No landscape here" };
+
+        let farmlandRefund = 0;
+        const wasFarmlandId = oldStruct.id === "farmland";
+        if (wasFarmlandId) {
+          const previousPlaced = state.farmlandPlaced || 0;
+          if (previousPlaced > 4) farmlandRefund = 25;
+        }
+        removeStructure(oldStructKey, "landscape");
+
+        const farmlandPlaced = state.farmlandPlaced || 0;
+        const cost = farmlandPlaced < 4 ? 0 : 25;
+        if (cost > 0) {
+          if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)} to place` };
+          state.totalMoney -= cost;
+          world.costAnimations.push({ key, value: -cost, start: performance.now() });
+        }
+        if (farmlandRefund > 0) {
+          state.totalMoney += farmlandRefund;
+          world.costAnimations.push({ key, value: farmlandRefund, start: performance.now() });
+        }
+        world.filled.add(key);
+        state.farmlandPlaced = farmlandPlaced + 1;
+        onMoneyChanged();
+        state.needsRender = true;
+        renderCropOptions();
         saveState();
         return { success: true };
       }

@@ -8,8 +8,8 @@ function mixColors(c1, c2, t) {
 
 function createWaterTileAsset({ lowColor, highColor } = {}) {
   const TILE_SIZE = 20;
-  const ROWS = 48;
-  const COLS = 48;
+  const ROWS = 32;
+  const COLS = 32;
   const LOOP_DURATION = 5;
   const CYCLES_PER_LOOP = 2;
   // Default palette matches the provided example; variants override below.

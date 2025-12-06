@@ -43,6 +43,7 @@ export function createInitialState(config) {
     lastSavedAt: 0,
     selectedBuildKey: null,
     selectedLandscapeKey: null,
+    farmlandPlaced: 0,
   };
 }
 
@@ -91,13 +92,13 @@ export function applyDefaultSelection(state) {
   state.selectedLandscapeKey = null;
 }
 
-export function recalcPlacedCounts(world, crops) {
+export function recalcPlacedCounts(world, crops, state) {
   Object.values(crops).forEach((c) => {
     c.placed = 0;
     c.lastPlantedAt = null;
   });
-  if (crops.farmland) {
-    crops.farmland.placed = world.filled.size;
+  if (state) {
+    state.farmlandPlaced = world.filled.size;
   }
   world.plots.forEach((plot) => {
     const crop = crops[plot.cropKey];
@@ -307,6 +308,8 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     }
 
     state.needsRender = true;
+    if (Number.isFinite(data.farmlandPlaced)) state.farmlandPlaced = data.farmlandPlaced;
+    else state.farmlandPlaced = world.filled.size;
   } catch (err) {
     console.error("State load failed", err);
   }
@@ -352,6 +355,7 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     updatedAt,
     selectedBuildKey: state.selectedBuildKey || null,
     selectedLandscapeKey: state.selectedLandscapeKey || null,
+    farmlandPlaced: state.farmlandPlaced || 0,
   };
 
   state.lastSavedAt = updatedAt;
@@ -475,6 +479,8 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   }
 
   state.needsRender = true;
+  if (Number.isFinite(data.farmlandPlaced)) state.farmlandPlaced = data.farmlandPlaced;
+  else state.farmlandPlaced = world.filled.size;
   console.log("[load] applyLoadedData done", {
     filled: world.filled.size,
     plots: world.plots.size,

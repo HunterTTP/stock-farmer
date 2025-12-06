@@ -1,4 +1,24 @@
 export const landscapes = {
+  farmland: {
+    id: "farmland",
+    name: "Farmland",
+    width: 1,
+    height: 1,
+    cost: 25,
+    image: "images/farmland.jpg",
+    unlocked: true,
+    isFarmland: true,
+  },
+  grass: {
+    id: "grass",
+    name: "Grass",
+    width: 1,
+    height: 1,
+    cost: 0,
+    image: "images/grass.jpg",
+    unlocked: true,
+    isGrass: true,
+  },
   water_1: {
     id: "water_1",
     name: "Water 1",
@@ -7,8 +27,8 @@ export const landscapes = {
     cost: 0,
     image: "",
     unlocked: true,
-    lowColor: { r: 40, g: 132, b: 189 },
-    highColor: { r: 108, g: 179, b: 224 },
+    lowColor: { r: 16, g: 88, b: 136 },
+    highColor: { r: 64, g: 148, b: 208 },
   },
   water_2: {
     id: "water_2",
@@ -18,7 +38,6 @@ export const landscapes = {
     cost: 0,
     image: "",
     unlocked: true,
-    // Slightly deeper teal palette
     lowColor: { r: 24, g: 112, b: 156 },
     highColor: { r: 82, g: 182, b: 222 },
   },
@@ -30,8 +49,7 @@ export const landscapes = {
     cost: 0,
     image: "",
     unlocked: true,
-    // Darker blue palette
-    lowColor: { r: 16, g: 88, b: 136 },
-    highColor: { r: 64, g: 148, b: 208 },
+    lowColor: { r: 40, g: 132, b: 189 },
+    highColor: { r: 108, g: 179, b: 224 },
   },
 };
