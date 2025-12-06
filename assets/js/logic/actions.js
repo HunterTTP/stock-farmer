@@ -150,7 +150,25 @@ export function createActions({
 
   function computeHoverPreview(baseRow, baseCol, size, nowMs) {
     const results = [];
-    const isHarvestMode = state.activeMode === "harvest";
+    const mode = state.activeMode || "plant";
+
+    if (mode === "build") {
+      const buildKey = state.selectedBuildKey;
+      const building = buildKey && buildKey !== "destroy" ? buildings?.[buildKey] : null;
+      const fallbackSize = Math.max(1, size || 1);
+      const width = Number.isInteger(building?.width) && building.width > 0 ? building.width : fallbackSize;
+      const height = Number.isInteger(building?.height) && building.height > 0 ? building.height : fallbackSize;
+      const action = determineActionForTile(baseRow, baseCol, nowMs);
+      const allowed = action?.type === "placeBuilding";
+      for (let dr = 0; dr < height; dr++) {
+        for (let dc = 0; dc < width; dc++) {
+          results.push({ row: baseRow + dr, col: baseCol + dc, allowed });
+        }
+      }
+      return results;
+    }
+
+    const isHarvestMode = mode === "harvest";
     const baseAction = isHarvestMode ? null : determineActionForTile(baseRow, baseCol, nowMs);
     const placed = {};
     Object.values(crops).forEach((c) => {
