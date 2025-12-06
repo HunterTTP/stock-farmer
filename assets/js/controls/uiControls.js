@@ -860,6 +860,7 @@
     },
     renderSizeMenu,
     renderCropOptions,
+    renderLandscapeOptions,
     openConfirmModal,
     closeConfirmModal,
     openOffcanvas,

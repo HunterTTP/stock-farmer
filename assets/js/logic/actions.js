@@ -9,6 +9,7 @@ export function createActions({
   formatCurrency,
   onMoneyChanged,
   renderCropOptions,
+  renderLandscapeOptions,
   showAggregateMoneyChange,
   saveState,
   openConfirmModal,
@@ -82,7 +83,12 @@ export function createActions({
       if (world.plots.has(key)) return { type: "none", reason: "Crop growing here" };
 
       if (isLandscapeMode && selection.isGrass) {
-        if (!world.filled.has(key)) return { type: "none", reason: "No farmland here" };
+        const existingStructKeyForGrass = getStructureAtKey(key);
+        const existingStructForGrass = existingStructKeyForGrass ? world.structures.get(existingStructKeyForGrass) : null;
+        if (existingStructForGrass && getStructKind(existingStructForGrass) === "landscape") {
+          return { type: "replaceLandscapeWithGrass", oldStructKey: existingStructKeyForGrass };
+        }
+        if (!world.filled.has(key)) return { type: "none", reason: "Nothing here" };
         return { type: "removeFarmland" };
       }
 
@@ -216,7 +222,7 @@ export function createActions({
       const width = Number.isInteger(selection?.width) && selection.width > 0 ? selection.width : fallbackSize;
       const height = Number.isInteger(selection?.height) && selection.height > 0 ? selection.height : fallbackSize;
       const action = determineActionForTile(baseRow, baseCol, nowMs);
-      const allowed = action?.type === "placeStructure" || action?.type === "destroyStructure" || action?.type === "placeFarmland" || action?.type === "removeFarmland" || action?.type === "placeStructureOverFarmland" || action?.type === "replaceLandscape" || action?.type === "replaceLandscapeWithFarmland";
+      const allowed = action?.type === "placeStructure" || action?.type === "destroyStructure" || action?.type === "placeFarmland" || action?.type === "removeFarmland" || action?.type === "placeStructureOverFarmland" || action?.type === "replaceLandscape" || action?.type === "replaceLandscapeWithFarmland" || action?.type === "replaceLandscapeWithGrass";
       for (let dr = 0; dr < height; dr++) {
         for (let dc = 0; dc < width; dc++) {
           results.push({ row: baseRow + dr, col: baseCol + dc, allowed });
@@ -433,6 +439,7 @@ export function createActions({
         }
         state.needsRender = true;
         renderCropOptions();
+        renderLandscapeOptions();
         saveState();
         return { success: hadFarmland, reason: hadFarmland ? undefined : "No farmland here" };
       }
@@ -451,6 +458,7 @@ export function createActions({
         state.farmlandPlaced = farmlandPlaced + 1;
         state.needsRender = true;
         renderCropOptions();
+        renderLandscapeOptions();
         saveState();
         return { success: true };
       }
@@ -507,6 +515,7 @@ export function createActions({
             onMoneyChanged();
             world.costAnimations.push({ key, value: 25, start: performance.now() });
           }
+          renderLandscapeOptions();
         }
 
         const structKey = `${row},${col}`;
@@ -625,6 +634,31 @@ export function createActions({
         onMoneyChanged();
         state.needsRender = true;
         renderCropOptions();
+        renderLandscapeOptions();
+        saveState();
+        return { success: true };
+      }
+      case "replaceLandscapeWithGrass": {
+        const oldStructKey = resolvedAction?.oldStructKey;
+        const oldStruct = oldStructKey ? world.structures.get(oldStructKey) : null;
+        if (!oldStruct) return { success: false, reason: "No landscape here" };
+
+        let farmlandRefund = 0;
+        const wasFarmlandId = oldStruct.id === "farmland";
+        if (wasFarmlandId) {
+          const previousPlaced = state.farmlandPlaced || 0;
+          if (previousPlaced > 4) farmlandRefund = 25;
+          if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
+        }
+        removeStructure(oldStructKey, "landscape");
+
+        if (farmlandRefund > 0) {
+          state.totalMoney += farmlandRefund;
+          onMoneyChanged();
+          world.costAnimations.push({ key, value: farmlandRefund, start: performance.now() });
+        }
+        state.needsRender = true;
+        renderLandscapeOptions();
         saveState();
         return { success: true };
       }

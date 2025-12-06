@@ -113,6 +113,7 @@ const actions = createActions({
   formatCurrency,
   onMoneyChanged,
   renderCropOptions: ui.renderCropOptions,
+  renderLandscapeOptions: ui.renderLandscapeOptions,
   showAggregateMoneyChange: ui.showAggregateMoneyChange,
   saveState: persistence.save,
   openConfirmModal: ui.openConfirmModal,
