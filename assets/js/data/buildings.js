@@ -11,8 +11,8 @@ export const buildings = {
   house2: {
     id: "house2",
     name: "House 2",
-    width: 3,
-    height: 4,
+    width: 4,
+    height: 5,
     cost: 250000,
     image: "images/buildings/house_2/house_2.png",
     unlocked: true,
