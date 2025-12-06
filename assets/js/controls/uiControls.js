@@ -1,12 +1,26 @@
-export function createUIControls({ dom, state, crops, sizes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache }) {
+export function createUIControls({
+  dom,
+  state,
+  crops,
+  sizes,
+  formatCurrency,
+  onMoneyChanged,
+  saveState,
+  centerView,
+  resetFarm,
+  clearCache,
+}) {
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
   let openMenuKey = null;
   const confirmVariantClasses = {
-    primary: "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none",
-    danger: "py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500 focus:outline-none",
+    primary:
+      "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none",
+    danger:
+      "py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500 focus:outline-none",
   };
-  const defaultCancelBtnClass = "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
+  const defaultCancelBtnClass =
+    "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
   const modeOrder = ["plant", "harvest", "build"];
   let moneyChangeHideTimeout = null;
 
@@ -40,7 +54,11 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
 
   function formatHarvestText(crop, plantedAt, nowMs) {
     if (!crop || !Number.isFinite(plantedAt)) return null;
-    const growMs = Number.isFinite(crop.growTimeMs) ? crop.growTimeMs : Number.isFinite(crop.growMinutes) ? crop.growMinutes * 60 * 1000 : null;
+    const growMs = Number.isFinite(crop.growTimeMs)
+      ? crop.growTimeMs
+      : Number.isFinite(crop.growMinutes)
+      ? crop.growMinutes * 60 * 1000
+      : null;
     if (!growMs || growMs <= 0) return "Ready";
     const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
     if (remainingMs <= 0) return "Ready";
@@ -50,7 +68,9 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
   function getCropStatus(crop, nowMs) {
     if (!crop) return null;
     if (!crop.placed || crop.placed <= 0) return null;
-    const plantedAt = Number.isFinite(crop.lastPlantedAt) ? crop.lastPlantedAt : null;
+    const plantedAt = Number.isFinite(crop.lastPlantedAt)
+      ? crop.lastPlantedAt
+      : null;
     if (!plantedAt || plantedAt <= 0) return null;
     const harvestText = formatHarvestText(crop, plantedAt, nowMs);
     if (!harvestText) return null;
@@ -86,13 +106,31 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
     pendingCancelAction = null;
   }
 
-  function openConfirmModal(message, onConfirm, title = "Confirm", onCancel = null, options = {}) {
-    if (!dom.confirmModal || !dom.confirmMessage || !dom.confirmConfirm || !dom.confirmCancel) {
+  function openConfirmModal(
+    message,
+    onConfirm,
+    title = "Confirm",
+    onCancel = null,
+    options = {}
+  ) {
+    if (
+      !dom.confirmModal ||
+      !dom.confirmMessage ||
+      !dom.confirmConfirm ||
+      !dom.confirmCancel
+    ) {
       onConfirm();
       return;
     }
-    const { confirmText = "Confirm", cancelText = "Cancel", showCancel = true, hideClose = false, confirmVariant = "primary" } = options;
-    const confirmBaseClass = confirmVariantClasses[confirmVariant] || confirmVariantClasses.primary;
+    const {
+      confirmText = "Confirm",
+      cancelText = "Cancel",
+      showCancel = true,
+      hideClose = false,
+      confirmVariant = "primary",
+    } = options;
+    const confirmBaseClass =
+      confirmVariantClasses[confirmVariant] || confirmVariantClasses.primary;
     const confirmWidthClass = showCancel ? "w-full sm:w-1/2" : "w-full";
 
     if (dom.confirmTitle) dom.confirmTitle.textContent = title;
@@ -100,7 +138,9 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
     dom.confirmConfirm.textContent = confirmText;
     dom.confirmConfirm.className = `${confirmWidthClass} ${confirmBaseClass}`;
     dom.confirmCancel.textContent = cancelText;
-    dom.confirmCancel.className = `${showCancel ? "w-full sm:w-1/2" : "hidden"} ${defaultCancelBtnClass}`;
+    dom.confirmCancel.className = `${
+      showCancel ? "w-full sm:w-1/2" : "hidden"
+    } ${defaultCancelBtnClass}`;
     dom.confirmClose?.classList.toggle("hidden", hideClose);
     pendingConfirmAction = onConfirm;
     pendingCancelAction = onCancel;
@@ -110,7 +150,8 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
   }
 
   function updateHideButtonsUI() {
-    if (dom.showTimerToggle) dom.showTimerToggle.checked = !!state.showTimerInfo;
+    if (dom.showTimerToggle)
+      dom.showTimerToggle.checked = !!state.showTimerInfo;
     if (dom.statBaseSize) {
       const val = Math.round(state.statBaseSize ?? 14);
       dom.statBaseSize.value = val;
@@ -133,8 +174,14 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
 
   function ensurePlantDefaults() {
     if (!state.selectedCropKey) {
-      const fallback = state.previousCropKey && crops[state.previousCropKey] && crops[state.previousCropKey].unlocked ? crops[state.previousCropKey] : null;
-      const firstUnlocked = fallback || Object.values(crops).find((c) => c && c.unlocked);
+      const fallback =
+        state.previousCropKey &&
+        crops[state.previousCropKey] &&
+        crops[state.previousCropKey].unlocked
+          ? crops[state.previousCropKey]
+          : null;
+      const firstUnlocked =
+        fallback || Object.values(crops).find((c) => c && c.unlocked);
       if (firstUnlocked) {
         state.selectedCropKey = firstUnlocked.id;
         state.previousCropKey = firstUnlocked.id;
@@ -162,9 +209,12 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
 
   function renderDropdownGroups() {
     const active = state.activeMode || "plant";
-    if (dom.plantDropdowns) dom.plantDropdowns.classList.toggle("hidden", active !== "plant");
-    if (dom.harvestDropdowns) dom.harvestDropdowns.classList.toggle("hidden", active !== "harvest");
-    if (dom.buildDropdowns) dom.buildDropdowns.classList.toggle("hidden", active !== "build");
+    if (dom.plantDropdowns)
+      dom.plantDropdowns.classList.toggle("hidden", active !== "plant");
+    if (dom.harvestDropdowns)
+      dom.harvestDropdowns.classList.toggle("hidden", active !== "harvest");
+    if (dom.buildDropdowns)
+      dom.buildDropdowns.classList.toggle("hidden", active !== "build");
   }
 
   function setActiveMode(nextMode) {
@@ -195,19 +245,27 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
     dom.plantCropMenu.innerHTML = "";
     let chainLocked = false;
     Object.values(crops).forEach((crop) => {
-      const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
+      const canAffordUnlock =
+        !crop.unlocked &&
+        typeof crop.unlockCost === "number" &&
+        crop.unlockCost > 0 &&
+        state.totalMoney >= crop.unlockCost;
       const gatedLocked = !crop.unlocked && chainLocked;
       const item = document.createElement("button");
       item.type = "button";
-      item.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (!crop.unlocked && !canAffordUnlock) item.classList.add("opacity-50", "cursor-not-allowed");
+      item.className =
+        "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (!crop.unlocked && !canAffordUnlock)
+        item.classList.add("opacity-50", "cursor-not-allowed");
       if (gatedLocked) item.classList.add("opacity-50", "cursor-not-allowed");
-      if (crop.id === state.selectedCropKey) item.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (crop.id === state.selectedCropKey)
+        item.classList.add("border-emerald-500", "bg-neutral-900/70");
 
       const img = document.createElement("img");
       img.src = cropThumbSrc(crop.id);
       img.alt = crop.name;
-      img.className = "w-5 h-5 rounded-sm object-cover border border-neutral-800";
+      img.className =
+        "w-5 h-5 rounded-sm object-cover border border-neutral-800";
       item.appendChild(img);
 
       const textWrap = document.createElement("div");
@@ -218,13 +276,22 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
       if (crop.id === "grass") meta.textContent = "Free";
-      else if (crop.id === "farmland") meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
+      else if (crop.id === "farmland")
+        meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
       else {
-        const costText = typeof crop.placeCost === "number" && crop.placeCost > 0 ? formatCurrency(crop.placeCost) : "Free";
-        meta.textContent = `Cost ${costText} - Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+        const costText =
+          typeof crop.placeCost === "number" && crop.placeCost > 0
+            ? formatCurrency(crop.placeCost)
+            : "Free";
+        meta.textContent = `Sell ${formatCurrency(
+          crop.baseValue
+        )} - ${formatGrowTime(crop.growMinutes)}`;
       }
       textWrap.appendChild(title);
-      const status = crop.id === "grass" || crop.id === "farmland" ? null : getCropStatus(crop, now);
+      const status =
+        crop.id === "grass" || crop.id === "farmland"
+          ? null
+          : getCropStatus(crop, now);
       if (status) {
         const statusLine = document.createElement("div");
         statusLine.className = "text-[11px] text-sky-300 truncate";
@@ -288,13 +355,19 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
     let chainLocked = false;
     Object.values(sizes).forEach((size) => {
       const locked = !size.unlocked;
-      const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
+      const canAffordUnlock =
+        locked &&
+        typeof size.unlockCost === "number" &&
+        state.totalMoney >= size.unlockCost;
       const gatedLocked = locked && chainLocked;
       const row = document.createElement("button");
       row.type = "button";
-      row.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (size.id === state.selectedSizeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
-      if (locked && !canAffordUnlock) row.classList.add("opacity-50", "cursor-not-allowed");
+      row.className =
+        "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (size.id === state.selectedSizeKey)
+        row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (locked && !canAffordUnlock)
+        row.classList.add("opacity-50", "cursor-not-allowed");
       if (gatedLocked) row.classList.add("opacity-50", "cursor-not-allowed");
 
       const left = document.createElement("div");
@@ -360,13 +433,17 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
   }
 
   function renderBuildOptions() {
-    if (dom.buildSelectLabel) dom.buildSelectLabel.textContent = "Coming soon..";
+    if (dom.buildSelectLabel)
+      dom.buildSelectLabel.textContent = "Coming soon..";
   }
 
   const menuMap = {
     plantCrop: () => ({ button: dom.plantCropButton, menu: dom.plantCropMenu }),
     plantSize: () => ({ button: dom.plantSizeButton, menu: dom.plantSizeMenu }),
-    harvestSize: () => ({ button: dom.harvestSizeButton, menu: dom.harvestSizeMenu }),
+    harvestSize: () => ({
+      button: dom.harvestSizeButton,
+      menu: dom.harvestSizeMenu,
+    }),
   };
 
   function closeAllMenus() {
@@ -402,16 +479,21 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
       } else {
         dom.plantCropLabel.textContent = base;
       }
-      dom.plantCropLabel.title = cropStatus ? `${base} - Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}` : "";
+      dom.plantCropLabel.title = cropStatus
+        ? `${base} - Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}`
+        : "";
     }
     if (dom.plantCropImage) {
       dom.plantCropImage.src = cropThumbSrc(crop ? crop.id : null);
       dom.plantCropImage.alt = crop ? crop.name : "Crop";
     }
     const size = currentSizeOption();
-    if (dom.plantSizeLabel) dom.plantSizeLabel.textContent = size ? size.name : "Size";
-    if (dom.harvestSizeLabel) dom.harvestSizeLabel.textContent = size ? size.name : "Size";
-    if (dom.buildSelectLabel) dom.buildSelectLabel.textContent = "Coming soon..";
+    if (dom.plantSizeLabel)
+      dom.plantSizeLabel.textContent = size ? size.name : "Size";
+    if (dom.harvestSizeLabel)
+      dom.harvestSizeLabel.textContent = size ? size.name : "Size";
+    if (dom.buildSelectLabel)
+      dom.buildSelectLabel.textContent = "Coming soon..";
   }
 
   function bindMenuToggle(button, key) {
@@ -423,14 +505,18 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
   }
 
   function updateTotalDisplay() {
-    if (dom.totalDisplay) dom.totalDisplay.textContent = formatCurrency(state.totalMoney, true);
+    if (dom.totalDisplay)
+      dom.totalDisplay.textContent = formatCurrency(state.totalMoney, true);
   }
 
   function showAggregateMoneyChange(amount) {
     const el = dom.moneyChangeDisplay;
     if (!el || amount === 0) return;
     const isGain = amount >= 0;
-    const valueText = `${isGain ? "+" : "-"}${formatCurrency(Math.abs(amount), true)}`;
+    const valueText = `${isGain ? "+" : "-"}${formatCurrency(
+      Math.abs(amount),
+      true
+    )}`;
     el.textContent = valueText;
     el.classList.remove("hidden");
     el.classList.remove("text-red-400");
@@ -468,7 +554,10 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
     bubble.className = "action-error";
     bubble.textContent = message;
     const clampedX = Math.max(12, Math.min(window.innerWidth - 12, clientX));
-    const clampedY = Math.max(12, Math.min(window.innerHeight - 12, clientY - 16));
+    const clampedY = Math.max(
+      12,
+      Math.min(window.innerHeight - 12, clientY - 16)
+    );
     bubble.style.left = clampedX + "px";
     bubble.style.top = clampedY + "px";
     document.body.appendChild(bubble);
@@ -482,7 +571,8 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
   function bindUIEvents() {
     if (dom.navToggle) dom.navToggle.addEventListener("click", toggleOffcanvas);
     if (dom.navClose) dom.navClose.addEventListener("click", closeOffcanvas);
-    if (dom.navOverlay) dom.navOverlay.addEventListener("click", closeOffcanvas);
+    if (dom.navOverlay)
+      dom.navOverlay.addEventListener("click", closeOffcanvas);
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
@@ -579,16 +669,32 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
     }
     if (dom.clearCacheBtn && clearCache) {
       dom.clearCacheBtn.addEventListener("click", () => {
-        openConfirmModal("Clear all cached data? If you are not logged in your progress will be lost.", clearCache, "Clear Cache", null, {
-          confirmText: "Yes",
-          cancelText: "No",
-          confirmVariant: "danger",
-        });
+        openConfirmModal(
+          "Clear all cached data? If you are not logged in your progress will be lost.",
+          clearCache,
+          "Clear Cache",
+          null,
+          {
+            confirmText: "Yes",
+            cancelText: "No",
+            confirmVariant: "danger",
+          }
+        );
       });
     }
     if (dom.resetFarmBtn) {
       dom.resetFarmBtn.addEventListener("click", () => {
-        openConfirmModal("Reset all progress and start fresh? This cannot be undone.", resetFarm, "Reset Progress", null, { confirmText: "Reset", cancelText: "Cancel", confirmVariant: "danger" });
+        openConfirmModal(
+          "Reset all progress and start fresh? This cannot be undone.",
+          resetFarm,
+          "Reset Progress",
+          null,
+          {
+            confirmText: "Reset",
+            cancelText: "Cancel",
+            confirmVariant: "danger",
+          }
+        );
       });
     }
 
@@ -607,9 +713,14 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
       });
     }
 
-    if (dom.modePlantBtn) dom.modePlantBtn.addEventListener("click", () => setActiveMode("plant"));
-    if (dom.modeHarvestBtn) dom.modeHarvestBtn.addEventListener("click", () => setActiveMode("harvest"));
-    if (dom.modeBuildBtn) dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
+    if (dom.modePlantBtn)
+      dom.modePlantBtn.addEventListener("click", () => setActiveMode("plant"));
+    if (dom.modeHarvestBtn)
+      dom.modeHarvestBtn.addEventListener("click", () =>
+        setActiveMode("harvest")
+      );
+    if (dom.modeBuildBtn)
+      dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
 
     bindMenuToggle(dom.plantCropButton, "plantCrop");
     bindMenuToggle(dom.plantSizeButton, "plantSize");
@@ -619,7 +730,9 @@ export function createUIControls({ dom, state, crops, sizes, formatCurrency, onM
       const target = e.target;
       const inside = Object.values(menuMap).some((get) => {
         const { button, menu } = get();
-        return (button && button.contains(target)) || (menu && menu.contains(target));
+        return (
+          (button && button.contains(target)) || (menu && menu.contains(target))
+        );
       });
       if (!inside) closeAllMenus();
     });
