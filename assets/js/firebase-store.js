@@ -30,52 +30,85 @@ const denormalizeFromRemote = (stateObject) => {
   return clone;
 };
 
+const getUserDocRef = (userId) => doc(db, "users", userId);
+
+const extractRemoteUpdatedAt = (data, state) => {
+  if (typeof data?.updatedAt?.toMillis === "function") return data.updatedAt.toMillis();
+  if (Number.isFinite(state?.updatedAt)) return state.updatedAt;
+  if (Number.isFinite(data?.state?.updatedAt)) return data.state.updatedAt;
+  return null;
+};
+
+const summarizeState = (state) => ({
+  filled: Array.isArray(state?.filled) ? state.filled.length : 0,
+  plots: Array.isArray(state?.plots) ? state.plots.length : 0,
+  sample: Array.isArray(state?.plots) && state.plots.length ? state.plots[0]?.[0] : null,
+  updatedAt: state?.updatedAt,
+});
+
 export const loadRemoteState = async () => {
   const user = auth.currentUser;
   if (!user) return null;
   try {
     console.log("[cloud] loadRemoteState start", user.uid);
-    const ref = doc(db, "users", user.uid);
+    const ref = getUserDocRef(user.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
-    const data = snap.data();
-    const state = denormalizeFromRemote(data?.state);
-    const remoteUpdatedAt =
-      typeof data?.updatedAt?.toMillis === "function"
-        ? data.updatedAt.toMillis()
-        : Number.isFinite(data?.state?.updatedAt)
-        ? data.state.updatedAt
-        : null;
-    const summary = {
-      filled: Array.isArray(state?.filled) ? state.filled.length : 0,
-      plots: Array.isArray(state?.plots) ? state.plots.length : 0,
-      sample: Array.isArray(state?.plots) && state.plots.length ? state.plots[0]?.[0] : null,
-      updatedAt: remoteUpdatedAt,
+    const data = snap.data() || {};
+    const state = denormalizeFromRemote(data.state || null);
+    const remoteUpdatedAt = extractRemoteUpdatedAt(data, state);
+    console.log("[cloud] loadRemoteState success", !!data?.state, summarizeState(state));
+    return {
+      state: state || null,
+      remoteUpdatedAt,
+      activeSessionId: data.activeSessionId || null,
+      username: typeof data.username === "string" ? data.username : null,
     };
-    console.log("[cloud] loadRemoteState success", !!data?.state, summary);
-    return { state: state || null, remoteUpdatedAt };
   } catch (error) {
     console.error("Remote load failed", error);
     return null;
   }
 };
 
-export const saveRemoteState = async (stateObject) => {
+export const saveRemoteState = async (stateObject, { sessionId, username, force = false } = {}) => {
   const user = auth.currentUser;
-  if (!user) return;
+  if (!user || !stateObject) return { ok: false, reason: "unauthenticated" };
   try {
-    const summary = {
-      filled: Array.isArray(stateObject?.filled) ? stateObject.filled.length : 0,
-      plots: Array.isArray(stateObject?.plots) ? stateObject.plots.length : 0,
-      sample: Array.isArray(stateObject?.plots) && stateObject.plots.length ? stateObject.plots[0]?.[0] : null,
-      updatedAt: stateObject?.updatedAt,
-    };
-    console.log("[cloud] saveRemoteState start", user.uid, summary);
-    const ref = doc(db, "users", user.uid);
+    const ref = getUserDocRef(user.uid);
+    const snap = await getDoc(ref);
+    const existing = snap.exists() ? snap.data() : null;
+    const currentActiveId = existing?.activeSessionId || null;
+
+    if (!force && currentActiveId && sessionId && currentActiveId !== sessionId) {
+      console.warn("[cloud] saveRemoteState blocked by active session mismatch", {
+        currentActiveId,
+        sessionId,
+      });
+      return { ok: false, reason: "session_conflict", activeSessionId: currentActiveId };
+    }
+
     const normalized = normalizeForRemote(stateObject);
-    await setDoc(ref, { state: normalized, updatedAt: serverTimestamp() }, { merge: true });
+    const resolvedUsername =
+      (typeof username === "string" && username.trim()) ||
+      (typeof user.displayName === "string" && user.displayName.trim()) ||
+      user.email ||
+      "Player";
+
+    const payload = {
+      username: resolvedUsername,
+      state: normalized,
+      updatedAt: serverTimestamp(),
+      activeSessionId: sessionId || currentActiveId || null,
+      activeSessionAt: serverTimestamp(),
+      lastSavedBySessionId: sessionId || currentActiveId || null,
+    };
+
+    console.log("[cloud] saveRemoteState start", user.uid, summarizeState(stateObject));
+    await setDoc(ref, payload, { merge: true });
     console.log("[cloud] saveRemoteState success", user.uid);
+    return { ok: true, activeSessionId: payload.activeSessionId };
   } catch (error) {
     console.error("Remote save failed", error);
+    return { ok: false, reason: "error", error };
   }
 };
