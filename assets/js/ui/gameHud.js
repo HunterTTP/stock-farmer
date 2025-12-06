@@ -9,27 +9,40 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         moneyChangeStart: 0,
         layout: null,
         menuScrollOffset: 0,
+        menuDragStart: null,
+        menuDragScrollStart: 0,
     };
 
     const LAYOUT = {
-        mobile: { modeButtonWidth: 72, modeButtonHeight: 44, gap: 8, padding: 12, fontSize: 12, iconSize: 20 },
-        tablet: { modeButtonWidth: 100, modeButtonHeight: 48, gap: 12, padding: 16, fontSize: 14, iconSize: 24 },
-        desktop: { modeButtonWidth: 120, modeButtonHeight: 52, gap: 16, padding: 20, fontSize: 15, iconSize: 28 },
+        mobile: { modeButtonSize: 52, gap: 6, padding: 12, fontSize: 11, iconSize: 22, toolbarPadding: 8 },
+        tablet: { modeButtonSize: 58, gap: 8, padding: 16, fontSize: 12, iconSize: 26, toolbarPadding: 10 },
+        desktop: { modeButtonSize: 64, gap: 10, padding: 20, fontSize: 13, iconSize: 28, toolbarPadding: 12 },
     };
 
     const COLORS = {
-        bgDark: "rgba(23, 23, 23, 0.92)",
-        bgMedium: "rgba(38, 38, 38, 0.95)",
-        border: "rgba(64, 64, 64, 0.8)",
-        borderActive: "rgba(16, 185, 129, 0.9)",
-        text: "#ffffff",
-        textSecondary: "#a3a3a3",
-        accent: "#10b981",
-        accentDark: "#059669",
-        money: "#22c55e",
-        moneyLoss: "#ef4444",
-        gold: "#fbbf24",
-        goldDimmed: "rgba(251, 191, 36, 0.5)",
+        toolbarBg: "rgba(35, 30, 25, 0.96)",
+        toolbarBorder: "rgba(85, 75, 60, 0.6)",
+        buttonBg: "rgba(55, 48, 40, 0.92)",
+        buttonHover: "rgba(70, 60, 48, 0.95)",
+        buttonActive: "rgba(120, 70, 30, 0.95)",
+        buttonBorder: "rgba(85, 75, 60, 0.5)",
+        buttonActiveBorder: "rgba(230, 140, 60, 0.9)",
+        panelBg: "rgba(30, 26, 22, 0.97)",
+        panelBorder: "rgba(85, 75, 60, 0.5)",
+        itemBg: "rgba(45, 40, 35, 0.85)",
+        itemHover: "rgba(60, 52, 44, 0.92)",
+        itemSelected: "rgba(140, 80, 30, 0.25)",
+        itemSelectedBorder: "rgba(230, 140, 60, 0.9)",
+        text: "#e8e4dc",
+        textSecondary: "rgba(180, 170, 155, 0.85)",
+        accent: "#e6913c",
+        accentDark: "#c97020",
+        money: "#f0c830",
+        moneyBg: "rgba(35, 30, 25, 0.92)",
+        moneyLoss: "#d94040",
+        gold: "#f0c830",
+        goldDimmed: "rgba(240, 200, 48, 0.5)",
+        shadow: "rgba(0, 0, 0, 0.45)",
     };
 
     const imageCache = {};
@@ -49,34 +62,42 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const canvasHeight = canvas.clientHeight;
 
         const modeCount = MODE_ORDER.length;
-        const totalModeWidth = modeCount * layout.modeButtonWidth + (modeCount - 1) * layout.gap;
-        const modeButtonsX = (canvasWidth - totalModeWidth) / 2;
-        const modeButtonsY = canvasHeight - layout.modeButtonHeight - layout.padding;
+        const buttonSize = layout.modeButtonSize;
+        const totalModeWidth = modeCount * buttonSize + (modeCount - 1) * layout.gap + layout.toolbarPadding * 2;
+        const toolbarHeight = buttonSize + layout.toolbarPadding * 2;
+        const toolbarX = (canvasWidth - totalModeWidth) / 2;
+        const toolbarY = canvasHeight - toolbarHeight - layout.padding;
 
         const modeButtons = MODE_ORDER.map((mode, i) => ({
             id: mode,
             type: "modeButton",
-            x: modeButtonsX + i * (layout.modeButtonWidth + layout.gap),
-            y: modeButtonsY,
-            width: layout.modeButtonWidth,
-            height: layout.modeButtonHeight,
+            x: toolbarX + layout.toolbarPadding + i * (buttonSize + layout.gap),
+            y: toolbarY + layout.toolbarPadding,
+            width: buttonSize,
+            height: buttonSize,
             mode,
         }));
 
-        const dropdownHeight = 40;
-        const dropdownY = modeButtonsY - layout.gap - dropdownHeight;
+        const toolbar = { x: toolbarX, y: toolbarY, width: totalModeWidth, height: toolbarHeight };
+
+        const dropdownHeight = 44;
+        const dropdownY = toolbarY - layout.gap - dropdownHeight;
         const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, layout);
 
-        const moneyWidth = 140;
-        const moneyHeight = 36;
+        const moneyHeight = 34;
+        const moneyText = formatCurrency(state.totalMoney, true);
+        ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
+        const moneyTextWidth = ctx.measureText(moneyText).width;
+        const coinSize = 22;
+        const moneyWidth = 10 + coinSize + 8 + moneyTextWidth + 14;
         const moneyX = canvasWidth - moneyWidth - layout.padding;
         const moneyY = layout.padding;
         const moneyDisplay = { id: "money", type: "moneyDisplay", x: moneyX, y: moneyY, width: moneyWidth, height: moneyHeight };
 
-        const moneyChangeX = moneyX - 100 - 8;
-        const moneyChange = { id: "moneyChange", type: "moneyChange", x: moneyChangeX, y: moneyY, width: 100, height: moneyHeight };
+        const moneyChangeX = moneyX - 80 - 8;
+        const moneyChange = { id: "moneyChange", type: "moneyChange", x: moneyChangeX, y: moneyY, width: 80, height: moneyHeight };
 
-        hudState.layout = { layout, modeButtons, dropdowns, moneyDisplay, moneyChange };
+        hudState.layout = { layout, modeButtons, dropdowns, moneyDisplay, moneyChange, toolbar };
         return hudState.layout;
     }
 
@@ -115,21 +136,22 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const previewData = getDropdownPreviewData(dropdown);
         const hasPreview = previewData && (previewData.imageUrl || previewData.colorData || previewData.iconType);
 
-        const previewWidth = hasPreview ? 24 + 6 : 0;
-        const paddingLeft = hasPreview ? 8 : 10;
-        const paddingRight = 32;
+        const previewWidth = hasPreview ? 28 + 8 : 0;
+        const paddingLeft = hasPreview ? 10 : 12;
+        const chevronWidth = 28;
+        const paddingRight = 8;
 
-        ctx.font = meta ? `600 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif` : `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+        ctx.font = meta ? `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif` : `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
         const labelWidth = ctx.measureText(label).width;
 
         let textWidth = labelWidth;
         if (meta) {
-            ctx.font = `400 ${layout.fontSize - 4}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `400 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
             const metaWidth = ctx.measureText(meta).width;
             textWidth = Math.max(labelWidth, metaWidth);
         }
 
-        return Math.ceil(paddingLeft + previewWidth + textWidth + paddingRight);
+        return Math.ceil(paddingLeft + previewWidth + textWidth + chevronWidth + paddingRight);
     }
 
     function getDropdownPreviewData(dropdown) {
@@ -191,71 +213,204 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.closePath();
     }
 
-    function drawButton(btn, isActive, isHover, isPressed) {
-        const layout = hudState.layout?.layout || getLayout();
-        const radius = 10;
+    function drawToolbar() {
+        const computed = hudState.layout;
+        if (!computed || !computed.toolbar) return;
+
+        const { toolbar } = computed;
+        const radius = 20;
 
         ctx.save();
-        drawRoundedRect(btn.x, btn.y, btn.width, btn.height, radius);
+        ctx.shadowColor = COLORS.shadow;
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 4;
 
-        const gradient = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.height);
-        if (isPressed) {
-            gradient.addColorStop(0, "rgba(38, 38, 38, 0.98)");
-            gradient.addColorStop(1, "rgba(30, 30, 30, 0.98)");
-        } else if (isHover) {
-            gradient.addColorStop(0, "rgba(45, 45, 45, 0.95)");
-            gradient.addColorStop(1, "rgba(38, 38, 38, 0.95)");
-        } else {
-            gradient.addColorStop(0, "rgba(30, 30, 30, 0.92)");
-            gradient.addColorStop(1, "rgba(23, 23, 23, 0.92)");
-        }
-        ctx.fillStyle = gradient;
+        drawRoundedRect(toolbar.x, toolbar.y, toolbar.width, toolbar.height, radius);
+        ctx.fillStyle = COLORS.toolbarBg;
         ctx.fill();
 
-        ctx.strokeStyle = isActive ? COLORS.borderActive : COLORS.border;
+        ctx.shadowColor = "transparent";
+        ctx.strokeStyle = COLORS.toolbarBorder;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    function drawButton(btn, isActive, isHover, isPressed) {
+        const layout = hudState.layout?.layout || getLayout();
+        const radius = 14;
+
+        ctx.save();
+
+        if (isActive || isHover || isPressed) {
+            ctx.shadowColor = isActive ? "rgba(134, 194, 96, 0.3)" : "rgba(0, 0, 0, 0.2)";
+            ctx.shadowBlur = isActive ? 12 : 8;
+            ctx.shadowOffsetY = 2;
+        }
+
+        drawRoundedRect(btn.x, btn.y, btn.width, btn.height, radius);
+
+        let bgColor;
+        if (isActive) {
+            bgColor = COLORS.buttonActive;
+        } else if (isPressed) {
+            bgColor = "rgba(72, 58, 42, 0.95)";
+        } else if (isHover) {
+            bgColor = COLORS.buttonHover;
+        } else {
+            bgColor = COLORS.buttonBg;
+        }
+        ctx.fillStyle = bgColor;
+        ctx.fill();
+
+        ctx.shadowColor = "transparent";
+        ctx.strokeStyle = isActive ? COLORS.buttonActiveBorder : COLORS.buttonBorder;
         ctx.lineWidth = isActive ? 2 : 1;
         ctx.stroke();
 
+        const iconY = btn.y + btn.height * 0.38;
+        const labelY = btn.y + btn.height * 0.78;
+        const iconSize = layout.iconSize;
+
+        drawModeIcon(btn.x + btn.width / 2, iconY, iconSize, btn.mode, isActive);
+
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
         ctx.fillStyle = isActive ? COLORS.accent : COLORS.text;
 
         const label = btn.mode.charAt(0).toUpperCase() + btn.mode.slice(1);
-        ctx.fillText(label, btn.x + btn.width / 2, btn.y + btn.height / 2);
+        ctx.fillText(label, btn.x + btn.width / 2, labelY);
+
+        ctx.restore();
+    }
+
+    function drawModeIcon(cx, cy, size, mode, isActive) {
+        const color = isActive ? COLORS.accent : COLORS.text;
+        const s = size * 0.4;
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (mode === "plant") {
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.5, cy - s * 0.8);
+            ctx.lineTo(cx + s * 0.5, cy - s * 0.8);
+            ctx.lineTo(cx + s * 0.6, cy + s * 0.6);
+            ctx.lineTo(cx - s * 0.6, cy + s * 0.6);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy - s * 0.1, s * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + s * 0.15);
+            ctx.lineTo(cx - s * 0.2, cy + s * 0.45);
+            ctx.moveTo(cx, cy + s * 0.15);
+            ctx.lineTo(cx + s * 0.2, cy + s * 0.45);
+            ctx.stroke();
+        } else if (mode === "harvest") {
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.7, cy + s * 0.3);
+            ctx.quadraticCurveTo(cx - s * 0.8, cy - s * 0.4, cx - s * 0.3, cy - s * 0.6);
+            ctx.lineTo(cx + s * 0.3, cy - s * 0.6);
+            ctx.quadraticCurveTo(cx + s * 0.8, cy - s * 0.4, cx + s * 0.7, cy + s * 0.3);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.5, cy + s * 0.3);
+            ctx.lineTo(cx - s * 0.4, cy + s * 0.7);
+            ctx.lineTo(cx + s * 0.4, cy + s * 0.7);
+            ctx.lineTo(cx + s * 0.5, cy + s * 0.3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy - s * 0.2, s * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (mode === "landscape") {
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.8, cy + s * 0.6);
+            ctx.lineTo(cx - s * 0.8, cy - s * 0.6);
+            ctx.lineTo(cx + s * 0.8, cy - s * 0.6);
+            ctx.lineTo(cx + s * 0.8, cy + s * 0.6);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.5, cy + s * 0.2);
+            ctx.lineTo(cx - s * 0.2, cy - s * 0.2);
+            ctx.lineTo(cx + s * 0.1, cy + s * 0.1);
+            ctx.lineTo(cx + s * 0.5, cy - s * 0.3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.8, cy + s * 0.6);
+            ctx.lineTo(cx + s * 0.8, cy + s * 0.6);
+            ctx.stroke();
+        } else if (mode === "build") {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - s * 0.8);
+            ctx.lineTo(cx - s * 0.7, cy + s * 0.1);
+            ctx.lineTo(cx - s * 0.7, cy + s * 0.8);
+            ctx.lineTo(cx + s * 0.7, cy + s * 0.8);
+            ctx.lineTo(cx + s * 0.7, cy + s * 0.1);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.rect(cx - s * 0.2, cy + s * 0.3, s * 0.4, s * 0.5);
+            ctx.fill();
+        } else if (mode === "trade") {
+            ctx.beginPath();
+            ctx.moveTo(cx - s * 0.7, cy + s * 0.5);
+            ctx.lineTo(cx - s * 0.3, cy - s * 0.1);
+            ctx.lineTo(cx + s * 0.2, cy + s * 0.3);
+            ctx.lineTo(cx + s * 0.7, cy - s * 0.6);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx + s * 0.4, cy - s * 0.6);
+            ctx.lineTo(cx + s * 0.7, cy - s * 0.6);
+            ctx.lineTo(cx + s * 0.7, cy - s * 0.3);
+            ctx.stroke();
+        }
+
         ctx.restore();
     }
 
     function drawDropdown(dropdown, isOpen, isHover) {
         const layout = hudState.layout?.layout || getLayout();
-        const radius = 8;
-        const previewSize = 24;
-        const previewMargin = 8;
+        const radius = 12;
+        const previewSize = 28;
+        const previewMargin = 10;
         const previewData = getDropdownPreviewData(dropdown);
         const hasPreview = previewData && (previewData.imageUrl || previewData.colorData || previewData.iconType);
 
         ctx.save();
+
+        ctx.shadowColor = COLORS.shadow;
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 3;
+
         drawRoundedRect(dropdown.x, dropdown.y, dropdown.width, dropdown.height, radius);
 
-        const gradient = ctx.createLinearGradient(dropdown.x, dropdown.y, dropdown.x, dropdown.y + dropdown.height);
+        let bgColor;
         if (isOpen) {
-            gradient.addColorStop(0, "rgba(38, 38, 38, 0.98)");
-            gradient.addColorStop(1, "rgba(30, 30, 30, 0.98)");
+            bgColor = "rgba(72, 58, 44, 0.98)";
         } else if (isHover) {
-            gradient.addColorStop(0, "rgba(45, 45, 45, 0.95)");
-            gradient.addColorStop(1, "rgba(38, 38, 38, 0.95)");
+            bgColor = "rgba(82, 68, 52, 0.95)";
         } else {
-            gradient.addColorStop(0, "rgba(30, 30, 30, 0.92)");
-            gradient.addColorStop(1, "rgba(23, 23, 23, 0.92)");
+            bgColor = COLORS.panelBg;
         }
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = bgColor;
         ctx.fill();
 
-        ctx.strokeStyle = isOpen ? COLORS.borderActive : COLORS.border;
-        ctx.lineWidth = 1;
+        ctx.shadowColor = "transparent";
+        ctx.strokeStyle = isOpen ? COLORS.itemSelectedBorder : COLORS.panelBorder;
+        ctx.lineWidth = isOpen ? 1.5 : 1;
         ctx.stroke();
 
-        let textX = dropdown.x + 10;
+        let textX = dropdown.x + 12;
         if (hasPreview) {
             const previewX = dropdown.x + previewMargin;
             const previewY = dropdown.y + (dropdown.height - previewSize) / 2;
@@ -268,7 +423,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             } else {
                 drawPreviewImage(previewX, previewY, previewSize, previewData.imageUrl, previewData.colorData);
             }
-            textX = dropdown.x + previewMargin + previewSize + 6;
+            textX = dropdown.x + previewMargin + previewSize + 8;
         }
 
         const label = getDropdownLabel(dropdown);
@@ -278,21 +433,21 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
         if (meta) {
             ctx.textBaseline = "middle";
-            ctx.font = `600 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
             ctx.fillStyle = COLORS.text;
-            ctx.fillText(label, textX, dropdown.y + dropdown.height / 2 - 6);
+            ctx.fillText(label, textX, dropdown.y + dropdown.height / 2 - 7);
 
-            ctx.font = `400 ${layout.fontSize - 4}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `400 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
             ctx.fillStyle = COLORS.textSecondary;
-            ctx.fillText(meta, textX, dropdown.y + dropdown.height / 2 + 7);
+            ctx.fillText(meta, textX, dropdown.y + dropdown.height / 2 + 8);
         } else {
             ctx.textBaseline = "middle";
-            ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
             ctx.fillStyle = COLORS.text;
             ctx.fillText(label, textX, dropdown.y + dropdown.height / 2);
         }
 
-        drawChevron(dropdown.x + dropdown.width - 18, dropdown.y + dropdown.height / 2, 18 * 0.35, isOpen);
+        drawChevron(dropdown.x + dropdown.width - 20, dropdown.y + dropdown.height / 2, 6, isOpen);
 
         ctx.restore();
     }
@@ -386,28 +541,66 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     }
 
     function drawMoneyDisplay(elem) {
-        const radius = 8;
+        const radius = 16;
+        const coinSize = 22;
 
         ctx.save();
-        drawRoundedRect(elem.x, elem.y, elem.width, elem.height, radius);
+        ctx.shadowColor = COLORS.shadow;
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
 
-        const gradient = ctx.createLinearGradient(elem.x, elem.y, elem.x, elem.y + elem.height);
-        gradient.addColorStop(0, "rgba(30, 30, 30, 0.95)");
-        gradient.addColorStop(1, "rgba(23, 23, 23, 0.95)");
-        ctx.fillStyle = gradient;
+        drawRoundedRect(elem.x, elem.y, elem.width, elem.height, radius);
+        ctx.fillStyle = COLORS.moneyBg;
         ctx.fill();
 
-        ctx.strokeStyle = COLORS.border;
+        ctx.shadowColor = "transparent";
+        ctx.strokeStyle = "rgba(244, 208, 63, 0.4)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.textAlign = "center";
+        const coinX = elem.x + 10;
+        const coinY = elem.y + (elem.height - coinSize) / 2;
+        drawCoinIcon(coinX, coinY, coinSize);
+
+        ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.font = `700 14px system-ui, -apple-system, sans-serif`;
-        ctx.fillStyle = COLORS.text;
+        ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = COLORS.money;
 
         const moneyText = formatCurrency(state.totalMoney, true);
-        ctx.fillText(moneyText, elem.x + elem.width / 2, elem.y + elem.height / 2);
+        const textX = coinX + coinSize + 6;
+        const textY = elem.y + elem.height / 2;
+        ctx.fillText(moneyText, textX, textY);
+
+        ctx.restore();
+    }
+
+    function drawCoinIcon(x, y, size) {
+        const cx = x + size / 2;
+        const cy = y + size / 2;
+        const r = size / 2 - 1;
+
+        ctx.save();
+
+        const gradient = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        gradient.addColorStop(0, "#ffe066");
+        gradient.addColorStop(0.7, "#f4d03f");
+        gradient.addColorStop(1, "#c9a227");
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(169, 130, 30, 0.6)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = `bold ${size * 0.55}px system-ui`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(139, 100, 20, 0.8)";
+        ctx.fillText("$", cx, cy + 1);
 
         ctx.restore();
     }
@@ -415,7 +608,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     function drawMoneyChange(elem) {
         if (hudState.moneyChangeOpacity <= 0) return;
 
-        const radius = 6;
+        const radius = 12;
         const amount = hudState.moneyChangeAmount;
         const isGain = amount >= 0;
 
@@ -423,21 +616,17 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.globalAlpha = hudState.moneyChangeOpacity;
 
         drawRoundedRect(elem.x, elem.y, elem.width, elem.height, radius);
-
-        const gradient = ctx.createLinearGradient(elem.x, elem.y, elem.x, elem.y + elem.height);
-        gradient.addColorStop(0, "rgba(38, 38, 38, 0.9)");
-        gradient.addColorStop(1, "rgba(30, 30, 30, 0.9)");
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = COLORS.moneyBg;
         ctx.fill();
 
-        ctx.strokeStyle = COLORS.border;
+        ctx.strokeStyle = isGain ? "rgba(134, 194, 96, 0.5)" : "rgba(231, 76, 60, 0.5)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.font = `600 13px system-ui, -apple-system, sans-serif`;
-        ctx.fillStyle = isGain ? COLORS.money : COLORS.moneyLoss;
+        ctx.font = `600 12px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = isGain ? COLORS.accent : COLORS.moneyLoss;
 
         const prefix = isGain ? "+" : "";
         ctx.fillText(prefix + formatCurrency(amount, true), elem.x + elem.width / 2, elem.y + elem.height / 2);
@@ -590,30 +779,34 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const radius = 4;
         ctx.save();
         drawRoundedRect(x, y, size, size, radius);
-        ctx.fillStyle = "rgba(64, 64, 64, 0.8)";
+        ctx.fillStyle = "rgba(45, 40, 35, 0.9)";
         ctx.fill();
         ctx.restore();
 
         const cx = x + size / 2;
         const cy = y + size / 2;
-        const s = size * 0.35;
+        const coinR = size * 0.32;
 
         ctx.save();
-        ctx.strokeStyle = COLORS.money;
-        ctx.lineWidth = 1.5;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
+
+        const gradient = ctx.createRadialGradient(cx - coinR * 0.25, cy - coinR * 0.25, 0, cx, cy, coinR);
+        gradient.addColorStop(0, "#ffe066");
+        gradient.addColorStop(0.6, "#f0c830");
+        gradient.addColorStop(1, "#c9a227");
 
         ctx.beginPath();
-        ctx.moveTo(cx, cy - s * 1.1);
-        ctx.lineTo(cx, cy + s * 1.1);
+        ctx.arc(cx, cy, coinR, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(169, 130, 30, 0.7)";
+        ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.beginPath();
-        ctx.moveTo(cx + s * 0.5, cy - s * 0.5);
-        ctx.quadraticCurveTo(cx - s * 0.7, cy - s * 0.7, cx - s * 0.3, cy);
-        ctx.quadraticCurveTo(cx + s * 0.7, cy + s * 0.3, cx - s * 0.5, cy + s * 0.7);
-        ctx.stroke();
+        ctx.font = `bold ${coinR * 1.2}px system-ui`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(139, 100, 20, 0.9)";
+        ctx.fillText("$", cx, cy + 0.5);
 
         ctx.restore();
 
@@ -658,17 +851,17 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         if (!items || items.length === 0) return;
 
         const layout = hudState.layout?.layout || getLayout();
-        const itemHeight = 44;
-        const maxVisibleHeight = 280;
+        const itemHeight = 48;
+        const maxVisibleHeight = 300;
         const totalContentHeight = items.length * itemHeight;
         const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
         const menuHeight = menuContentHeight + 16;
         const menuWidth = measureMenuWidth(items, layout);
         const menuX = dropdown.x;
-        const menuY = dropdown.y - menuHeight - 8;
-        const radius = 10;
-        const previewSize = 32;
-        const previewMargin = 8;
+        const menuY = dropdown.y - menuHeight - 10;
+        const radius = 14;
+        const previewSize = 36;
+        const previewMargin = 10;
         const textOffset = previewSize + previewMargin * 2;
         const scrollable = totalContentHeight > maxVisibleHeight;
         const maxScroll = scrollable ? totalContentHeight - maxVisibleHeight : 0;
@@ -676,26 +869,22 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
         ctx.save();
 
-        ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-        ctx.shadowBlur = 20;
-        ctx.shadowOffsetY = 8;
+        ctx.shadowColor = COLORS.shadow;
+        ctx.shadowBlur = 24;
+        ctx.shadowOffsetY = 10;
 
         drawRoundedRect(menuX, menuY, menuWidth, menuHeight, radius);
-
-        const gradient = ctx.createLinearGradient(menuX, menuY, menuX, menuY + menuHeight);
-        gradient.addColorStop(0, "rgba(23, 23, 23, 0.98)");
-        gradient.addColorStop(1, "rgba(10, 10, 10, 0.98)");
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = COLORS.panelBg;
         ctx.fill();
 
         ctx.shadowColor = "transparent";
 
-        ctx.strokeStyle = COLORS.border;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = COLORS.panelBorder;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
         ctx.save();
-        drawRoundedRect(menuX + 4, menuY + 8, menuWidth - 8, menuContentHeight, 6);
+        drawRoundedRect(menuX + 6, menuY + 8, menuWidth - 12, menuContentHeight, 8);
         ctx.clip();
 
         items.forEach((item, i) => {
@@ -704,22 +893,26 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 return;
             }
 
-            const itemX = menuX + 8;
+            const itemX = menuX + 10;
             const itemY = itemYBase;
-            const itemW = menuWidth - 16;
-            const itemH = itemHeight - 4;
+            const itemW = menuWidth - 20;
+            const itemH = itemHeight - 6;
             const isSelected = isItemSelected(dropdown, item);
             const isHover = hudState.hoverElement?.id === `menuItem_${dropdown.id}_${i}`;
 
-            if (isSelected || isHover) {
-                drawRoundedRect(itemX, itemY, itemW, itemH, 6);
-                ctx.fillStyle = isHover && !isSelected ? "rgba(64, 64, 64, 0.5)" : "rgba(30, 30, 30, 0.95)";
+            drawRoundedRect(itemX, itemY, itemW, itemH, 8);
+            if (isSelected) {
+                ctx.fillStyle = COLORS.itemSelected;
                 ctx.fill();
-                if (isSelected) {
-                    ctx.strokeStyle = COLORS.borderActive;
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
-                }
+                ctx.strokeStyle = COLORS.itemSelectedBorder;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            } else if (isHover) {
+                ctx.fillStyle = COLORS.itemHover;
+                ctx.fill();
+            } else {
+                ctx.fillStyle = COLORS.itemBg;
+                ctx.fill();
             }
 
             const previewX = itemX + previewMargin;
@@ -730,21 +923,19 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 drawDollarIcon(previewX, previewY, previewSize);
             } else if (item.iconType === "grid") {
                 drawGridIcon(previewX, previewY, previewSize, item.gridSize || 1);
-            } else if (item.iconType === "toolPhase") {
-                drawPreviewImage(previewX, previewY, previewSize, `images/harvest/tool/tool-phase-${item.toolPhase || 1}.png`, null);
             } else {
                 drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
             }
 
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
-            ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
             ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
 
-            const labelY = itemY + itemH / 2 - 6;
+            const labelY = itemY + itemH / 2 - 7;
             ctx.fillText(item.label, itemX + textOffset, labelY);
 
-            ctx.font = `400 ${layout.fontSize - 3}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `400 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
             const metaY = itemY + itemH / 2 + 8;
 
             if (item.locked && item.unlockCost > 0) {
@@ -759,21 +950,21 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.restore();
 
         if (scrollable) {
-            const scrollTrackX = menuX + menuWidth - 10;
-            const scrollTrackY = menuY + 12;
-            const scrollTrackHeight = menuContentHeight - 8;
+            const scrollTrackX = menuX + menuWidth - 12;
+            const scrollTrackY = menuY + 14;
+            const scrollTrackHeight = menuContentHeight - 12;
             const scrollThumbHeight = Math.max(30, (maxVisibleHeight / totalContentHeight) * scrollTrackHeight);
             const scrollThumbY = scrollTrackY + (scrollOffset / maxScroll) * (scrollTrackHeight - scrollThumbHeight);
 
             ctx.save();
-            ctx.fillStyle = "rgba(64, 64, 64, 0.5)";
+            ctx.fillStyle = "rgba(100, 85, 65, 0.5)";
             ctx.beginPath();
-            ctx.roundRect(scrollTrackX, scrollTrackY, 4, scrollTrackHeight, 2);
+            ctx.roundRect(scrollTrackX, scrollTrackY, 5, scrollTrackHeight, 2.5);
             ctx.fill();
 
-            ctx.fillStyle = "rgba(128, 128, 128, 0.8)";
+            ctx.fillStyle = "rgba(180, 160, 130, 0.8)";
             ctx.beginPath();
-            ctx.roundRect(scrollTrackX, scrollThumbY, 4, scrollThumbHeight, 2);
+            ctx.roundRect(scrollTrackX, scrollThumbY, 5, scrollThumbHeight, 2.5);
             ctx.fill();
             ctx.restore();
         }
@@ -932,6 +1123,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     function render() {
         const computed = computeLayout();
 
+        drawToolbar();
+
         computed.modeButtons.forEach((btn) => {
             const isActive = btn.mode === state.activeMode;
             const isHover = hudState.hoverElement?.id === btn.id;
@@ -1041,30 +1234,61 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         return null;
     }
 
-    function handlePointerMove(x, y) {
-        const hit = hitTest(x, y);
-        const prev = hudState.hoverElement?.id;
-        hudState.hoverElement = hit;
-        if (hit?.id !== prev) {
-            state.needsRender = true;
-        }
-    }
-
     function handlePointerDown(x, y) {
         const hit = hitTest(x, y);
         hudState.pointerDown = true;
         hudState.pointerDownElement = hit;
+
+        if (hit && (hit.type === "menu" || hit.type === "menuItem") && hudState.openMenuKey) {
+            hudState.menuDragStart = y;
+            hudState.menuDragScrollStart = hudState.menuScrollOffset;
+        } else {
+            hudState.menuDragStart = null;
+        }
+
         if (hit) {
             state.needsRender = true;
         }
         return !!hit;
     }
 
+    function handlePointerMove(x, y) {
+        const hit = hitTest(x, y);
+        const prev = hudState.hoverElement?.id;
+        hudState.hoverElement = hit;
+
+        if (hudState.menuDragStart !== null && hudState.pointerDown) {
+            const deltaY = hudState.menuDragStart - y;
+            const computed = hudState.layout;
+            if (computed && hudState.openMenuKey) {
+                const dropdown = computed.dropdowns.find((d) => d.menu === hudState.openMenuKey);
+                if (dropdown) {
+                    const bounds = getMenuBounds(dropdown);
+                    if (bounds.scrollable) {
+                        hudState.menuScrollOffset = Math.max(0, Math.min(bounds.maxScroll, hudState.menuDragScrollStart + deltaY));
+                        state.needsRender = true;
+                    }
+                }
+            }
+        }
+
+        if (hit?.id !== prev) {
+            state.needsRender = true;
+        }
+    }
+
     function handlePointerUp(x, y) {
         const hit = hitTest(x, y);
         const wasDown = hudState.pointerDownElement;
+        const wasDragging = hudState.menuDragStart !== null && Math.abs(hudState.menuScrollOffset - hudState.menuDragScrollStart) > 5;
+
         hudState.pointerDown = false;
         hudState.pointerDownElement = null;
+        hudState.menuDragStart = null;
+
+        if (wasDragging) {
+            return !!hit;
+        }
 
         if (!hit || !wasDown || hit.id !== wasDown.id) {
             if (hudState.openMenuKey && !hit) {
