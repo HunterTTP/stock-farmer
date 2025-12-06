@@ -427,6 +427,25 @@
                   class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
               </div>
             </div>
+            <div id="landscapeDropdowns" class="hidden flex flex-wrap justify-center gap-2 items-center">
+              <div class="relative">
+                <button
+                  id="landscapeSelectButton"
+                  type="button"
+                  class="h-11 px-3 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold text-white shadow-lg inline-flex items-center gap-2 justify-between text-left focus:outline-none">
+                  <div class="flex items-center gap-2 overflow-hidden flex-1 text-left">
+                    <img id="landscapeSelectImage" class="w-5 h-5 rounded-sm object-cover border border-neutral-800" alt="Landscape" />
+                    <span id="landscapeSelectLabel" class="truncate flex-1 text-left">Select</span>
+                  </div>
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <div
+                  id="landscapeSelectMenu"
+                  class="dropdown-menu hidden absolute bottom-full mb-2 left-0 w-max min-w-full max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 shadow-2xl p-2 space-y-1 z-30"></div>
+              </div>
+            </div>
           </div>
           <div class="w-full max-w-xl">
             <div class="flex items-center justify-center gap-3 flex-wrap">
@@ -447,6 +466,12 @@
                 type="button"
                 class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
                 Build
+              </button>
+              <button
+                id="modeLandscapeBtn"
+                type="button"
+                class="mode-btn w-24 sm:w-28 h-12 rounded-lg border border-neutral-800 bg-neutral-900/80 text-sm font-semibold tracking-wide shadow-lg focus:outline-none">
+                Landscape
               </button>
               <button
                 id="modeTradeBtn"

@@ -1,7 +1,8 @@
 import { getStageBreakpoints } from "../utils/helpers.js";
 
-export function createRenderer({ canvas, ctx, state, world, config, crops, assets, currentSizeOption, computeHoverPreview }) {
+export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview }) {
   const buildingImageCache = new Map();
+  const getLandscapeAsset = (id) => (id && landscapeAssets ? landscapeAssets[id] : null);
 
   const getBuildingImage = (src) => {
     if (!src) return null;
@@ -10,6 +11,15 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
     img.src = src;
     buildingImageCache.set(src, img);
     return img;
+  };
+
+  const updateLandscapeAssets = (nowPerf) => {
+    if (!landscapeAssets) return;
+    Object.values(landscapeAssets).forEach((asset) => {
+      if (asset && typeof asset.update === "function") {
+        asset.update(nowPerf);
+      }
+    });
   };
   function renderFloatingValue(anim, nowPerf, startRow, endRow, startCol, endCol) {
     const visibleDuration = 1000;
@@ -59,7 +69,20 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
   }
 
   function render() {
-    const hasAnimations = world.harvestAnimations.length > 0 || world.costAnimations.length > 0;
+    const landscapeInWorld =
+      world.structures && typeof world.structures.values === "function"
+        ? Array.from(world.structures.values()).some(
+            (struct) => struct && struct.kind === "landscape"
+          )
+        : false;
+    const hasLandscapeAnimation =
+      landscapeInWorld && landscapeAssets
+        ? Object.values(landscapeAssets).some((asset) => asset && asset.animated)
+        : false;
+    const hasAnimations =
+      world.harvestAnimations.length > 0 ||
+      world.costAnimations.length > 0 ||
+      hasLandscapeAnimation;
     if (!state.needsRender && !hasAnimations) return;
     state.needsRender = false;
 
@@ -81,7 +104,9 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
     const tileScreenSize = state.tileSize * state.scale;
     const now = Date.now();
     const nowPerf = performance.now();
+    if (landscapeInWorld) updateLandscapeAssets(nowPerf);
 
+    const landscapeDrawn = new Set();
     for (let row = startRow; row < endRow; row++) {
       for (let col = startCol; col < endCol; col++) {
         const key = row + "," + col;
@@ -90,6 +115,25 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
 
         if (world.filled.has(key)) ctx.drawImage(assets.farmland.img, x, y, tileScreenSize, tileScreenSize);
         else ctx.drawImage(assets.grass.img, x, y, tileScreenSize, tileScreenSize);
+
+        const structKey = world.structureTiles.get(key);
+        if (structKey && !landscapeDrawn.has(structKey)) {
+          const struct = world.structures.get(structKey);
+          if (struct && struct.kind === "landscape") {
+            const asset = getLandscapeAsset(struct.id);
+            const targetW = struct.width * state.tileSize * state.scale;
+            const targetH = struct.height * state.tileSize * state.scale;
+            const drawX = state.offsetX + struct.col * state.tileSize * state.scale;
+            const drawY = state.offsetY + struct.row * state.tileSize * state.scale;
+            if (asset?.canvas) {
+              ctx.drawImage(asset.canvas, drawX, drawY, targetW, targetH);
+            } else {
+              ctx.fillStyle = "#0ea5e9";
+              ctx.fillRect(drawX, drawY, targetW, targetH);
+            }
+            landscapeDrawn.add(structKey);
+          }
+        }
 
         const plot = world.plots.get(key);
         if (!plot) continue;
@@ -184,17 +228,17 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
 
     if (world.structures && typeof world.structures.forEach === "function") {
       world.structures.forEach((struct) => {
-        if (!struct) return;
+        if (!struct || struct.kind === "landscape") return;
         const left = struct.col;
         const top = struct.row;
         const right = struct.col + struct.width;
         const bottom = struct.row + struct.height;
         if (right < startCol || left > endCol || bottom < startRow || top > endRow) return;
-        const img = getBuildingImage(struct.image);
         const x = state.offsetX + left * state.tileSize * state.scale;
         const y = state.offsetY + top * state.tileSize * state.scale;
         const targetW = struct.width * state.tileSize * state.scale;
         const targetH = struct.height * state.tileSize * state.scale;
+        const img = getBuildingImage(struct.image);
         if (img && img.complete) {
           const naturalW = img.naturalWidth || targetW;
           const naturalH = img.naturalHeight || targetH;

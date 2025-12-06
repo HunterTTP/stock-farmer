@@ -83,24 +83,21 @@ export function createPointerControls({ canvas, state, config, viewport, actions
               state.hoeHoldTriggered = true;
               const count = destroyTargets.length;
               const label = count === 1 ? "crop" : "crops";
-              openConfirmModal(
-                `Destroy ${count} ${label}? No money will be earned.`,
-                () => destroyTargets.forEach((k) => actions.destroyPlot(k)),
-                count === 1 ? "Destroy Crop" : "Destroy Crops"
-              );
+              openConfirmModal(`Destroy ${count} ${label}? No money will be earned.`, () => destroyTargets.forEach((k) => actions.destroyPlot(k)), count === 1 ? "Destroy Crop" : "Destroy Crops");
             }, config.hoeDestroyWindowMs);
           }
         }
-      } else if (state.activeMode === "build") {
+      } else if (state.activeMode === "build" || state.activeMode === "landscape") {
         const tile = viewport.tileFromClient(e.clientX, e.clientY);
         if (tile) {
-          const targets = actions.collectStructureSellTargets(tile.row, tile.col);
+          const kind = state.activeMode === "landscape" ? "landscape" : "building";
+          const targets = actions.collectStructureSellTargets(tile.row, tile.col, kind);
           if (targets.length > 0) {
             const sellTargets = targets.slice();
             state.buildingHoldTimeoutId = setTimeout(() => {
               state.buildingHoldTimeoutId = null;
               state.buildingHoldTriggered = true;
-              actions.promptSellStructures(sellTargets);
+              actions.promptSellStructures(sellTargets, kind);
             }, config.hoeDestroyWindowMs);
           }
         }
@@ -167,7 +164,6 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     if (e.type === "pointerleave" || e.type === "pointercancel") setHoverTile(null);
     else updateHoverFromEvent(e);
 
-    // Ensure final view after gesture ends is persisted
     queueViewSave();
   }
 

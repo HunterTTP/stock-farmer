@@ -42,6 +42,7 @@ export function createInitialState(config) {
     buildingHoldTriggered: false,
     lastSavedAt: 0,
     selectedBuildKey: null,
+    selectedLandscapeKey: null,
   };
 }
 
@@ -87,6 +88,7 @@ export function applyDefaultSelection(state) {
   state.statBaseSize = 14;
   state.statTextAlpha = 1;
   state.statBgAlpha = 1;
+  state.selectedLandscapeKey = null;
 }
 
 export function recalcPlacedCounts(world, crops) {
@@ -109,8 +111,8 @@ export function recalcPlacedCounts(world, crops) {
   });
 }
 
-export function saveState({ state, world, crops, sizes, config }) {
-  const data = buildSaveData({ state, world, crops, sizes, config });
+export function saveState({ state, world, crops, sizes, landscapes = {}, config }) {
+  const data = buildSaveData({ state, world, crops, sizes, landscapes, config });
   try {
     localStorage.setItem(config.saveKey, JSON.stringify(data));
   } catch (err) {
@@ -134,6 +136,11 @@ function isFootprintInBounds(row, col, width, height, config) {
   return row >= 0 && col >= 0 && row + height <= config.gridRows && col + width <= config.gridCols;
 }
 
+function normalizeStructureKind(kind) {
+  if (kind === "landscape") return "landscape";
+  return "building";
+}
+
 function cleanStructureValue(value, config) {
   if (!value || typeof value !== "object") return null;
   const row = Number.isInteger(value.row) ? value.row : null;
@@ -144,6 +151,7 @@ function cleanStructureValue(value, config) {
   if (!isFootprintInBounds(row, col, width, height, config)) return null;
   return {
     id: typeof value.id === "string" ? value.id : null,
+    kind: normalizeStructureKind(value.kind),
     name: typeof value.name === "string" ? value.name : "",
     row,
     col,
@@ -165,6 +173,10 @@ function normalizeBuildKey(value) {
   return typeof value === "string" ? value : null;
 }
 
+function normalizeLandscapeKey(value) {
+  return normalizeBuildKey(value);
+}
+
 function cleanStockHoldings(raw) {
   const cleaned = {};
   if (!raw || typeof raw !== "object") return cleaned;
@@ -181,7 +193,7 @@ function cleanStockHoldings(raw) {
   return cleaned;
 }
 
-export function loadState({ state, world, crops, sizes, config }) {
+export function loadState({ state, world, crops, sizes, landscapes = {}, config }) {
   let raw;
   try {
     raw = localStorage.getItem(config.saveKey);
@@ -225,6 +237,12 @@ export function loadState({ state, world, crops, sizes, config }) {
       });
     }
 
+    if (data.landscapesUnlocked) {
+      Object.entries(data.landscapesUnlocked).forEach(([id, unlocked]) => {
+        if (landscapes[id]) landscapes[id].unlocked = !!unlocked;
+      });
+    }
+
     if (Array.isArray(data.structures)) {
       world.structures.clear();
       world.structureTiles.clear();
@@ -258,6 +276,8 @@ export function loadState({ state, world, crops, sizes, config }) {
     else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
     const savedBuildKey = normalizeBuildKey(data.selectedBuildKey);
     if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
+    const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
+    if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
 
     const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
     const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
@@ -270,7 +290,7 @@ export function loadState({ state, world, crops, sizes, config }) {
     state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
     state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
-    if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build") {
+    if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
       state.activeMode = savedMode;
     } else if (typeof data.hoeSelected === "boolean" && data.hoeSelected) {
       state.activeMode = "harvest";
@@ -292,7 +312,7 @@ export function loadState({ state, world, crops, sizes, config }) {
   }
 }
 
-export function buildSaveData({ state, world, crops, sizes, config }) {
+export function buildSaveData({ state, world, crops, sizes, landscapes = {}, config }) {
   const previousUpdatedAt = Number.isFinite(state.lastSavedAt) ? state.lastSavedAt : 0;
   const updatedAt = Date.now();
   const showTimer = !!state.showTimerInfo;
@@ -323,6 +343,7 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
     offsetY: state.offsetY,
     cropsUnlocked: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, c.unlocked])),
     sizesUnlocked: Object.fromEntries(Object.entries(sizes).map(([id, t]) => [id, t.unlocked])),
+    landscapesUnlocked: Object.fromEntries(Object.entries(landscapes || {}).map(([id, l]) => [id, l.unlocked])),
     cropLimits: Object.fromEntries(Object.entries(crops).map(([id, c]) => [id, typeof c.limit === "number" ? c.limit : -1])),
     structures: Array.from(world.structures.entries())
       .map(([key, value]) => [key, cleanStructureValue({ ...value, key }, config)])
@@ -330,6 +351,7 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
     previousUpdatedAt,
     updatedAt,
     selectedBuildKey: state.selectedBuildKey || null,
+    selectedLandscapeKey: state.selectedLandscapeKey || null,
   };
 
   state.lastSavedAt = updatedAt;
@@ -343,7 +365,7 @@ export function buildSaveData({ state, world, crops, sizes, config }) {
   return data;
 }
 
-export function applyLoadedData(data, { state, world, crops, sizes, config }) {
+export function applyLoadedData(data, { state, world, crops, sizes, landscapes = {}, config }) {
   if (!data || typeof data !== "object") return;
   if (world.structures && typeof world.structures.clear === "function") world.structures.clear();
   if (world.structureTiles && typeof world.structureTiles.clear === "function") world.structureTiles.clear();
@@ -399,6 +421,12 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
     });
   }
 
+  if (data.landscapesUnlocked) {
+    Object.entries(data.landscapesUnlocked).forEach(([id, unlocked]) => {
+      if (landscapes[id]) landscapes[id].unlocked = !!unlocked;
+    });
+  }
+
   if (data.cropLimits) {
     Object.entries(data.cropLimits).forEach(([id, limit]) => {
       if (crops[id] && typeof limit === "number") crops[id].limit = limit;
@@ -416,6 +444,8 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
   else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
   const savedBuildKey = normalizeBuildKey(data.selectedBuildKey);
   if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
+  const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
+  if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
 
   const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
   const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
@@ -428,7 +458,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
   state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
   state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
   const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
-  if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build") {
+  if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
     state.activeMode = savedMode;
   } else if (typeof data.hoeSelected === "boolean" && data.hoeSelected) {
     state.activeMode = "harvest";

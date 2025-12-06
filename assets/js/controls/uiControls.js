@@ -1,28 +1,15 @@
-﻿export function createUIControls({
-  dom,
-  state,
-  crops,
-  sizes,
-  buildings,
-  formatCurrency,
-  onMoneyChanged,
-  saveState,
-  centerView,
-  resetFarm,
-  clearCache,
-}) {
+﻿export function createUIControls({ dom, state, crops, sizes, buildings, landscapes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache }) {
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
   let openMenuKey = null;
   const confirmVariantClasses = {
-    primary:
-      "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none",
-    danger:
-      "py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500 focus:outline-none",
+    primary: "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none",
+    danger: "py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500 focus:outline-none",
   };
-  const defaultCancelBtnClass =
-    "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
-  const modeOrder = ["plant", "harvest", "build"];
+  const defaultCancelBtnClass = "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
+  const modeOrder = ["plant", "harvest", "build", "landscape"];
+  const sellIconSrc =
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>";
   let moneyChangeHideTimeout = null;
 
   const currentSizeOption = () => sizes[state.selectedSizeKey] || sizes.single;
@@ -55,11 +42,7 @@
 
   function formatHarvestText(crop, plantedAt, nowMs) {
     if (!crop || !Number.isFinite(plantedAt)) return null;
-    const growMs = Number.isFinite(crop.growTimeMs)
-      ? crop.growTimeMs
-      : Number.isFinite(crop.growMinutes)
-      ? crop.growMinutes * 60 * 1000
-      : null;
+    const growMs = Number.isFinite(crop.growTimeMs) ? crop.growTimeMs : Number.isFinite(crop.growMinutes) ? crop.growMinutes * 60 * 1000 : null;
     if (!growMs || growMs <= 0) return "Ready";
     const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
     if (remainingMs <= 0) return "Ready";
@@ -69,9 +52,7 @@
   function getCropStatus(crop, nowMs) {
     if (!crop) return null;
     if (!crop.placed || crop.placed <= 0) return null;
-    const plantedAt = Number.isFinite(crop.lastPlantedAt)
-      ? crop.lastPlantedAt
-      : null;
+    const plantedAt = Number.isFinite(crop.lastPlantedAt) ? crop.lastPlantedAt : null;
     if (!plantedAt || plantedAt <= 0) return null;
     const harvestText = formatHarvestText(crop, plantedAt, nowMs);
     if (!harvestText) return null;
@@ -107,31 +88,13 @@
     pendingCancelAction = null;
   }
 
-  function openConfirmModal(
-    message,
-    onConfirm,
-    title = "Confirm",
-    onCancel = null,
-    options = {}
-  ) {
-    if (
-      !dom.confirmModal ||
-      !dom.confirmMessage ||
-      !dom.confirmConfirm ||
-      !dom.confirmCancel
-    ) {
+  function openConfirmModal(message, onConfirm, title = "Confirm", onCancel = null, options = {}) {
+    if (!dom.confirmModal || !dom.confirmMessage || !dom.confirmConfirm || !dom.confirmCancel) {
       onConfirm();
       return;
     }
-    const {
-      confirmText = "Confirm",
-      cancelText = "Cancel",
-      showCancel = true,
-      hideClose = false,
-      confirmVariant = "primary",
-    } = options;
-    const confirmBaseClass =
-      confirmVariantClasses[confirmVariant] || confirmVariantClasses.primary;
+    const { confirmText = "Confirm", cancelText = "Cancel", showCancel = true, hideClose = false, confirmVariant = "primary" } = options;
+    const confirmBaseClass = confirmVariantClasses[confirmVariant] || confirmVariantClasses.primary;
     const confirmWidthClass = showCancel ? "w-full sm:w-1/2" : "w-full";
 
     if (dom.confirmTitle) dom.confirmTitle.textContent = title;
@@ -139,9 +102,7 @@
     dom.confirmConfirm.textContent = confirmText;
     dom.confirmConfirm.className = `${confirmWidthClass} ${confirmBaseClass}`;
     dom.confirmCancel.textContent = cancelText;
-    dom.confirmCancel.className = `${
-      showCancel ? "w-full sm:w-1/2" : "hidden"
-    } ${defaultCancelBtnClass}`;
+    dom.confirmCancel.className = `${showCancel ? "w-full sm:w-1/2" : "hidden"} ${defaultCancelBtnClass}`;
     dom.confirmClose?.classList.toggle("hidden", hideClose);
     pendingConfirmAction = onConfirm;
     pendingCancelAction = onCancel;
@@ -151,8 +112,7 @@
   }
 
   function updateHideButtonsUI() {
-    if (dom.showTimerToggle)
-      dom.showTimerToggle.checked = !!state.showTimerInfo;
+    if (dom.showTimerToggle) dom.showTimerToggle.checked = !!state.showTimerInfo;
     if (dom.statBaseSize) {
       const val = Math.round(state.statBaseSize ?? 14);
       dom.statBaseSize.value = val;
@@ -175,14 +135,8 @@
 
   function ensurePlantDefaults() {
     if (!state.selectedCropKey) {
-      const fallback =
-        state.previousCropKey &&
-        crops[state.previousCropKey] &&
-        crops[state.previousCropKey].unlocked
-          ? crops[state.previousCropKey]
-          : null;
-      const firstUnlocked =
-        fallback || Object.values(crops).find((c) => c && c.unlocked);
+      const fallback = state.previousCropKey && crops[state.previousCropKey] && crops[state.previousCropKey].unlocked ? crops[state.previousCropKey] : null;
+      const firstUnlocked = fallback || Object.values(crops).find((c) => c && c.unlocked);
       if (firstUnlocked) {
         state.selectedCropKey = firstUnlocked.id;
         state.previousCropKey = firstUnlocked.id;
@@ -197,12 +151,20 @@
     state.selectedBuildKey = first ? first.id : "sell";
   }
 
+  function ensureLandscapeDefaults() {
+    if (state.selectedLandscapeKey === "sell") return;
+    if (state.selectedLandscapeKey && landscapes?.[state.selectedLandscapeKey]) return;
+    const first = Object.values(landscapes || {}).find((l) => l && l.unlocked);
+    state.selectedLandscapeKey = first ? first.id : "sell";
+  }
+
   function updateModeButtonsUI() {
     const active = state.activeMode || "plant";
     const entries = [
       { key: "plant", el: dom.modePlantBtn },
       { key: "harvest", el: dom.modeHarvestBtn },
       { key: "build", el: dom.modeBuildBtn },
+      { key: "landscape", el: dom.modeLandscapeBtn },
     ];
     entries.forEach(({ key, el }) => {
       if (!el) return;
@@ -217,18 +179,17 @@
 
   function renderDropdownGroups() {
     const active = state.activeMode || "plant";
-    if (dom.plantDropdowns)
-      dom.plantDropdowns.classList.toggle("hidden", active !== "plant");
-    if (dom.harvestDropdowns)
-      dom.harvestDropdowns.classList.toggle("hidden", active !== "harvest");
-    if (dom.buildDropdowns)
-      dom.buildDropdowns.classList.toggle("hidden", active !== "build");
+    if (dom.plantDropdowns) dom.plantDropdowns.classList.toggle("hidden", active !== "plant");
+    if (dom.harvestDropdowns) dom.harvestDropdowns.classList.toggle("hidden", active !== "harvest");
+    if (dom.buildDropdowns) dom.buildDropdowns.classList.toggle("hidden", active !== "build");
+    if (dom.landscapeDropdowns) dom.landscapeDropdowns.classList.toggle("hidden", active !== "landscape");
   }
 
   function setActiveMode(nextMode) {
     if (!modeOrder.includes(nextMode)) return;
     if (nextMode === "plant") ensurePlantDefaults();
     if (nextMode === "build") ensureBuildDefaults();
+    if (nextMode === "landscape") ensureLandscapeDefaults();
     state.activeMode = nextMode;
     state.hoeSelected = nextMode === "harvest";
     closeAllMenus();
@@ -236,6 +197,7 @@
     renderSizeMenu();
     if (nextMode === "plant") renderCropOptions();
     if (nextMode === "build") renderBuildOptions();
+    if (nextMode === "landscape") renderLandscapeOptions();
     renderDropdownGroups();
     state.needsRender = true;
     saveState();
@@ -254,27 +216,19 @@
     dom.plantCropMenu.innerHTML = "";
     let chainLocked = false;
     Object.values(crops).forEach((crop) => {
-      const canAffordUnlock =
-        !crop.unlocked &&
-        typeof crop.unlockCost === "number" &&
-        crop.unlockCost > 0 &&
-        state.totalMoney >= crop.unlockCost;
+      const canAffordUnlock = !crop.unlocked && typeof crop.unlockCost === "number" && crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost;
       const gatedLocked = !crop.unlocked && chainLocked;
       const item = document.createElement("button");
       item.type = "button";
-      item.className =
-        "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (!crop.unlocked && !canAffordUnlock)
-        item.classList.add("opacity-50", "cursor-not-allowed");
+      item.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (!crop.unlocked && !canAffordUnlock) item.classList.add("opacity-50", "cursor-not-allowed");
       if (gatedLocked) item.classList.add("opacity-50", "cursor-not-allowed");
-      if (crop.id === state.selectedCropKey)
-        item.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (crop.id === state.selectedCropKey) item.classList.add("border-emerald-500", "bg-neutral-900/70");
 
       const img = document.createElement("img");
       img.src = cropThumbSrc(crop.id);
       img.alt = crop.name;
-      img.className =
-        "w-5 h-5 rounded-sm object-cover border border-neutral-800";
+      img.className = "w-5 h-5 rounded-sm object-cover border border-neutral-800";
       item.appendChild(img);
 
       const textWrap = document.createElement("div");
@@ -285,22 +239,13 @@
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
       if (crop.id === "grass") meta.textContent = "Free";
-      else if (crop.id === "farmland")
-        meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
+      else if (crop.id === "farmland") meta.textContent = crop.placed < 4 ? "Free" : formatCurrency(25);
       else {
-        const costText =
-          typeof crop.placeCost === "number" && crop.placeCost > 0
-            ? formatCurrency(crop.placeCost)
-            : "Free";
-        meta.textContent = `Sell ${formatCurrency(
-          crop.baseValue
-        )} - ${formatGrowTime(crop.growMinutes)}`;
+        const costText = typeof crop.placeCost === "number" && crop.placeCost > 0 ? formatCurrency(crop.placeCost) : "Free";
+        meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       }
       textWrap.appendChild(title);
-      const status =
-        crop.id === "grass" || crop.id === "farmland"
-          ? null
-          : getCropStatus(crop, now);
+      const status = crop.id === "grass" || crop.id === "farmland" ? null : getCropStatus(crop, now);
       if (status) {
         const statusLine = document.createElement("div");
         statusLine.className = "text-[11px] text-sky-300 truncate";
@@ -364,19 +309,13 @@
     let chainLocked = false;
     Object.values(sizes).forEach((size) => {
       const locked = !size.unlocked;
-      const canAffordUnlock =
-        locked &&
-        typeof size.unlockCost === "number" &&
-        state.totalMoney >= size.unlockCost;
+      const canAffordUnlock = locked && typeof size.unlockCost === "number" && state.totalMoney >= size.unlockCost;
       const gatedLocked = locked && chainLocked;
       const row = document.createElement("button");
       row.type = "button";
-      row.className =
-        "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (size.id === state.selectedSizeKey)
-        row.classList.add("border-emerald-500", "bg-neutral-900/70");
-      if (locked && !canAffordUnlock)
-        row.classList.add("opacity-50", "cursor-not-allowed");
+      row.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (size.id === state.selectedSizeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (locked && !canAffordUnlock) row.classList.add("opacity-50", "cursor-not-allowed");
       if (gatedLocked) row.classList.add("opacity-50", "cursor-not-allowed");
 
       const left = document.createElement("div");
@@ -460,10 +399,8 @@
     const renderRow = (item) => {
       const row = document.createElement("button");
       row.type = "button";
-      row.className =
-        "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (item.id === state.selectedBuildKey)
-        row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      row.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (item.id === state.selectedBuildKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
       const thumbWrap = document.createElement("div");
       thumbWrap.className = "w-8 h-8 rounded-sm border border-neutral-800 bg-neutral-900/60 flex items-center justify-center overflow-hidden";
       const thumb = document.createElement("img");
@@ -480,10 +417,7 @@
       title.textContent = item.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent =
-        item.id === "sell"
-          ? "Remove and refund"
-          : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
       text.appendChild(title);
       text.appendChild(meta);
       row.appendChild(text);
@@ -498,8 +432,7 @@
       width: 1,
       height: 1,
       cost: 0,
-      image:
-        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>",
+      image: sellIconSrc,
     });
     dom.buildSelectMenu.appendChild(sellOption);
 
@@ -511,9 +444,9 @@
         return costA - costB;
       })
       .forEach((b) => {
-      if (!b) return;
-      dom.buildSelectMenu.appendChild(renderRow(b));
-    });
+        if (!b) return;
+        dom.buildSelectMenu.appendChild(renderRow(b));
+      });
 
     updateBuildLabel();
   }
@@ -529,13 +462,104 @@
     }
     if (dom.buildSelectImage) {
       if (state.selectedBuildKey === "sell") {
-        dom.buildSelectImage.src =
-          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>";
+        dom.buildSelectImage.src = sellIconSrc;
         dom.buildSelectImage.alt = "Sell";
       } else {
         const selected = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
         dom.buildSelectImage.src = selected?.image || "images/farmland.jpg";
         dom.buildSelectImage.alt = selected?.name || "Build";
+      }
+    }
+  }
+
+  function renderLandscapeOptions() {
+    ensureLandscapeDefaults();
+    if (!dom.landscapeSelectMenu) {
+      updateLandscapeLabel();
+      return;
+    }
+    dom.landscapeSelectMenu.innerHTML = "";
+
+    const setSelected = (id) => {
+      state.selectedLandscapeKey = id;
+      updateLandscapeLabel();
+      state.needsRender = true;
+      closeAllMenus();
+      saveState();
+    };
+
+    const renderRow = (item) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
+      if (item.id === state.selectedLandscapeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      const thumbWrap = document.createElement("div");
+      thumbWrap.className = "w-8 h-8 rounded-sm border border-neutral-800 bg-neutral-900/60 flex items-center justify-center overflow-hidden";
+      const thumb = document.createElement("img");
+      thumb.src = item.image || "images/farmland.jpg";
+      thumb.alt = item.name;
+      thumb.className = "max-w-full max-h-full object-contain";
+      thumbWrap.appendChild(thumb);
+      row.appendChild(thumbWrap);
+
+      const text = document.createElement("div");
+      text.className = "flex-1 min-w-0";
+      const title = document.createElement("div");
+      title.className = "text-sm font-semibold text-white truncate";
+      title.textContent = item.name;
+      const meta = document.createElement("div");
+      meta.className = "text-[11px] text-neutral-400 truncate";
+      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      text.appendChild(title);
+      text.appendChild(meta);
+      row.appendChild(text);
+
+      row.addEventListener("click", () => setSelected(item.id));
+      return row;
+    };
+
+    const sellOption = renderRow({
+      id: "sell",
+      name: "Sell",
+      width: 1,
+      height: 1,
+      cost: 0,
+      image: sellIconSrc,
+    });
+    dom.landscapeSelectMenu.appendChild(sellOption);
+
+    Object.values(landscapes || {})
+      .slice()
+      .sort((a, b) => {
+        const costA = Number.isFinite(a?.cost) ? a.cost : 0;
+        const costB = Number.isFinite(b?.cost) ? b.cost : 0;
+        return costA - costB;
+      })
+      .forEach((landscape) => {
+        if (!landscape) return;
+        dom.landscapeSelectMenu.appendChild(renderRow(landscape));
+      });
+
+    updateLandscapeLabel();
+  }
+
+  function updateLandscapeLabel() {
+    if (dom.landscapeSelectLabel) {
+      if (state.selectedLandscapeKey === "sell") {
+        dom.landscapeSelectLabel.textContent = "Sell";
+      } else {
+        const selected = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
+        dom.landscapeSelectLabel.textContent = selected ? selected.name : "Select";
+      }
+    }
+    if (dom.landscapeSelectImage) {
+      if (state.selectedLandscapeKey === "sell") {
+        dom.landscapeSelectImage.src = sellIconSrc;
+        dom.landscapeSelectImage.alt = "Sell";
+      } else {
+        const selected = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
+        dom.landscapeSelectImage.src = selected?.image || "images/farmland.jpg";
+        dom.landscapeSelectImage.alt = selected?.name || "Landscape";
       }
     }
   }
@@ -548,6 +572,7 @@
       menu: dom.harvestSizeMenu,
     }),
     buildSelect: () => ({ button: dom.buildSelectButton, menu: dom.buildSelectMenu }),
+    landscapeSelect: () => ({ button: dom.landscapeSelectButton, menu: dom.landscapeSelectMenu }),
   };
 
   function closeAllMenus() {
@@ -566,6 +591,7 @@
     if (shouldOpen) {
       if (key === "plantCrop") renderCropOptions();
       if (key === "buildSelect") renderBuildOptions();
+      if (key === "landscapeSelect") renderLandscapeOptions();
       entry.menu.classList.remove("hidden");
       openMenuKey = key;
     }
@@ -584,21 +610,19 @@
       } else {
         dom.plantCropLabel.textContent = base;
       }
-      dom.plantCropLabel.title = cropStatus
-        ? `${base} - Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}`
-        : "";
+      dom.plantCropLabel.title = cropStatus ? `${base} - Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}` : "";
     }
     if (dom.plantCropImage) {
       dom.plantCropImage.src = cropThumbSrc(crop ? crop.id : null);
       dom.plantCropImage.alt = crop ? crop.name : "Crop";
     }
     const size = currentSizeOption();
-    if (dom.plantSizeLabel)
-      dom.plantSizeLabel.textContent = size ? size.name : "Size";
-    if (dom.harvestSizeLabel)
-      dom.harvestSizeLabel.textContent = size ? size.name : "Size";
+    if (dom.plantSizeLabel) dom.plantSizeLabel.textContent = size ? size.name : "Size";
+    if (dom.harvestSizeLabel) dom.harvestSizeLabel.textContent = size ? size.name : "Size";
     ensureBuildDefaults();
     updateBuildLabel();
+    ensureLandscapeDefaults();
+    updateLandscapeLabel();
   }
 
   function bindMenuToggle(button, key) {
@@ -610,18 +634,14 @@
   }
 
   function updateTotalDisplay() {
-    if (dom.totalDisplay)
-      dom.totalDisplay.textContent = formatCurrency(state.totalMoney, true);
+    if (dom.totalDisplay) dom.totalDisplay.textContent = formatCurrency(state.totalMoney, true);
   }
 
   function showAggregateMoneyChange(amount) {
     const el = dom.moneyChangeDisplay;
     if (!el || amount === 0) return;
     const isGain = amount >= 0;
-    const valueText = `${isGain ? "+" : "-"}${formatCurrency(
-      Math.abs(amount),
-      true
-    )}`;
+    const valueText = `${isGain ? "+" : "-"}${formatCurrency(Math.abs(amount), true)}`;
     el.textContent = valueText;
     el.classList.remove("hidden");
     el.classList.remove("text-red-400");
@@ -645,11 +665,13 @@
   function refreshAllUI() {
     ensurePlantDefaults();
     ensureBuildDefaults();
+    ensureLandscapeDefaults();
     updateTotalDisplay();
     showAggregateMoneyChange(0);
     renderCropOptions();
     renderSizeMenu();
     renderBuildOptions();
+    renderLandscapeOptions();
     updateModeButtonsUI();
     updateHideButtonsUI();
     renderDropdownGroups();
@@ -660,10 +682,7 @@
     bubble.className = "action-error";
     bubble.textContent = message;
     const clampedX = Math.max(12, Math.min(window.innerWidth - 12, clientX));
-    const clampedY = Math.max(
-      12,
-      Math.min(window.innerHeight - 12, clientY - 16)
-    );
+    const clampedY = Math.max(12, Math.min(window.innerHeight - 12, clientY - 16));
     bubble.style.left = clampedX + "px";
     bubble.style.top = clampedY + "px";
     document.body.appendChild(bubble);
@@ -677,8 +696,7 @@
   function bindUIEvents() {
     if (dom.navToggle) dom.navToggle.addEventListener("click", toggleOffcanvas);
     if (dom.navClose) dom.navClose.addEventListener("click", closeOffcanvas);
-    if (dom.navOverlay)
-      dom.navOverlay.addEventListener("click", closeOffcanvas);
+    if (dom.navOverlay) dom.navOverlay.addEventListener("click", closeOffcanvas);
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
@@ -775,32 +793,20 @@
     }
     if (dom.clearCacheBtn && clearCache) {
       dom.clearCacheBtn.addEventListener("click", () => {
-        openConfirmModal(
-          "Clear all cached data? If you are not logged in your progress will be lost.",
-          clearCache,
-          "Clear Cache",
-          null,
-          {
-            confirmText: "Yes",
-            cancelText: "No",
-            confirmVariant: "danger",
-          }
-        );
+        openConfirmModal("Clear all cached data? If you are not logged in your progress will be lost.", clearCache, "Clear Cache", null, {
+          confirmText: "Yes",
+          cancelText: "No",
+          confirmVariant: "danger",
+        });
       });
     }
     if (dom.resetFarmBtn) {
       dom.resetFarmBtn.addEventListener("click", () => {
-        openConfirmModal(
-          "Reset all progress and start fresh? This cannot be undone.",
-          resetFarm,
-          "Reset Progress",
-          null,
-          {
-            confirmText: "Reset",
-            cancelText: "Cancel",
-            confirmVariant: "danger",
-          }
-        );
+        openConfirmModal("Reset all progress and start fresh? This cannot be undone.", resetFarm, "Reset Progress", null, {
+          confirmText: "Reset",
+          cancelText: "Cancel",
+          confirmVariant: "danger",
+        });
       });
     }
 
@@ -819,33 +825,27 @@
       });
     }
 
-    if (dom.modePlantBtn)
-      dom.modePlantBtn.addEventListener("click", () => setActiveMode("plant"));
-    if (dom.modeHarvestBtn)
-      dom.modeHarvestBtn.addEventListener("click", () =>
-        setActiveMode("harvest")
-      );
-    if (dom.modeBuildBtn)
-      dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
+    if (dom.modePlantBtn) dom.modePlantBtn.addEventListener("click", () => setActiveMode("plant"));
+    if (dom.modeHarvestBtn) dom.modeHarvestBtn.addEventListener("click", () => setActiveMode("harvest"));
+    if (dom.modeBuildBtn) dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
+    if (dom.modeLandscapeBtn) dom.modeLandscapeBtn.addEventListener("click", () => setActiveMode("landscape"));
 
     bindMenuToggle(dom.plantCropButton, "plantCrop");
     bindMenuToggle(dom.plantSizeButton, "plantSize");
     bindMenuToggle(dom.harvestSizeButton, "harvestSize");
     bindMenuToggle(dom.buildSelectButton, "buildSelect");
+    bindMenuToggle(dom.landscapeSelectButton, "landscapeSelect");
 
     document.addEventListener("click", (e) => {
       const target = e.target;
       const inside = Object.values(menuMap).some((get) => {
         const { button, menu } = get();
-        return (
-          (button && button.contains(target)) || (menu && menu.contains(target))
-        );
+        return (button && button.contains(target)) || (menu && menu.contains(target));
       });
       if (!inside) closeAllMenus();
     });
   }
 
-  // Keep the selected crop label (and open dropdown) fresh every second.
   setInterval(() => {
     const now = Date.now();
     updateSelectionLabels(now);
@@ -873,5 +873,3 @@
     showActionError,
   };
 }
-
-

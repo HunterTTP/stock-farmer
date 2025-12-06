@@ -114,9 +114,7 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
       const diff = t.price - t.prevPrice;
       const pct = (diff / t.prevPrice) * 100 || 0;
       const li = document.createElement("li");
-      li.className =
-        "flex items-center justify-between px-2.5 py-1.5 active:bg-neutral-800/70 cursor-pointer" +
-        (t.symbol === selectedSymbol ? " bg-neutral-800/80" : "");
+      li.className = "flex items-center justify-between px-2.5 py-1.5 active:bg-neutral-800/70 cursor-pointer" + (t.symbol === selectedSymbol ? " bg-neutral-800/80" : "");
       li.dataset.symbol = t.symbol;
       li.innerHTML = `
         <div>
@@ -335,7 +333,7 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
     const ticker = getTicker(symbol);
     if (!lot || !ticker) return;
     const proceeds = lot.shares * ticker.price;
-    const value = proceeds; // current market value of lot
+    const value = proceeds;
     state.totalMoney += proceeds;
     lots.splice(lotIndex, 1);
     if (!lots.length) delete holdings[symbol];

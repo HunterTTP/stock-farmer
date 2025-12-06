@@ -2,7 +2,9 @@ import { config } from "./config.js";
 import { crops } from "./data/crops.js";
 import { sizes } from "./data/sizes.js";
 import { buildings } from "./data/buildings.js";
+import { landscapes } from "./data/landscapes.js";
 import { createBaseAssets, preloadCropImages } from "./assets/assetLoader.js";
+import { createLandscapeAssets } from "./assets/landscapeAssets.js";
 import { createInitialState, createInitialWorld, applyDefaultSelection, loadState, saveState, recalcPlacedCounts } from "./state/state.js";
 import { getDomRefs } from "./ui/domRefs.js";
 import { createUIControls } from "./controls/uiControls.js";
@@ -22,16 +24,17 @@ const state = createInitialState(config);
 const world = createInitialWorld(config);
 const dom = getDomRefs();
 const assets = createBaseAssets(state);
+const landscapeAssets = createLandscapeAssets({ landscapes, state });
 preloadCropImages(crops, state);
 
 const persistence = {
   save: (options = {}) => {
-    const data = saveState({ state, world, crops, sizes, config });
+    const data = saveState({ state, world, crops, sizes, landscapes, config });
     if (!options.skipRemote) queueCloudSave(data);
     return data;
   },
   saveView: () => persistence.save({ skipRemote: true }),
-  load: () => loadState({ state, world, crops, sizes, config }),
+  load: () => loadState({ state, world, crops, sizes, landscapes, config }),
 };
 
 persistence.load();
@@ -72,6 +75,7 @@ ui = createUIControls({
   crops,
   sizes,
   buildings,
+  landscapes,
   formatCurrency,
   onMoneyChanged,
   saveState: persistence.save,
@@ -92,6 +96,7 @@ registerGameContext({
   crops,
   sizes,
   buildings,
+  landscapes,
   config,
   refreshUI: ui.refreshAllUI,
   openConfirmModal: ui.openConfirmModal,
@@ -103,6 +108,7 @@ const actions = createActions({
   config,
   crops,
   buildings,
+  landscapes,
   currentSizeOption: ui.currentSizeOption,
   formatCurrency,
   onMoneyChanged,
@@ -122,6 +128,8 @@ const renderer = createRenderer({
   config,
   crops,
   assets,
+  landscapes,
+  landscapeAssets,
   currentSizeOption: ui.currentSizeOption,
   computeHoverPreview: actions.computeHoverPreview,
 });

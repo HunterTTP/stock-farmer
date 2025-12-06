@@ -4,6 +4,7 @@ export function createActions({
   config,
   crops,
   buildings,
+  landscapes,
   currentSizeOption,
   formatCurrency,
   onMoneyChanged,
@@ -15,6 +16,9 @@ export function createActions({
   tileFromClient,
 }) {
   const getStructureAtKey = (key) => world.structureTiles.get(key) || null;
+  const getStructKind = (struct) => (struct && struct.kind === "landscape" ? "landscape" : "building");
+  const getPlacementSource = (kind, id) =>
+    kind === "landscape" ? landscapes?.[id] : buildings?.[id];
 
   const canPlaceStructure = (row, col, building) => {
     if (!building) return false;
@@ -32,10 +36,12 @@ export function createActions({
     return true;
   };
 
-  const removeStructure = (structKey) => {
+  const removeStructure = (structKey, expectedKind = null) => {
     if (!structKey) return { success: false, refund: 0 };
     const struct = world.structures.get(structKey);
     if (!struct) return { success: false, refund: 0 };
+    const kind = getStructKind(struct);
+    if (expectedKind && kind !== expectedKind) return { success: false, refund: 0 };
     for (let r = 0; r < struct.height; r++) {
       for (let c = 0; c < struct.width; c++) {
         world.structureTiles.delete(`${struct.row + r},${struct.col + c}`);
@@ -43,7 +49,7 @@ export function createActions({
     }
     world.structures.delete(structKey);
     const refund = Number.isFinite(struct.cost) ? struct.cost : 0;
-    return { success: true, refund };
+    return { success: true, refund, kind };
   };
 
   function determineActionForTile(row, col, nowMs = Date.now()) {
@@ -54,20 +60,24 @@ export function createActions({
     const mode = state.activeMode || "plant";
     const isHarvestMode = mode === "harvest";
     const isBuildMode = mode === "build";
-    if (isBuildMode) {
-      const buildKey = state.selectedBuildKey || null;
-      if (buildKey === "sell") {
+    const isLandscapeMode = mode === "landscape";
+    const isPlacementMode = isBuildMode || isLandscapeMode;
+    if (isPlacementMode) {
+      const kind = isLandscapeMode ? "landscape" : "building";
+      const selectionKey = isLandscapeMode ? state.selectedLandscapeKey : state.selectedBuildKey;
+      if (selectionKey === "sell") {
         const structKey = getStructureAtKey(key);
-        if (!structKey) return { type: "none", reason: "No building here" };
-        return { type: "destroyBuilding", structKey };
+        const struct = structKey ? world.structures.get(structKey) : null;
+        if (!struct || getStructKind(struct) !== kind) return { type: "none", reason: `No ${kind} here` };
+        return { type: "destroyStructure", structKey, kind };
       }
-      const building = buildKey ? buildings?.[buildKey] : null;
-      if (!building) return { type: "none", reason: "Select a building" };
-      if (!building.unlocked) return { type: "none", reason: "Building locked" };
-      if (!canPlaceStructure(row, col, building)) return { type: "none", reason: "Not enough space" };
-      const cost = Number.isFinite(building.cost) ? building.cost : 0;
+      const selection = selectionKey ? getPlacementSource(kind, selectionKey) : null;
+      if (!selection) return { type: "none", reason: `Select a ${kind}` };
+      if (!selection.unlocked) return { type: "none", reason: `${kind === "landscape" ? "Landscape" : "Building"} locked` };
+      if (!canPlaceStructure(row, col, selection)) return { type: "none", reason: "Not enough space" };
+      const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
       if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
-      return { type: "placeBuilding", buildingId: building.id, row, col };
+      return { type: "placeStructure", structureId: selection.id, kind, row, col };
     }
     if (isHarvestMode) {
       if (existingPlot) {
@@ -78,7 +88,7 @@ export function createActions({
       return { type: "none", reason: "Nothing to harvest" };
     }
 
-    if (existingStructKey) return { type: "none", reason: "Building here" };
+    if (existingStructKey) return { type: "none", reason: "Structure here" };
     if (existingPlot) return { type: "none", reason: "Already planted" };
     const cropSelection = state.selectedCropKey ? crops[state.selectedCropKey] : null;
     if (!cropSelection) return { type: "none", reason: "Select a crop" };
@@ -166,14 +176,15 @@ export function createActions({
     const results = [];
     const mode = state.activeMode || "plant";
 
-    if (mode === "build") {
-      const buildKey = state.selectedBuildKey;
-      const building = buildKey && buildKey !== "sell" ? buildings?.[buildKey] : null;
-      const fallbackSize = buildKey === "sell" ? 1 : Math.max(1, size || 1);
-      const width = Number.isInteger(building?.width) && building.width > 0 ? building.width : fallbackSize;
-      const height = Number.isInteger(building?.height) && building.height > 0 ? building.height : fallbackSize;
+    if (mode === "build" || mode === "landscape") {
+      const kind = mode === "landscape" ? "landscape" : "building";
+      const selectedKey = kind === "landscape" ? state.selectedLandscapeKey : state.selectedBuildKey;
+      const selection = selectedKey && selectedKey !== "sell" ? getPlacementSource(kind, selectedKey) : null;
+      const fallbackSize = selectedKey === "sell" ? 1 : Math.max(1, size || 1);
+      const width = Number.isInteger(selection?.width) && selection.width > 0 ? selection.width : fallbackSize;
+      const height = Number.isInteger(selection?.height) && selection.height > 0 ? selection.height : fallbackSize;
       const action = determineActionForTile(baseRow, baseCol, nowMs);
-      const allowed = action?.type === "placeBuilding" || action?.type === "destroyBuilding";
+      const allowed = action?.type === "placeStructure" || action?.type === "destroyStructure";
       for (let dr = 0; dr < height; dr++) {
         for (let dc = 0; dc < width; dc++) {
           results.push({ row: baseRow + dr, col: baseCol + dc, allowed });
@@ -264,13 +275,21 @@ export function createActions({
     return targets;
   }
 
-  function collectStructureSellTargets(baseRow, baseCol) {
-    if (state.activeMode !== "build") return [];
+  function collectStructureSellTargets(baseRow, baseCol, kindOverride = null) {
+    const activeKind =
+      kindOverride ||
+      (state.activeMode === "build"
+        ? "building"
+        : state.activeMode === "landscape"
+        ? "landscape"
+        : null);
+    if (!activeKind) return [];
     const targets = new Set();
-    const buildKey = state.selectedBuildKey;
-    const building = buildKey && buildKey !== "sell" ? buildings?.[buildKey] : null;
-    const width = Number.isInteger(building?.width) && building.width > 0 ? building.width : 1;
-    const height = Number.isInteger(building?.height) && building.height > 0 ? building.height : 1;
+    const selectedKey =
+      activeKind === "landscape" ? state.selectedLandscapeKey : state.selectedBuildKey;
+    const selected = selectedKey && selectedKey !== "sell" ? getPlacementSource(activeKind, selectedKey) : null;
+    const width = Number.isInteger(selected?.width) && selected.width > 0 ? selected.width : 1;
+    const height = Number.isInteger(selected?.height) && selected.height > 0 ? selected.height : 1;
     for (let dr = 0; dr < height; dr++) {
       for (let dc = 0; dc < width; dc++) {
         const row = baseRow + dr;
@@ -278,13 +297,15 @@ export function createActions({
         if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) continue;
         const key = `${row},${col}`;
         const structKey = getStructureAtKey(key);
-        if (structKey) targets.add(structKey);
+        if (!structKey) continue;
+        const struct = world.structures.get(structKey);
+        if (struct && getStructKind(struct) === activeKind) targets.add(structKey);
       }
     }
     return Array.from(targets);
   }
 
-  function getStructureSellSummary(structKeys) {
+  function getStructureSellSummary(structKeys, kind = null) {
     const seen = new Set();
     let count = 0;
     let total = 0;
@@ -292,7 +313,7 @@ export function createActions({
       if (!key || seen.has(key)) return;
       seen.add(key);
       const struct = world.structures.get(key);
-      if (!struct) return;
+      if (!struct || (kind && getStructKind(struct) !== kind)) return;
       count += 1;
       const refund = Number.isFinite(struct.cost) ? struct.cost : 0;
       total += refund;
@@ -300,14 +321,14 @@ export function createActions({
     return { count, total };
   }
 
-  function sellStructures(structKeys) {
+  function sellStructures(structKeys, kind = null) {
     const seen = new Set();
     let sold = 0;
     let totalRefund = 0;
     (structKeys || []).forEach((key) => {
       if (!key || seen.has(key)) return;
       seen.add(key);
-      const result = removeStructure(key);
+      const result = removeStructure(key, kind || undefined);
       if (result.success) {
         sold += 1;
         totalRefund += result.refund;
@@ -324,15 +345,19 @@ export function createActions({
     return { sold, totalRefund };
   }
 
-  function promptSellStructures(structKeys) {
-    const summary = getStructureSellSummary(structKeys);
+  function promptSellStructures(structKeys, kind = null) {
+    const summary = getStructureSellSummary(structKeys, kind || undefined);
     if (!summary.count) return;
-    const label = summary.count === 1 ? "building" : "buildings";
+    const singleLabel =
+      kind === "landscape" ? "landscape tile" : "building";
+    const pluralLabel =
+      kind === "landscape" ? "landscape tiles" : "buildings";
+    const label = summary.count === 1 ? singleLabel : pluralLabel;
     const priceText = formatCurrency(summary.total || 0);
     openConfirmModal(
       `Sell ${summary.count} ${label} for ${priceText}?`,
-      () => sellStructures(structKeys),
-      "Sell Buildings",
+      () => sellStructures(structKeys, kind || undefined),
+      kind === "landscape" ? "Sell Landscapes" : "Sell Buildings",
       null,
       { confirmVariant: "danger", confirmText: "Sell" }
     );
@@ -424,27 +449,35 @@ export function createActions({
         saveState();
         return { success: true };
       }
-      case "placeBuilding": {
-        const building = resolvedAction && resolvedAction.buildingId ? buildings?.[resolvedAction.buildingId] : null;
-        if (!building) return { success: false, reason: "Select a building" };
-      if (!building.unlocked) return { success: false, reason: "Building locked" };
-      if (!canPlaceStructure(row, col, building)) return { success: false, reason: "Not enough space" };
-      const cost = Number.isFinite(building.cost) ? building.cost : 0;
-      if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)}` };
-      const structKey = `${row},${col}`;
+      case "placeStructure": {
+        const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
+        const selectionId =
+          resolvedAction && resolvedAction.structureId
+            ? resolvedAction.structureId
+            : kind === "landscape"
+            ? state.selectedLandscapeKey
+            : state.selectedBuildKey;
+        const selection = selectionId ? getPlacementSource(kind, selectionId) : null;
+        if (!selection) return { success: false, reason: `Select a ${kind}` };
+        if (!selection.unlocked) return { success: false, reason: `${kind === "landscape" ? "Landscape" : "Building"} locked` };
+        if (!canPlaceStructure(row, col, selection)) return { success: false, reason: "Not enough space" };
+        const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
+        if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)}` };
+        const structKey = `${row},${col}`;
         const stored = {
-          id: building.id,
-          name: building.name,
+          id: selection.id,
+          kind,
+          name: selection.name,
           row,
           col,
-          width: building.width,
-          height: building.height,
+          width: selection.width,
+          height: selection.height,
           cost,
-          image: building.image,
+          image: kind === "landscape" ? "" : selection.image,
         };
         world.structures.set(structKey, stored);
-        for (let r = 0; r < building.height; r++) {
-          for (let c = 0; c < building.width; c++) {
+        for (let r = 0; r < selection.height; r++) {
+          for (let c = 0; c < selection.width; c++) {
             world.structureTiles.set(`${row + r},${col + c}`, structKey);
           }
         }
@@ -454,11 +487,12 @@ export function createActions({
         saveState();
         return { success: true };
       }
-      case "destroyBuilding": {
+      case "destroyStructure": {
+        const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
         const structKey = resolvedAction?.structKey || getStructureAtKey(key);
-        if (!structKey) return { success: false, reason: "No building here" };
-        const { success, refund } = removeStructure(structKey);
-        if (!success) return { success: false, reason: "No building here" };
+        if (!structKey) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
+        const { success, refund } = removeStructure(structKey, kind);
+        if (!success) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
         if (refund > 0) {
           state.totalMoney += refund;
           onMoneyChanged();
@@ -477,7 +511,8 @@ export function createActions({
     const tile = tileFromClient(clientX, clientY);
     if (!tile) return;
     const sizeOption = currentSizeOption();
-    const size = state.activeMode === "build" ? 1 : sizeOption.size || 1;
+    const isPlacementMode = state.activeMode === "build" || state.activeMode === "landscape";
+    const size = isPlacementMode ? 1 : sizeOption.size || 1;
     const baseRow = tile.row;
     const baseCol = tile.col;
     const isHarvestMode = state.activeMode === "harvest";
