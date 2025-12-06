@@ -1,3 +1,5 @@
+import { getStageBreakpoints } from "../utils/helpers.js";
+
 export function createRenderer({ canvas, ctx, state, world, config, crops, assets, currentSizeOption, computeHoverPreview }) {
   function renderFloatingValue(anim, nowPerf, startRow, endRow, startCol, endCol) {
     const visibleDuration = 1000;
@@ -88,8 +90,7 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         const progress = Math.min(1, elapsed / crop.growTimeMs);
         const isReady = progress >= 1;
 
-        const breakpoints =
-          Array.isArray(plot.stageBreakpoints) && plot.stageBreakpoints.length === 2 ? plot.stageBreakpoints : [1 / 3, 2 / 3];
+        const breakpoints = getStageBreakpoints(key, plot.cropKey, plot.plantedAt, crop.growTimeMs);
         let phaseIndex = 0;
         if (isReady) phaseIndex = 3;
         else if (progress >= breakpoints[1]) phaseIndex = 2;

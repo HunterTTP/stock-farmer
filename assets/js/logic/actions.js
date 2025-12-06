@@ -5,7 +5,6 @@ export function createActions({
   crops,
   currentSizeOption,
   formatCurrency,
-  createRandomStageBreakpoints,
   onMoneyChanged,
   renderCropOptions,
   showAggregateMoneyChange,
@@ -277,7 +276,6 @@ export function createActions({
         world.plots.set(key, {
           cropKey,
           plantedAt,
-          stageBreakpoints: createRandomStageBreakpoints(crop.growTimeMs),
         });
         crop.placed += 1;
         crop.lastPlantedAt = plantedAt;

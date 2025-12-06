@@ -9,7 +9,7 @@ import { createViewport } from "./render/viewport.js";
 import { createRenderer } from "./render/canvasRenderer.js";
 import { createPointerControls } from "./controls/pointerControls.js";
 import { createActions } from "./logic/actions.js";
-import { formatCurrency, createRandomStageBreakpoints } from "./utils/helpers.js";
+import { formatCurrency } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
 import { createTradeModal } from "./trading/tradeModal.js";
 
@@ -101,7 +101,6 @@ const actions = createActions({
   crops,
   currentSizeOption: ui.currentSizeOption,
   formatCurrency,
-  createRandomStageBreakpoints,
   onMoneyChanged,
   renderCropOptions: ui.renderCropOptions,
   showAggregateMoneyChange: ui.showAggregateMoneyChange,

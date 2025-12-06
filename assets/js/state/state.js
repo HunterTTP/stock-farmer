@@ -110,12 +110,10 @@ export function saveState({ state, world, crops, sizes, config }) {
 }
 
 function cleanPlotValue(value) {
-  const stageBreakpoints = Array.isArray(value?.stageBreakpoints) ? value.stageBreakpoints : [];
   const plantedAt = typeof value?.plantedAt === "number" ? value.plantedAt : Date.now();
   return {
     cropKey: value?.cropKey || null,
     plantedAt,
-    stageBreakpoints,
   };
 }
 
