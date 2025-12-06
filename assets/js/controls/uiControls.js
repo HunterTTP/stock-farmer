@@ -191,10 +191,10 @@
   }
 
   function ensureBuildDefaults() {
-    if (state.selectedBuildKey === "destroy") return;
+    if (state.selectedBuildKey === "sell") return;
     if (state.selectedBuildKey && buildings?.[state.selectedBuildKey]) return;
     const first = Object.values(buildings || {}).find((b) => b && b.unlocked);
-    state.selectedBuildKey = first ? first.id : "destroy";
+    state.selectedBuildKey = first ? first.id : "sell";
   }
 
   function updateModeButtonsUI() {
@@ -481,7 +481,7 @@
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
       meta.textContent =
-        item.id === "destroy"
+        item.id === "sell"
           ? "Remove and refund"
           : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
       text.appendChild(title);
@@ -492,16 +492,16 @@
       return row;
     };
 
-    const destroyOption = renderRow({
-      id: "destroy",
-      name: "Destroy",
+    const sellOption = renderRow({
+      id: "sell",
+      name: "Sell",
       width: 1,
       height: 1,
       cost: 0,
       image:
         "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>",
     });
-    dom.buildSelectMenu.appendChild(destroyOption);
+    dom.buildSelectMenu.appendChild(sellOption);
 
     Object.values(buildings || {})
       .slice()
@@ -520,18 +520,18 @@
 
   function updateBuildLabel() {
     if (dom.buildSelectLabel) {
-      if (state.selectedBuildKey === "destroy") {
-        dom.buildSelectLabel.textContent = "Destroy";
+      if (state.selectedBuildKey === "sell") {
+        dom.buildSelectLabel.textContent = "Sell";
       } else {
         const selected = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
         dom.buildSelectLabel.textContent = selected ? selected.name : "Select";
       }
     }
     if (dom.buildSelectImage) {
-      if (state.selectedBuildKey === "destroy") {
+      if (state.selectedBuildKey === "sell") {
         dom.buildSelectImage.src =
           "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>";
-        dom.buildSelectImage.alt = "Destroy";
+        dom.buildSelectImage.alt = "Sell";
       } else {
         const selected = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
         dom.buildSelectImage.src = selected?.image || "images/farmland.jpg";

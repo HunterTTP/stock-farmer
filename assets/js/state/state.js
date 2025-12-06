@@ -38,6 +38,8 @@ export function createInitialState(config) {
     hoeSelected: false,
     hoeHoldTimeoutId: null,
     hoeHoldTriggered: false,
+    buildingHoldTimeoutId: null,
+    buildingHoldTriggered: false,
     lastSavedAt: 0,
     selectedBuildKey: null,
   };
@@ -73,6 +75,10 @@ export function applyDefaultSelection(state) {
   state.selectedBuildKey = null;
   state.activeMode = "plant";
   state.hoeSelected = false;
+  state.hoeHoldTimeoutId = null;
+  state.hoeHoldTriggered = false;
+  state.buildingHoldTimeoutId = null;
+  state.buildingHoldTriggered = false;
   state.showTickerInfo = false;
   state.showPctInfo = false;
   state.showTimerInfo = false;
@@ -152,6 +158,11 @@ function clampShares(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
   return Math.max(0, Math.floor(num));
+}
+
+function normalizeBuildKey(value) {
+  if (value === "destroy") return "sell";
+  return typeof value === "string" ? value : null;
 }
 
 function cleanStockHoldings(raw) {
@@ -245,7 +256,8 @@ export function loadState({ state, world, crops, sizes, config }) {
     if (data.selectedStockKey) state.selectedStockKey = null;
     if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
     else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
-    if (typeof data.selectedBuildKey === "string") state.selectedBuildKey = data.selectedBuildKey;
+    const savedBuildKey = normalizeBuildKey(data.selectedBuildKey);
+    if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
 
     const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
     const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
@@ -402,7 +414,8 @@ export function applyLoadedData(data, { state, world, crops, sizes, config }) {
   state.selectedStockKey = null;
   if (data.selectedSizeKey && sizes[data.selectedSizeKey]) state.selectedSizeKey = data.selectedSizeKey;
   else if (data.selectedToolKey && sizes[data.selectedToolKey]) state.selectedSizeKey = data.selectedToolKey;
-  if (typeof data.selectedBuildKey === "string") state.selectedBuildKey = data.selectedBuildKey;
+  const savedBuildKey = normalizeBuildKey(data.selectedBuildKey);
+  if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
 
   const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
   const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;

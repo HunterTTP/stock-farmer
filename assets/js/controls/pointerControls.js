@@ -8,6 +8,13 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     }
   }
 
+  function cancelBuildingHold() {
+    if (state.buildingHoldTimeoutId) {
+      clearTimeout(state.buildingHoldTimeoutId);
+      state.buildingHoldTimeoutId = null;
+    }
+  }
+
   const persistView = saveViewState || saveState;
 
   let viewSaveTimerId = null;
@@ -58,6 +65,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.pinchCenter = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
       state.tapStart = null;
       cancelHoeHold();
+      cancelBuildingHold();
     } else if (state.activePointers.size === 1) {
       state.isPinching = false;
       state.isDragging = true;
@@ -80,6 +88,19 @@ export function createPointerControls({ canvas, state, config, viewport, actions
                 () => destroyTargets.forEach((k) => actions.destroyPlot(k)),
                 count === 1 ? "Destroy Crop" : "Destroy Crops"
               );
+            }, config.hoeDestroyWindowMs);
+          }
+        }
+      } else if (state.activeMode === "build") {
+        const tile = viewport.tileFromClient(e.clientX, e.clientY);
+        if (tile) {
+          const targets = actions.collectStructureSellTargets(tile.row, tile.col);
+          if (targets.length > 0) {
+            const sellTargets = targets.slice();
+            state.buildingHoldTimeoutId = setTimeout(() => {
+              state.buildingHoldTimeoutId = null;
+              state.buildingHoldTriggered = true;
+              actions.promptSellStructures(sellTargets);
             }, config.hoeDestroyWindowMs);
           }
         }
@@ -116,6 +137,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         if (dx * dx + dy * dy > 25) {
           state.tapStart = null;
           cancelHoeHold();
+          cancelBuildingHold();
         }
       }
     }
@@ -124,13 +146,15 @@ export function createPointerControls({ canvas, state, config, viewport, actions
 
   function onPointerUp(e) {
     cancelHoeHold();
+    cancelBuildingHold();
     state.activePointers.delete(e.pointerId);
     canvas.releasePointerCapture(e.pointerId);
     if (state.activePointers.size < 2) state.isPinching = false;
     if (state.activePointers.size === 0) state.isDragging = false;
 
-    if (state.hoeHoldTriggered) {
+    if (state.hoeHoldTriggered || state.buildingHoldTriggered) {
       state.hoeHoldTriggered = false;
+      state.buildingHoldTriggered = false;
       state.tapStart = null;
     } else if (state.tapStart && state.tapStart.id === e.pointerId) {
       const dt = performance.now() - state.tapStart.time;
@@ -167,6 +191,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
 
     document.addEventListener("pointerleave", () => {
       cancelHoeHold();
+      cancelBuildingHold();
     });
   }
 

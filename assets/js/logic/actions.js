@@ -32,6 +32,20 @@ export function createActions({
     return true;
   };
 
+  const removeStructure = (structKey) => {
+    if (!structKey) return { success: false, refund: 0 };
+    const struct = world.structures.get(structKey);
+    if (!struct) return { success: false, refund: 0 };
+    for (let r = 0; r < struct.height; r++) {
+      for (let c = 0; c < struct.width; c++) {
+        world.structureTiles.delete(`${struct.row + r},${struct.col + c}`);
+      }
+    }
+    world.structures.delete(structKey);
+    const refund = Number.isFinite(struct.cost) ? struct.cost : 0;
+    return { success: true, refund };
+  };
+
   function determineActionForTile(row, col, nowMs = Date.now()) {
     if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { type: "none", reason: "Out of bounds" };
     const key = row + "," + col;
@@ -42,7 +56,7 @@ export function createActions({
     const isBuildMode = mode === "build";
     if (isBuildMode) {
       const buildKey = state.selectedBuildKey || null;
-      if (buildKey === "destroy") {
+      if (buildKey === "sell") {
         const structKey = getStructureAtKey(key);
         if (!structKey) return { type: "none", reason: "No building here" };
         return { type: "destroyBuilding", structKey };
@@ -154,12 +168,12 @@ export function createActions({
 
     if (mode === "build") {
       const buildKey = state.selectedBuildKey;
-      const building = buildKey && buildKey !== "destroy" ? buildings?.[buildKey] : null;
-      const fallbackSize = Math.max(1, size || 1);
+      const building = buildKey && buildKey !== "sell" ? buildings?.[buildKey] : null;
+      const fallbackSize = buildKey === "sell" ? 1 : Math.max(1, size || 1);
       const width = Number.isInteger(building?.width) && building.width > 0 ? building.width : fallbackSize;
       const height = Number.isInteger(building?.height) && building.height > 0 ? building.height : fallbackSize;
       const action = determineActionForTile(baseRow, baseCol, nowMs);
-      const allowed = action?.type === "placeBuilding";
+      const allowed = action?.type === "placeBuilding" || action?.type === "destroyBuilding";
       for (let dr = 0; dr < height; dr++) {
         for (let dc = 0; dc < width; dc++) {
           results.push({ row: baseRow + dr, col: baseCol + dc, allowed });
@@ -248,6 +262,80 @@ export function createActions({
       }
     }
     return targets;
+  }
+
+  function collectStructureSellTargets(baseRow, baseCol) {
+    if (state.activeMode !== "build") return [];
+    const targets = new Set();
+    const buildKey = state.selectedBuildKey;
+    const building = buildKey && buildKey !== "sell" ? buildings?.[buildKey] : null;
+    const width = Number.isInteger(building?.width) && building.width > 0 ? building.width : 1;
+    const height = Number.isInteger(building?.height) && building.height > 0 ? building.height : 1;
+    for (let dr = 0; dr < height; dr++) {
+      for (let dc = 0; dc < width; dc++) {
+        const row = baseRow + dr;
+        const col = baseCol + dc;
+        if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) continue;
+        const key = `${row},${col}`;
+        const structKey = getStructureAtKey(key);
+        if (structKey) targets.add(structKey);
+      }
+    }
+    return Array.from(targets);
+  }
+
+  function getStructureSellSummary(structKeys) {
+    const seen = new Set();
+    let count = 0;
+    let total = 0;
+    (structKeys || []).forEach((key) => {
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      const struct = world.structures.get(key);
+      if (!struct) return;
+      count += 1;
+      const refund = Number.isFinite(struct.cost) ? struct.cost : 0;
+      total += refund;
+    });
+    return { count, total };
+  }
+
+  function sellStructures(structKeys) {
+    const seen = new Set();
+    let sold = 0;
+    let totalRefund = 0;
+    (structKeys || []).forEach((key) => {
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      const result = removeStructure(key);
+      if (result.success) {
+        sold += 1;
+        totalRefund += result.refund;
+      }
+    });
+    if (sold > 0) {
+      if (totalRefund > 0) {
+        state.totalMoney += totalRefund;
+        onMoneyChanged();
+      }
+      state.needsRender = true;
+      saveState();
+    }
+    return { sold, totalRefund };
+  }
+
+  function promptSellStructures(structKeys) {
+    const summary = getStructureSellSummary(structKeys);
+    if (!summary.count) return;
+    const label = summary.count === 1 ? "building" : "buildings";
+    const priceText = formatCurrency(summary.total || 0);
+    openConfirmModal(
+      `Sell ${summary.count} ${label} for ${priceText}?`,
+      () => sellStructures(structKeys),
+      "Sell Buildings",
+      null,
+      { confirmVariant: "danger", confirmText: "Sell" }
+    );
   }
 
   function handleTileAction(row, col, action) {
@@ -369,15 +457,8 @@ export function createActions({
       case "destroyBuilding": {
         const structKey = resolvedAction?.structKey || getStructureAtKey(key);
         if (!structKey) return { success: false, reason: "No building here" };
-        const struct = world.structures.get(structKey);
-        if (!struct) return { success: false, reason: "No building here" };
-        const refund = Number.isFinite(struct.cost) ? struct.cost : 0;
-        for (let r = 0; r < struct.height; r++) {
-          for (let c = 0; c < struct.width; c++) {
-            world.structureTiles.delete(`${struct.row + r},${struct.col + c}`);
-          }
-        }
-        world.structures.delete(structKey);
+        const { success, refund } = removeStructure(structKey);
+        if (!success) return { success: false, reason: "No building here" };
         if (refund > 0) {
           state.totalMoney += refund;
           onMoneyChanged();
@@ -429,6 +510,8 @@ export function createActions({
     determineActionForTile,
     computeHoverPreview,
     collectHoeDestroyTargets,
+    collectStructureSellTargets,
+    promptSellStructures,
     handleTileAction,
     handleTap,
     destroyPlot,
