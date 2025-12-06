@@ -1,6 +1,6 @@
 import { getStageBreakpoints } from "../utils/helpers.js";
 
-export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview }) {
+export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud }) {
   const buildingImageCache = new Map();
   const getLandscapeAsset = (id) => (id && landscapeAssets ? landscapeAssets[id] : null);
 
@@ -72,8 +72,8 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
     const landscapeInWorld =
       world.structures && typeof world.structures.values === "function"
         ? Array.from(world.structures.values()).some(
-            (struct) => struct && struct.kind === "landscape"
-          )
+          (struct) => struct && struct.kind === "landscape"
+        )
         : false;
     const hasLandscapeAnimation =
       landscapeInWorld && landscapeAssets
@@ -271,6 +271,12 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         ctx.strokeStyle = allowed ? allowedColor : blockedColor;
         ctx.strokeRect(x, y, state.tileSize * state.scale, state.tileSize * state.scale);
       }
+    }
+
+    if (gameHud) {
+      const animating = gameHud.updateMoneyChangeAnimation();
+      if (animating) state.needsRender = true;
+      gameHud.render();
     }
   }
 

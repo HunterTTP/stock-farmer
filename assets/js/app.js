@@ -15,6 +15,7 @@ import { createActions } from "./logic/actions.js";
 import { formatCurrency } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
 import { createTradeModal } from "./trading/tradeModal.js";
+import { createGameHud } from "./ui/gameHud.js";
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -47,6 +48,8 @@ const viewport = createViewport({ canvas, ctx, state, config });
 
 let ui;
 let tradeModal;
+let gameHud;
+
 const onMoneyChanged = () => {
   if (ui) {
     ui.updateTotalDisplay();
@@ -54,6 +57,7 @@ const onMoneyChanged = () => {
     ui.renderSizeMenu();
   }
   tradeModal?.refreshBalances();
+  state.needsRender = true;
 };
 
 function resetFarm() {
@@ -90,6 +94,20 @@ tradeModal = createTradeModal({
   saveState: persistence.save,
 });
 
+gameHud = createGameHud({
+  canvas,
+  ctx,
+  state,
+  crops,
+  sizes,
+  landscapes,
+  buildings,
+  formatCurrency,
+  onMoneyChanged,
+  saveState: persistence.save,
+  openConfirmModal: ui.openConfirmModal,
+});
+
 registerGameContext({
   state,
   world,
@@ -114,7 +132,7 @@ const actions = createActions({
   onMoneyChanged,
   renderCropOptions: ui.renderCropOptions,
   renderLandscapeOptions: ui.renderLandscapeOptions,
-  showAggregateMoneyChange: ui.showAggregateMoneyChange,
+  showAggregateMoneyChange: (amount) => gameHud.showMoneyChange(amount),
   saveState: persistence.save,
   openConfirmModal: ui.openConfirmModal,
   showActionError: ui.showActionError,
@@ -133,6 +151,7 @@ const renderer = createRenderer({
   landscapeAssets,
   currentSizeOption: ui.currentSizeOption,
   computeHoverPreview: actions.computeHoverPreview,
+  gameHud,
 });
 
 const pointerControls = createPointerControls({
@@ -144,6 +163,7 @@ const pointerControls = createPointerControls({
   openConfirmModal: ui.openConfirmModal,
   saveState: persistence.save,
   saveViewState: persistence.saveView,
+  gameHud,
 });
 
 ui.bindUIEvents();
@@ -157,5 +177,7 @@ setInterval(() => {
 
 window.addEventListener("resize", () => {
   viewport.resizeCanvas();
+  if (gameHud) gameHud.computeLayout();
   state.needsRender = true;
 });
+

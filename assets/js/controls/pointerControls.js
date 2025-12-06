@@ -1,6 +1,8 @@
 import { clampScale } from "../utils/helpers.js";
 
-export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState, saveViewState }) {
+export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState, saveViewState, gameHud }) {
+  let hudHandlingPointer = false;
+
   function cancelHoeHold() {
     if (state.hoeHoldTimeoutId) {
       clearTimeout(state.hoeHoldTimeoutId);
@@ -53,7 +55,23 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     setHoverTile(tile ? { row: tile.row, col: tile.col } : null);
   }
 
+  function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
   function onPointerDown(e) {
+    if (gameHud) {
+      const coords = getCanvasCoords(e);
+      const handled = gameHud.handlePointerDown(coords.x, coords.y);
+      if (handled) {
+        hudHandlingPointer = true;
+        e.preventDefault();
+        return;
+      }
+    }
+
+    hudHandlingPointer = false;
     canvas.setPointerCapture(e.pointerId);
     updatePointer(e);
     if (state.activePointers.size === 2) {
@@ -106,6 +124,13 @@ export function createPointerControls({ canvas, state, config, viewport, actions
   }
 
   function onPointerMove(e) {
+    if (gameHud) {
+      const coords = getCanvasCoords(e);
+      gameHud.handlePointerMove(coords.x, coords.y);
+    }
+
+    if (hudHandlingPointer) return;
+
     updatePointer(e);
     if (state.isPinching && state.activePointers.size === 2) {
       e.preventDefault();
@@ -142,6 +167,13 @@ export function createPointerControls({ canvas, state, config, viewport, actions
   }
 
   function onPointerUp(e) {
+    if (hudHandlingPointer && gameHud) {
+      const coords = getCanvasCoords(e);
+      gameHud.handlePointerUp(coords.x, coords.y);
+      hudHandlingPointer = false;
+      return;
+    }
+
     cancelHoeHold();
     cancelBuildingHold();
     state.activePointers.delete(e.pointerId);
@@ -168,6 +200,16 @@ export function createPointerControls({ canvas, state, config, viewport, actions
   }
 
   function onWheel(e) {
+    if (gameHud) {
+      const coords = getCanvasCoords(e);
+      if (gameHud.isPointerOverHud(coords.x, coords.y)) {
+        if (gameHud.handleMenuScroll && gameHud.handleMenuScroll(e.deltaY)) {
+          e.preventDefault();
+        }
+        return;
+      }
+    }
+
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const cx = rect.width / 2;
@@ -193,3 +235,4 @@ export function createPointerControls({ canvas, state, config, viewport, actions
 
   return { bind, updateHoverFromEvent };
 }
+

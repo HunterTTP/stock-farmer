@@ -1,0 +1,1211 @@
+export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, buildings, formatCurrency, onMoneyChanged, saveState, openConfirmModal }) {
+    const hudState = {
+        openMenuKey: null,
+        hoverElement: null,
+        pointerDown: false,
+        pointerDownElement: null,
+        moneyChangeAmount: 0,
+        moneyChangeOpacity: 0,
+        moneyChangeStart: 0,
+        layout: null,
+        menuScrollOffset: 0,
+    };
+
+    const LAYOUT = {
+        mobile: { modeButtonWidth: 72, modeButtonHeight: 44, gap: 8, padding: 12, fontSize: 12, iconSize: 20 },
+        tablet: { modeButtonWidth: 100, modeButtonHeight: 48, gap: 12, padding: 16, fontSize: 14, iconSize: 24 },
+        desktop: { modeButtonWidth: 120, modeButtonHeight: 52, gap: 16, padding: 20, fontSize: 15, iconSize: 28 },
+    };
+
+    const COLORS = {
+        bgDark: "rgba(23, 23, 23, 0.92)",
+        bgMedium: "rgba(38, 38, 38, 0.95)",
+        border: "rgba(64, 64, 64, 0.8)",
+        borderActive: "rgba(16, 185, 129, 0.9)",
+        text: "#ffffff",
+        textSecondary: "#a3a3a3",
+        accent: "#10b981",
+        accentDark: "#059669",
+        money: "#22c55e",
+        moneyLoss: "#ef4444",
+        gold: "#fbbf24",
+        goldDimmed: "rgba(251, 191, 36, 0.5)",
+    };
+
+    const imageCache = {};
+
+    const MODE_ORDER = ["plant", "harvest", "landscape", "build", "trade"];
+
+    function getLayout() {
+        const width = canvas.clientWidth;
+        if (width >= 1024) return { ...LAYOUT.desktop, breakpoint: "desktop" };
+        if (width >= 640) return { ...LAYOUT.tablet, breakpoint: "tablet" };
+        return { ...LAYOUT.mobile, breakpoint: "mobile" };
+    }
+
+    function computeLayout() {
+        const layout = getLayout();
+        const canvasWidth = canvas.clientWidth;
+        const canvasHeight = canvas.clientHeight;
+
+        const modeCount = MODE_ORDER.length;
+        const totalModeWidth = modeCount * layout.modeButtonWidth + (modeCount - 1) * layout.gap;
+        const modeButtonsX = (canvasWidth - totalModeWidth) / 2;
+        const modeButtonsY = canvasHeight - layout.modeButtonHeight - layout.padding;
+
+        const modeButtons = MODE_ORDER.map((mode, i) => ({
+            id: mode,
+            type: "modeButton",
+            x: modeButtonsX + i * (layout.modeButtonWidth + layout.gap),
+            y: modeButtonsY,
+            width: layout.modeButtonWidth,
+            height: layout.modeButtonHeight,
+            mode,
+        }));
+
+        const dropdownHeight = 40;
+        const dropdownY = modeButtonsY - layout.gap - dropdownHeight;
+        const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, layout);
+
+        const moneyWidth = 140;
+        const moneyHeight = 36;
+        const moneyX = canvasWidth - moneyWidth - layout.padding;
+        const moneyY = layout.padding;
+        const moneyDisplay = { id: "money", type: "moneyDisplay", x: moneyX, y: moneyY, width: moneyWidth, height: moneyHeight };
+
+        const moneyChangeX = moneyX - 100 - 8;
+        const moneyChange = { id: "moneyChange", type: "moneyChange", x: moneyChangeX, y: moneyY, width: 100, height: moneyHeight };
+
+        hudState.layout = { layout, modeButtons, dropdowns, moneyDisplay, moneyChange };
+        return hudState.layout;
+    }
+
+    function computeDropdownLayout(canvasWidth, y, height, layout) {
+        const active = state.activeMode || "plant";
+        const dropdowns = [];
+
+        if (active === "plant") {
+            const cropW = measureDropdownWidth("cropSelect", layout);
+            const sizeW = measureDropdownWidth("sizeSelect", layout);
+            const totalW = cropW + layout.gap + sizeW;
+            const startX = (canvasWidth - totalW) / 2;
+            dropdowns.push({ id: "cropSelect", type: "dropdown", x: startX, y, width: cropW, height, menu: "cropMenu" });
+            dropdowns.push({ id: "sizeSelect", type: "dropdown", x: startX + cropW + layout.gap, y, width: sizeW, height, menu: "sizeMenu" });
+        } else if (active === "harvest") {
+            const sizeW = measureDropdownWidth("harvestSizeSelect", layout);
+            const startX = (canvasWidth - sizeW) / 2;
+            dropdowns.push({ id: "harvestSizeSelect", type: "dropdown", x: startX, y, width: sizeW, height, menu: "harvestSizeMenu" });
+        } else if (active === "landscape") {
+            const w = measureDropdownWidth("landscapeSelect", layout);
+            const startX = (canvasWidth - w) / 2;
+            dropdowns.push({ id: "landscapeSelect", type: "dropdown", x: startX, y, width: w, height, menu: "landscapeMenu" });
+        } else if (active === "build") {
+            const w = measureDropdownWidth("buildSelect", layout);
+            const startX = (canvasWidth - w) / 2;
+            dropdowns.push({ id: "buildSelect", type: "dropdown", x: startX, y, width: w, height, menu: "buildMenu" });
+        }
+
+        return dropdowns;
+    }
+
+    function measureDropdownWidth(dropdownId, layout) {
+        const dropdown = { id: dropdownId };
+        const label = getDropdownLabel(dropdown);
+        const meta = getDropdownMeta(dropdown);
+        const previewData = getDropdownPreviewData(dropdown);
+        const hasPreview = previewData && (previewData.imageUrl || previewData.colorData || previewData.iconType);
+
+        const previewWidth = hasPreview ? 24 + 6 : 0;
+        const paddingLeft = hasPreview ? 8 : 10;
+        const paddingRight = 32;
+
+        ctx.font = meta ? `600 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif` : `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+        const labelWidth = ctx.measureText(label).width;
+
+        let textWidth = labelWidth;
+        if (meta) {
+            ctx.font = `400 ${layout.fontSize - 4}px system-ui, -apple-system, sans-serif`;
+            const metaWidth = ctx.measureText(meta).width;
+            textWidth = Math.max(labelWidth, metaWidth);
+        }
+
+        return Math.ceil(paddingLeft + previewWidth + textWidth + paddingRight);
+    }
+
+    function getDropdownPreviewData(dropdown) {
+        if (dropdown.id === "cropSelect") {
+            const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
+            if (crop) {
+                return { imageUrl: `images/crops/${crop.id}/${crop.id}-phase-4.png` };
+            }
+            return { imageUrl: null };
+        }
+        if (dropdown.id === "sizeSelect") {
+            const size = sizes[state.selectedSizeKey];
+            if (size) {
+                return { iconType: "grid", gridSize: size.size };
+            }
+            return { iconType: "grid", gridSize: 1 };
+        }
+        if (dropdown.id === "harvestSizeSelect") {
+            const size = sizes[state.selectedSizeKey];
+            if (size) {
+                return { iconType: "grid", gridSize: size.size };
+            }
+            return { iconType: "grid", gridSize: 1 };
+        }
+        if (dropdown.id === "landscapeSelect") {
+            if (state.selectedLandscapeKey === "sell") {
+                return { iconType: "trash" };
+            }
+            const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
+            if (landscape) {
+                return { imageUrl: landscape.image || null, colorData: landscape.lowColor || null };
+            }
+            return { imageUrl: null };
+        }
+        if (dropdown.id === "buildSelect") {
+            if (state.selectedBuildKey === "sell") {
+                return { iconType: "dollar" };
+            }
+            const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
+            if (building) {
+                return { imageUrl: building.image || null };
+            }
+            return { imageUrl: null };
+        }
+        return { imageUrl: null };
+    }
+
+    function drawRoundedRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    function drawButton(btn, isActive, isHover, isPressed) {
+        const layout = hudState.layout?.layout || getLayout();
+        const radius = 10;
+
+        ctx.save();
+        drawRoundedRect(btn.x, btn.y, btn.width, btn.height, radius);
+
+        const gradient = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.height);
+        if (isPressed) {
+            gradient.addColorStop(0, "rgba(38, 38, 38, 0.98)");
+            gradient.addColorStop(1, "rgba(30, 30, 30, 0.98)");
+        } else if (isHover) {
+            gradient.addColorStop(0, "rgba(45, 45, 45, 0.95)");
+            gradient.addColorStop(1, "rgba(38, 38, 38, 0.95)");
+        } else {
+            gradient.addColorStop(0, "rgba(30, 30, 30, 0.92)");
+            gradient.addColorStop(1, "rgba(23, 23, 23, 0.92)");
+        }
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.strokeStyle = isActive ? COLORS.borderActive : COLORS.border;
+        ctx.lineWidth = isActive ? 2 : 1;
+        ctx.stroke();
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = isActive ? COLORS.accent : COLORS.text;
+
+        const label = btn.mode.charAt(0).toUpperCase() + btn.mode.slice(1);
+        ctx.fillText(label, btn.x + btn.width / 2, btn.y + btn.height / 2);
+        ctx.restore();
+    }
+
+    function drawDropdown(dropdown, isOpen, isHover) {
+        const layout = hudState.layout?.layout || getLayout();
+        const radius = 8;
+        const previewSize = 24;
+        const previewMargin = 8;
+        const previewData = getDropdownPreviewData(dropdown);
+        const hasPreview = previewData && (previewData.imageUrl || previewData.colorData || previewData.iconType);
+
+        ctx.save();
+        drawRoundedRect(dropdown.x, dropdown.y, dropdown.width, dropdown.height, radius);
+
+        const gradient = ctx.createLinearGradient(dropdown.x, dropdown.y, dropdown.x, dropdown.y + dropdown.height);
+        if (isOpen) {
+            gradient.addColorStop(0, "rgba(38, 38, 38, 0.98)");
+            gradient.addColorStop(1, "rgba(30, 30, 30, 0.98)");
+        } else if (isHover) {
+            gradient.addColorStop(0, "rgba(45, 45, 45, 0.95)");
+            gradient.addColorStop(1, "rgba(38, 38, 38, 0.95)");
+        } else {
+            gradient.addColorStop(0, "rgba(30, 30, 30, 0.92)");
+            gradient.addColorStop(1, "rgba(23, 23, 23, 0.92)");
+        }
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.strokeStyle = isOpen ? COLORS.borderActive : COLORS.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        let textX = dropdown.x + 10;
+        if (hasPreview) {
+            const previewX = dropdown.x + previewMargin;
+            const previewY = dropdown.y + (dropdown.height - previewSize) / 2;
+            if (previewData.iconType === "trash") {
+                drawTrashIcon(previewX, previewY, previewSize);
+            } else if (previewData.iconType === "dollar") {
+                drawDollarIcon(previewX, previewY, previewSize);
+            } else if (previewData.iconType === "grid") {
+                drawGridIcon(previewX, previewY, previewSize, previewData.gridSize);
+            } else {
+                drawPreviewImage(previewX, previewY, previewSize, previewData.imageUrl, previewData.colorData);
+            }
+            textX = dropdown.x + previewMargin + previewSize + 6;
+        }
+
+        const label = getDropdownLabel(dropdown);
+        const meta = getDropdownMeta(dropdown);
+
+        ctx.textAlign = "left";
+
+        if (meta) {
+            ctx.textBaseline = "middle";
+            ctx.font = `600 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
+            ctx.fillStyle = COLORS.text;
+            ctx.fillText(label, textX, dropdown.y + dropdown.height / 2 - 6);
+
+            ctx.font = `400 ${layout.fontSize - 4}px system-ui, -apple-system, sans-serif`;
+            ctx.fillStyle = COLORS.textSecondary;
+            ctx.fillText(meta, textX, dropdown.y + dropdown.height / 2 + 7);
+        } else {
+            ctx.textBaseline = "middle";
+            ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+            ctx.fillStyle = COLORS.text;
+            ctx.fillText(label, textX, dropdown.y + dropdown.height / 2);
+        }
+
+        drawChevron(dropdown.x + dropdown.width - 18, dropdown.y + dropdown.height / 2, 18 * 0.35, isOpen);
+
+        ctx.restore();
+    }
+
+    function getDropdownLabel(dropdown) {
+        if (dropdown.id === "cropSelect") {
+            const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
+            return crop ? crop.name : "Select Crop";
+        }
+        if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
+            const size = sizes[state.selectedSizeKey];
+            return size ? size.name : "Size";
+        }
+        if (dropdown.id === "landscapeSelect") {
+            if (state.selectedLandscapeKey === "sell") return "Destroy";
+            const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
+            return landscape ? landscape.name : "Select";
+        }
+        if (dropdown.id === "buildSelect") {
+            if (state.selectedBuildKey === "sell") return "Sell";
+            const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
+            return building ? building.name : "Select";
+        }
+        return "Select";
+    }
+
+    function getDropdownMeta(dropdown) {
+        if (dropdown.id === "cropSelect") {
+            const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
+            if (crop) {
+                const status = getCropStatus(crop);
+                if (status) {
+                    return `Planted: ${status.count} | ${status.harvestText}`;
+                }
+                return `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+            }
+            return null;
+        }
+        if (dropdown.id === "landscapeSelect") {
+            if (state.selectedLandscapeKey === "sell") {
+                return "Remove landscape";
+            }
+            const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
+            if (landscape) {
+                const cost = landscape.isFarmland && state.farmlandPlaced < 4 ? 0 : landscape.cost || 0;
+                return cost === 0 ? "Free" : formatCurrency(cost);
+            }
+            return null;
+        }
+        if (dropdown.id === "buildSelect") {
+            if (state.selectedBuildKey === "sell") {
+                return "Remove and refund";
+            }
+            const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
+            if (building) {
+                return `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    function truncateText(ctx, text, maxWidth) {
+        const metrics = ctx.measureText(text);
+        if (metrics.width <= maxWidth) return text;
+        let truncated = text;
+        while (ctx.measureText(truncated + "...").width > maxWidth && truncated.length > 0) {
+            truncated = truncated.slice(0, -1);
+        }
+        return truncated + "...";
+    }
+
+    function drawChevron(x, y, size, isOpen) {
+        ctx.save();
+        ctx.strokeStyle = COLORS.textSecondary;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        if (isOpen) {
+            ctx.moveTo(x - size, y + size * 0.5);
+            ctx.lineTo(x, y - size * 0.5);
+            ctx.lineTo(x + size, y + size * 0.5);
+        } else {
+            ctx.moveTo(x - size, y - size * 0.5);
+            ctx.lineTo(x, y + size * 0.5);
+            ctx.lineTo(x + size, y - size * 0.5);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawMoneyDisplay(elem) {
+        const radius = 8;
+
+        ctx.save();
+        drawRoundedRect(elem.x, elem.y, elem.width, elem.height, radius);
+
+        const gradient = ctx.createLinearGradient(elem.x, elem.y, elem.x, elem.y + elem.height);
+        gradient.addColorStop(0, "rgba(30, 30, 30, 0.95)");
+        gradient.addColorStop(1, "rgba(23, 23, 23, 0.95)");
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.strokeStyle = COLORS.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `700 14px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = COLORS.text;
+
+        const moneyText = formatCurrency(state.totalMoney, true);
+        ctx.fillText(moneyText, elem.x + elem.width / 2, elem.y + elem.height / 2);
+
+        ctx.restore();
+    }
+
+    function drawMoneyChange(elem) {
+        if (hudState.moneyChangeOpacity <= 0) return;
+
+        const radius = 6;
+        const amount = hudState.moneyChangeAmount;
+        const isGain = amount >= 0;
+
+        ctx.save();
+        ctx.globalAlpha = hudState.moneyChangeOpacity;
+
+        drawRoundedRect(elem.x, elem.y, elem.width, elem.height, radius);
+
+        const gradient = ctx.createLinearGradient(elem.x, elem.y, elem.x, elem.y + elem.height);
+        gradient.addColorStop(0, "rgba(38, 38, 38, 0.9)");
+        gradient.addColorStop(1, "rgba(30, 30, 30, 0.9)");
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.strokeStyle = COLORS.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `600 13px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = isGain ? COLORS.money : COLORS.moneyLoss;
+
+        const prefix = isGain ? "+" : "";
+        ctx.fillText(prefix + formatCurrency(amount, true), elem.x + elem.width / 2, elem.y + elem.height / 2);
+
+        ctx.restore();
+    }
+
+    function getOrLoadImage(src) {
+        if (!src) return null;
+        if (imageCache[src]) return imageCache[src];
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+            state.needsRender = true;
+        };
+        imageCache[src] = img;
+        return img;
+    }
+
+    function drawPreviewImage(x, y, size, imageSrc, colorData) {
+        const radius = 4;
+        const padding = 1;
+
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.fillStyle = "rgba(64, 64, 64, 0.8)";
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.clip();
+
+        const innerX = x + padding;
+        const innerY = y + padding;
+        const innerSize = size - padding * 2;
+
+        if (imageSrc) {
+            const img = getOrLoadImage(imageSrc);
+            if (img && img.complete && img.naturalWidth > 0) {
+                const imgW = img.naturalWidth;
+                const imgH = img.naturalHeight;
+                const scale = Math.min(innerSize / imgW, innerSize / imgH);
+                const drawW = imgW * scale;
+                const drawH = imgH * scale;
+                const drawX = innerX + (innerSize - drawW) / 2;
+                const drawY = innerY + (innerSize - drawH) / 2;
+                ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            }
+        } else if (colorData) {
+            const { r, g, b } = colorData;
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            drawRoundedRect(innerX, innerY, innerSize, innerSize, 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawGridIcon(x, y, size, gridSize) {
+        const radius = 4;
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.fillStyle = "rgba(64, 64, 64, 0.8)";
+        ctx.fill();
+        ctx.restore();
+
+        const padding = size * 0.15;
+        const innerSize = size - padding * 2;
+        const cellSize = innerSize / gridSize;
+        const gap = Math.max(1, cellSize * 0.15);
+        const actualCellSize = (innerSize - gap * (gridSize - 1)) / gridSize;
+
+        ctx.save();
+        ctx.fillStyle = COLORS.accent;
+        for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+                const cellX = x + padding + col * (actualCellSize + gap);
+                const cellY = y + padding + row * (actualCellSize + gap);
+                ctx.beginPath();
+                ctx.roundRect(cellX, cellY, actualCellSize, actualCellSize, 1);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawTrashIcon(x, y, size) {
+        const radius = 4;
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.fillStyle = "rgba(64, 64, 64, 0.8)";
+        ctx.fill();
+        ctx.restore();
+
+        const cx = x + size / 2;
+        const cy = y + size / 2;
+        const s = size * 0.35;
+
+        ctx.save();
+        ctx.strokeStyle = COLORS.textSecondary;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        ctx.beginPath();
+        ctx.moveTo(cx - s, cy - s * 0.6);
+        ctx.lineTo(cx + s, cy - s * 0.6);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - s * 0.7, cy - s * 0.6);
+        ctx.lineTo(cx - s * 0.5, cy + s);
+        ctx.lineTo(cx + s * 0.5, cy + s);
+        ctx.lineTo(cx + s * 0.7, cy - s * 0.6);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - s * 0.3, cy - s * 0.6);
+        ctx.lineTo(cx - s * 0.3, cy - s);
+        ctx.lineTo(cx + s * 0.3, cy - s);
+        ctx.lineTo(cx + s * 0.3, cy - s * 0.6);
+        ctx.stroke();
+
+        ctx.restore();
+
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawDollarIcon(x, y, size) {
+        const radius = 4;
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.fillStyle = "rgba(64, 64, 64, 0.8)";
+        ctx.fill();
+        ctx.restore();
+
+        const cx = x + size / 2;
+        const cy = y + size / 2;
+        const s = size * 0.35;
+
+        ctx.save();
+        ctx.strokeStyle = COLORS.money;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - s * 1.1);
+        ctx.lineTo(cx, cy + s * 1.1);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx + s * 0.5, cy - s * 0.5);
+        ctx.quadraticCurveTo(cx - s * 0.7, cy - s * 0.7, cx - s * 0.3, cy);
+        ctx.quadraticCurveTo(cx + s * 0.7, cy + s * 0.3, cx - s * 0.5, cy + s * 0.7);
+        ctx.stroke();
+
+        ctx.restore();
+
+        ctx.save();
+        drawRoundedRect(x, y, size, size, radius);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function measureMenuWidth(items, layout) {
+        const previewSize = 32;
+        const previewMargin = 8;
+        const textOffset = previewSize + previewMargin * 2;
+        const padding = 32;
+        const scrollbarWidth = 16;
+
+        let maxWidth = 0;
+
+        items.forEach((item) => {
+            ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+            const labelWidth = ctx.measureText(item.label).width;
+
+            ctx.font = `400 ${layout.fontSize - 3}px system-ui, -apple-system, sans-serif`;
+            let metaText = item.meta;
+            if (item.locked && item.unlockCost > 0) {
+                metaText = `Unlock for ${formatCurrency(item.unlockCost)}`;
+            }
+            const metaWidth = ctx.measureText(metaText || "").width;
+
+            const textWidth = Math.max(labelWidth, metaWidth);
+            const totalWidth = textOffset + textWidth + padding + scrollbarWidth;
+            if (totalWidth > maxWidth) maxWidth = totalWidth;
+        });
+
+        return Math.max(maxWidth, 180);
+    }
+
+    function drawMenu(dropdown) {
+        const items = getMenuItems(dropdown);
+        if (!items || items.length === 0) return;
+
+        const layout = hudState.layout?.layout || getLayout();
+        const itemHeight = 44;
+        const maxVisibleHeight = 280;
+        const totalContentHeight = items.length * itemHeight;
+        const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
+        const menuHeight = menuContentHeight + 16;
+        const menuWidth = measureMenuWidth(items, layout);
+        const menuX = dropdown.x;
+        const menuY = dropdown.y - menuHeight - 8;
+        const radius = 10;
+        const previewSize = 32;
+        const previewMargin = 8;
+        const textOffset = previewSize + previewMargin * 2;
+        const scrollable = totalContentHeight > maxVisibleHeight;
+        const maxScroll = scrollable ? totalContentHeight - maxVisibleHeight : 0;
+        const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
+
+        ctx.save();
+
+        ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetY = 8;
+
+        drawRoundedRect(menuX, menuY, menuWidth, menuHeight, radius);
+
+        const gradient = ctx.createLinearGradient(menuX, menuY, menuX, menuY + menuHeight);
+        gradient.addColorStop(0, "rgba(23, 23, 23, 0.98)");
+        gradient.addColorStop(1, "rgba(10, 10, 10, 0.98)");
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.shadowColor = "transparent";
+
+        ctx.strokeStyle = COLORS.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.save();
+        drawRoundedRect(menuX + 4, menuY + 8, menuWidth - 8, menuContentHeight, 6);
+        ctx.clip();
+
+        items.forEach((item, i) => {
+            const itemYBase = menuY + 8 + i * itemHeight - scrollOffset;
+            if (itemYBase + itemHeight < menuY + 8 || itemYBase > menuY + 8 + menuContentHeight) {
+                return;
+            }
+
+            const itemX = menuX + 8;
+            const itemY = itemYBase;
+            const itemW = menuWidth - 16;
+            const itemH = itemHeight - 4;
+            const isSelected = isItemSelected(dropdown, item);
+            const isHover = hudState.hoverElement?.id === `menuItem_${dropdown.id}_${i}`;
+
+            if (isSelected || isHover) {
+                drawRoundedRect(itemX, itemY, itemW, itemH, 6);
+                ctx.fillStyle = isHover && !isSelected ? "rgba(64, 64, 64, 0.5)" : "rgba(30, 30, 30, 0.95)";
+                ctx.fill();
+                if (isSelected) {
+                    ctx.strokeStyle = COLORS.borderActive;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
+            }
+
+            const previewX = itemX + previewMargin;
+            const previewY = itemY + (itemH - previewSize) / 2;
+            if (item.iconType === "trash") {
+                drawTrashIcon(previewX, previewY, previewSize);
+            } else if (item.iconType === "dollar") {
+                drawDollarIcon(previewX, previewY, previewSize);
+            } else if (item.iconType === "grid") {
+                drawGridIcon(previewX, previewY, previewSize, item.gridSize || 1);
+            } else if (item.iconType === "toolPhase") {
+                drawPreviewImage(previewX, previewY, previewSize, `images/harvest/tool/tool-phase-${item.toolPhase || 1}.png`, null);
+            } else {
+                drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
+            }
+
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+            ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
+
+            const labelY = itemY + itemH / 2 - 6;
+            ctx.fillText(item.label, itemX + textOffset, labelY);
+
+            ctx.font = `400 ${layout.fontSize - 3}px system-ui, -apple-system, sans-serif`;
+            const metaY = itemY + itemH / 2 + 8;
+
+            if (item.locked && item.unlockCost > 0) {
+                ctx.fillStyle = item.canAfford ? COLORS.gold : COLORS.goldDimmed;
+                ctx.fillText(`Unlock for ${formatCurrency(item.unlockCost)}`, itemX + textOffset, metaY);
+            } else {
+                ctx.fillStyle = COLORS.textSecondary;
+                ctx.fillText(item.meta, itemX + textOffset, metaY);
+            }
+        });
+
+        ctx.restore();
+
+        if (scrollable) {
+            const scrollTrackX = menuX + menuWidth - 10;
+            const scrollTrackY = menuY + 12;
+            const scrollTrackHeight = menuContentHeight - 8;
+            const scrollThumbHeight = Math.max(30, (maxVisibleHeight / totalContentHeight) * scrollTrackHeight);
+            const scrollThumbY = scrollTrackY + (scrollOffset / maxScroll) * (scrollTrackHeight - scrollThumbHeight);
+
+            ctx.save();
+            ctx.fillStyle = "rgba(64, 64, 64, 0.5)";
+            ctx.beginPath();
+            ctx.roundRect(scrollTrackX, scrollTrackY, 4, scrollTrackHeight, 2);
+            ctx.fill();
+
+            ctx.fillStyle = "rgba(128, 128, 128, 0.8)";
+            ctx.beginPath();
+            ctx.roundRect(scrollTrackX, scrollThumbY, 4, scrollThumbHeight, 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    function formatDurationMs(ms) {
+        const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+        const parts = [];
+        if (hrs > 0) parts.push(`${hrs}hr`);
+        if (hrs > 0 || mins > 0) parts.push(`${mins}m`);
+        parts.push(`${secs}s`);
+        return parts.join(" ");
+    }
+
+    function getCropStatus(crop) {
+        if (!crop) return null;
+        if (!crop.placed || crop.placed <= 0) return null;
+        const plantedAt = Number.isFinite(crop.lastPlantedAt) ? crop.lastPlantedAt : null;
+        if (!plantedAt || plantedAt <= 0) return { count: crop.placed, harvestText: "Ready" };
+        const growMs = Number.isFinite(crop.growTimeMs) ? crop.growTimeMs : Number.isFinite(crop.growMinutes) ? crop.growMinutes * 60 * 1000 : null;
+        if (!growMs || growMs <= 0) return { count: crop.placed, harvestText: "Ready" };
+        const nowMs = Date.now();
+        const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
+        if (remainingMs <= 0) return { count: crop.placed, harvestText: "Ready" };
+        return { count: crop.placed, harvestText: formatDurationMs(remainingMs) };
+    }
+
+    function getMenuItems(dropdown) {
+        if (dropdown.id === "cropSelect") {
+            return Object.values(crops).map((crop) => {
+                const status = getCropStatus(crop);
+                let meta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+                if (status) {
+                    meta = `Planted: ${status.count} | ${status.harvestText}`;
+                }
+                return {
+                    id: crop.id,
+                    label: crop.name,
+                    meta,
+                    locked: !crop.unlocked,
+                    unlockCost: crop.unlockCost || 0,
+                    canAfford: state.totalMoney >= (crop.unlockCost || 0),
+                    imageUrl: `images/crops/${crop.id}/${crop.id}-phase-4.png`,
+                };
+            });
+        }
+
+        if (dropdown.id === "sizeSelect") {
+            return Object.values(sizes).map((size) => ({
+                id: size.id,
+                label: size.name,
+                meta: "",
+                locked: !size.unlocked,
+                unlockCost: size.unlockCost || 0,
+                canAfford: state.totalMoney >= (size.unlockCost || 0),
+                iconType: "grid",
+                gridSize: size.size,
+            }));
+        }
+
+        if (dropdown.id === "harvestSizeSelect") {
+            return Object.values(sizes).map((size) => ({
+                id: size.id,
+                label: size.name,
+                meta: "",
+                locked: !size.unlocked,
+                unlockCost: size.unlockCost || 0,
+                canAfford: state.totalMoney >= (size.unlockCost || 0),
+                iconType: "grid",
+                gridSize: size.size,
+            }));
+        }
+
+        if (dropdown.id === "landscapeSelect") {
+            const items = [{
+                id: "sell",
+                label: "Destroy",
+                meta: "Remove landscape",
+                locked: false,
+                unlockCost: 0,
+                canAfford: true,
+                imageUrl: null,
+                iconType: "trash",
+            }];
+            Object.values(landscapes).forEach((l) => {
+                const cost = l.isFarmland && state.farmlandPlaced < 4 ? 0 : l.cost || 0;
+                items.push({
+                    id: l.id,
+                    label: l.name,
+                    meta: cost === 0 ? "Free" : formatCurrency(cost),
+                    locked: false,
+                    unlockCost: 0,
+                    canAfford: true,
+                    imageUrl: l.image || null,
+                    colorData: l.lowColor || null,
+                });
+            });
+            return items;
+        }
+
+        if (dropdown.id === "buildSelect") {
+            const items = [{
+                id: "sell",
+                label: "Sell",
+                meta: "Remove and refund",
+                locked: false,
+                unlockCost: 0,
+                canAfford: true,
+                imageUrl: null,
+                iconType: "dollar",
+            }];
+            Object.values(buildings || {}).forEach((b) => {
+                items.push({
+                    id: b.id,
+                    label: b.name,
+                    meta: `${b.width}x${b.height} | ${formatCurrency(b.cost || 0)}`,
+                    locked: false,
+                    unlockCost: 0,
+                    canAfford: true,
+                    imageUrl: b.image || null,
+                });
+            });
+            return items;
+        }
+
+        return [];
+    }
+
+    function isItemSelected(dropdown, item) {
+        if (dropdown.id === "cropSelect") return item.id === state.selectedCropKey;
+        if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") return item.id === state.selectedSizeKey;
+        if (dropdown.id === "landscapeSelect") return item.id === state.selectedLandscapeKey;
+        if (dropdown.id === "buildSelect") return item.id === state.selectedBuildKey;
+        return false;
+    }
+
+    function formatGrowTime(minutes) {
+        if (!Number.isFinite(minutes)) return "";
+        if (minutes > 0 && minutes < 1) {
+            const secs = Math.round(minutes * 60);
+            return `${secs}s`;
+        }
+        if (minutes === 60) return "1hr";
+        const hrs = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        if (hrs > 0 && mins === 0) return `${hrs}hr`;
+        if (hrs > 0) return `${hrs}hr ${mins}m`;
+        return `${minutes}m`;
+    }
+
+    function render() {
+        const computed = computeLayout();
+
+        computed.modeButtons.forEach((btn) => {
+            const isActive = btn.mode === state.activeMode;
+            const isHover = hudState.hoverElement?.id === btn.id;
+            const isPressed = hudState.pointerDown && hudState.pointerDownElement?.id === btn.id;
+            drawButton(btn, isActive, isHover, isPressed);
+        });
+
+        computed.dropdowns.forEach((dropdown) => {
+            const isOpen = hudState.openMenuKey === dropdown.menu;
+            const isHover = hudState.hoverElement?.id === dropdown.id;
+            drawDropdown(dropdown, isOpen, isHover);
+        });
+
+        drawMoneyDisplay(computed.moneyDisplay);
+        drawMoneyChange(computed.moneyChange);
+
+        const openDropdown = computed.dropdowns.find((d) => hudState.openMenuKey === d.menu);
+        if (openDropdown) {
+            drawMenu(openDropdown);
+        }
+    }
+
+    function updateMoneyChangeAnimation() {
+        if (hudState.moneyChangeOpacity <= 0) return false;
+
+        const elapsed = performance.now() - hudState.moneyChangeStart;
+        const visibleDuration = 2000;
+        const fadeDuration = 300;
+
+        if (elapsed < visibleDuration) {
+            hudState.moneyChangeOpacity = 1;
+        } else if (elapsed < visibleDuration + fadeDuration) {
+            hudState.moneyChangeOpacity = 1 - (elapsed - visibleDuration) / fadeDuration;
+        } else {
+            hudState.moneyChangeOpacity = 0;
+        }
+
+        return hudState.moneyChangeOpacity > 0;
+    }
+
+    function showMoneyChange(amount) {
+        if (amount === 0) return;
+        hudState.moneyChangeAmount = amount;
+        hudState.moneyChangeOpacity = 1;
+        hudState.moneyChangeStart = performance.now();
+        state.needsRender = true;
+    }
+
+    function getMenuBounds(dropdown) {
+        const items = getMenuItems(dropdown);
+        const layout = hudState.layout?.layout || getLayout();
+        const itemHeight = 44;
+        const maxVisibleHeight = 280;
+        const totalContentHeight = items.length * itemHeight;
+        const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
+        const menuHeight = menuContentHeight + 16;
+        const menuWidth = measureMenuWidth(items, layout);
+        const menuX = dropdown.x;
+        const menuY = dropdown.y - menuHeight - 8;
+        const scrollable = totalContentHeight > maxVisibleHeight;
+        const maxScroll = scrollable ? totalContentHeight - maxVisibleHeight : 0;
+        return { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll, scrollable };
+    }
+
+    function hitTest(x, y) {
+        const computed = hudState.layout;
+        if (!computed) return null;
+
+        if (hudState.openMenuKey) {
+            const dropdown = computed.dropdowns.find((d) => d.menu === hudState.openMenuKey);
+            if (dropdown) {
+                const bounds = getMenuBounds(dropdown);
+                const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll } = bounds;
+                const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
+
+                if (x >= menuX && x <= menuX + menuWidth && y >= menuY && y <= menuY + menuHeight) {
+                    const relY = y - menuY - 8 + scrollOffset;
+                    const itemIndex = Math.floor(relY / itemHeight);
+                    if (itemIndex >= 0 && itemIndex < items.length) {
+                        const itemYBase = menuY + 8 + itemIndex * itemHeight - scrollOffset;
+                        if (itemYBase >= menuY + 8 - itemHeight && itemYBase < menuY + 8 + menuContentHeight) {
+                            return { type: "menuItem", id: `menuItem_${dropdown.id}_${itemIndex}`, dropdown, itemIndex, item: items[itemIndex] };
+                        }
+                    }
+                    return { type: "menu", id: "menu" };
+                }
+            }
+        }
+
+        for (const dd of computed.dropdowns) {
+            if (x >= dd.x && x <= dd.x + dd.width && y >= dd.y && y <= dd.y + dd.height) {
+                return { type: "dropdown", ...dd };
+            }
+        }
+
+        for (const btn of computed.modeButtons) {
+            if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
+                return { type: "modeButton", ...btn };
+            }
+        }
+
+        const md = computed.moneyDisplay;
+        if (x >= md.x && x <= md.x + md.width && y >= md.y && y <= md.y + md.height) {
+            return { type: "moneyDisplay", ...md };
+        }
+
+        return null;
+    }
+
+    function handlePointerMove(x, y) {
+        const hit = hitTest(x, y);
+        const prev = hudState.hoverElement?.id;
+        hudState.hoverElement = hit;
+        if (hit?.id !== prev) {
+            state.needsRender = true;
+        }
+    }
+
+    function handlePointerDown(x, y) {
+        const hit = hitTest(x, y);
+        hudState.pointerDown = true;
+        hudState.pointerDownElement = hit;
+        if (hit) {
+            state.needsRender = true;
+        }
+        return !!hit;
+    }
+
+    function handlePointerUp(x, y) {
+        const hit = hitTest(x, y);
+        const wasDown = hudState.pointerDownElement;
+        hudState.pointerDown = false;
+        hudState.pointerDownElement = null;
+
+        if (!hit || !wasDown || hit.id !== wasDown.id) {
+            if (hudState.openMenuKey && !hit) {
+                hudState.openMenuKey = null;
+                state.needsRender = true;
+            }
+            return !!hit;
+        }
+
+        if (hit.type === "modeButton") {
+            handleModeButtonClick(hit.mode);
+            return true;
+        }
+
+        if (hit.type === "dropdown") {
+            handleDropdownClick(hit);
+            return true;
+        }
+
+        if (hit.type === "menuItem") {
+            handleMenuItemClick(hit.dropdown, hit.item);
+            return true;
+        }
+
+        return !!hit;
+    }
+
+    function handleModeButtonClick(mode) {
+        if (mode === "trade") {
+            const tradeModal = document.getElementById("tradeModal");
+            if (tradeModal) {
+                tradeModal.classList.remove("hidden");
+                document.body.classList.add("overflow-hidden");
+            }
+            return;
+        }
+
+        if (mode === state.activeMode) return;
+
+        state.activeMode = mode;
+        state.hoeSelected = mode === "harvest";
+        hudState.openMenuKey = null;
+        state.needsRender = true;
+        saveState();
+    }
+
+    function handleDropdownClick(dropdown) {
+        if (hudState.openMenuKey === dropdown.menu) {
+            hudState.openMenuKey = null;
+        } else {
+            hudState.openMenuKey = dropdown.menu;
+            hudState.menuScrollOffset = 0;
+        }
+        state.needsRender = true;
+    }
+
+    function handleMenuScroll(deltaY) {
+        if (!hudState.openMenuKey) return false;
+        const computed = hudState.layout;
+        if (!computed) return false;
+        const dropdown = computed.dropdowns.find((d) => d.menu === hudState.openMenuKey);
+        if (!dropdown) return false;
+
+        const bounds = getMenuBounds(dropdown);
+        if (!bounds.scrollable) return false;
+
+        hudState.menuScrollOffset = Math.max(0, Math.min(bounds.maxScroll, hudState.menuScrollOffset + deltaY));
+        state.needsRender = true;
+        return true;
+    }
+
+    function handleMenuItemClick(dropdown, item) {
+        if (item.locked && item.unlockCost > 0) {
+            if (item.canAfford) {
+                openConfirmModal(
+                    `Unlock ${item.label} for ${formatCurrency(item.unlockCost)}?`,
+                    () => {
+                        state.totalMoney -= item.unlockCost;
+                        unlockItem(dropdown.id, item.id);
+                        selectItem(dropdown.id, item.id);
+                        onMoneyChanged();
+                        state.needsRender = true;
+                        saveState();
+                    },
+                    "Confirm Unlock"
+                );
+            }
+            hudState.openMenuKey = null;
+            state.needsRender = true;
+            return;
+        }
+
+        selectItem(dropdown.id, item.id);
+        hudState.openMenuKey = null;
+        state.needsRender = true;
+        saveState();
+    }
+
+    function unlockItem(dropdownId, itemId) {
+        if (dropdownId === "cropSelect") {
+            if (crops[itemId]) crops[itemId].unlocked = true;
+        } else if (dropdownId === "sizeSelect" || dropdownId === "harvestSizeSelect") {
+            if (sizes[itemId]) sizes[itemId].unlocked = true;
+        }
+    }
+
+    function selectItem(dropdownId, itemId) {
+        if (dropdownId === "cropSelect") {
+            state.selectedCropKey = itemId;
+            state.previousCropKey = itemId;
+        } else if (dropdownId === "sizeSelect" || dropdownId === "harvestSizeSelect") {
+            state.selectedSizeKey = itemId;
+        } else if (dropdownId === "landscapeSelect") {
+            state.selectedLandscapeKey = itemId;
+        } else if (dropdownId === "buildSelect") {
+            state.selectedBuildKey = itemId;
+        }
+    }
+
+    function isPointerOverHud(x, y) {
+        return hitTest(x, y) !== null;
+    }
+
+    function closeAllMenus() {
+        if (hudState.openMenuKey) {
+            hudState.openMenuKey = null;
+            state.needsRender = true;
+        }
+    }
+
+    return {
+        render,
+        hitTest,
+        handlePointerMove,
+        handlePointerDown,
+        handlePointerUp,
+        isPointerOverHud,
+        showMoneyChange,
+        updateMoneyChangeAnimation,
+        closeAllMenus,
+        computeLayout,
+        handleMenuScroll,
+    };
+}
