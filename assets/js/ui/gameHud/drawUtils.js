@@ -1,5 +1,25 @@
+const MODE_ICONS = {
+  plant: "\uf4d8", // seedling
+  harvest: "\uf72d", // wheat-awn
+  landscape: "\uf1bb", // tree
+  build: "\uf6e3", // hammer
+  trade: "\uf201", // chart-line
+};
+
 export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
   const imageCache = {};
+  const faFont = "900 22px 'Font Awesome 6 Free'";
+
+  const drawFaIcon = (glyph, x, y, size, color = COLORS.text) => {
+    if (!glyph) return;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = `900 ${size}px 'Font Awesome 6 Free'`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(glyph, x + size / 2, y + size / 2 + 0.5);
+    ctx.restore();
+  };
 
   const drawRoundedRect = (x, y, w, h, r) => {
     ctx.beginPath();
@@ -16,58 +36,8 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
   };
 
   const drawModeIcon = (cx, cy, size, mode, isActive) => {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(size / 24, size / 24);
-    ctx.strokeStyle = isActive ? COLORS.accent : COLORS.text;
-    ctx.lineWidth = 2;
-
-    if (mode === "plant") {
-      ctx.beginPath();
-      ctx.moveTo(-2, 6);
-      ctx.quadraticCurveTo(-8, 4, -10, -2);
-      ctx.quadraticCurveTo(-4, -1, 0, 4);
-      ctx.quadraticCurveTo(4, -1, 10, -2);
-      ctx.quadraticCurveTo(8, 4, 2, 6);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, 6);
-      ctx.lineTo(0, 10);
-      ctx.stroke();
-    } else if (mode === "harvest") {
-      ctx.beginPath();
-      ctx.moveTo(-8, -8);
-      ctx.lineTo(8, 8);
-      ctx.moveTo(8, -8);
-      ctx.lineTo(-8, 8);
-      ctx.stroke();
-    } else if (mode === "landscape") {
-      ctx.beginPath();
-      ctx.moveTo(-10, 6);
-      ctx.lineTo(-6, 0);
-      ctx.lineTo(-2, 6);
-      ctx.lineTo(2, -2);
-      ctx.lineTo(6, 6);
-      ctx.lineTo(10, 0);
-      ctx.stroke();
-    } else if (mode === "build") {
-      ctx.strokeRect(-8, -4, 16, 12);
-      ctx.beginPath();
-      ctx.moveTo(-10, -4);
-      ctx.lineTo(0, -10);
-      ctx.lineTo(10, -4);
-      ctx.stroke();
-    } else if (mode === "trade") {
-      ctx.beginPath();
-      ctx.moveTo(-8, 4);
-      ctx.lineTo(-4, -4);
-      ctx.lineTo(0, 2);
-      ctx.lineTo(4, -6);
-      ctx.lineTo(8, 0);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    const glyph = MODE_ICONS[mode] || MODE_ICONS.trade;
+    drawFaIcon(glyph, cx - size / 2, cy - size / 2, size, isActive ? COLORS.accent : COLORS.text);
   };
 
   const drawChevron = (x, y, size, isOpen) => {
@@ -100,7 +70,7 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     return img;
   };
 
-  const drawPreviewImage = (x, y, size, imageSrc, colorData) => {
+  const drawPreviewImage = (x, y, size, imageSrc, colorData, faGlyph = null) => {
     const radius = 4;
     const padding = 1;
 
@@ -118,7 +88,9 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     const innerY = y + padding;
     const innerSize = size - padding * 2;
 
-    if (imageSrc) {
+    if (faGlyph) {
+      drawFaIcon(faGlyph, innerX, innerY, innerSize, COLORS.text);
+    } else if (imageSrc) {
       const img = getOrLoadImage(imageSrc);
       if (img && img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, innerX, innerY, innerSize, innerSize);
@@ -180,5 +152,6 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     drawGridIcon,
     drawTrashIcon,
     drawDollarIcon,
+    drawFaIcon,
   };
 }

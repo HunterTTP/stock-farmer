@@ -105,7 +105,7 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
 
       const itemX = menuX + 10;
       const itemY = itemYBase;
-      const rightPad = scrollable ? 22 : 10;
+      const rightPad = scrollable ? 24 : 12;
       const itemW = menuWidth - (10 + rightPad);
       const itemH = itemHeight - 6;
       const isSelected = menuData.isItemSelected(dropdown, item);
@@ -134,6 +134,8 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
         drawDollarIcon(previewX, previewY, previewSize);
       } else if (item.iconType === "grid") {
         drawGridIcon(previewX, previewY, previewSize, item.gridSize || 1);
+      } else if (item.iconType === "fa") {
+        drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph);
       } else {
         drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
       }

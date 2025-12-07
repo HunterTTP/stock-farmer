@@ -134,14 +134,15 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
   const getMenuItems = (dropdown) => {
     if (dropdown.id === "cropSelect") {
       const cropKeys = Object.keys(crops);
-      return Object.values(crops).map((crop, index) => {
+      return cropKeys.map((key, index) => {
+        const crop = crops[key];
         const status = getCropStatus(crop);
         let meta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
         if (status) {
           meta = `Planted: ${status.count} | ${status.harvestText}`;
         }
 
-        const allPreviousUnlocked = index === 0 || cropKeys.slice(0, index).every((key) => crops[key].unlocked);
+        const allPreviousUnlocked = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
         const canUnlock = allPreviousUnlocked && state.totalMoney >= (crop.unlockCost || 0);
 
         return {
@@ -153,22 +154,30 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           canAfford: canUnlock,
           imageUrl: `images/crops/${crop.id}/${crop.id}-phase-4.png`,
           requiresPrevious: !allPreviousUnlocked,
+          unlocked: !!crop.unlocked,
         };
       });
     }
 
     if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
-      return Object.values(sizes).map((size) => ({
-        id: size.id,
-        label: size.name,
-        meta: "",
-        locked: !size.unlocked,
-        unlockCost: size.unlockCost || 0,
-        canAfford: size.unlocked || state.totalMoney >= (size.unlockCost || 0),
-        imageUrl: null,
-        gridSize: size.size || 1,
-        iconType: "grid",
-      }));
+      const sizeKeys = Object.keys(sizes);
+      return sizeKeys.map((key, index) => {
+        const size = sizes[key];
+        const allPreviousUnlocked = index === 0 || sizeKeys.slice(0, index).every((prevKey) => sizes[prevKey].unlocked);
+        return {
+          id: size.id,
+          label: size.name,
+          meta: "",
+          locked: !size.unlocked,
+          unlockCost: size.unlockCost || 0,
+          canAfford: allPreviousUnlocked && state.totalMoney >= (size.unlockCost || 0),
+          imageUrl: null,
+          gridSize: size.size || 1,
+          iconType: "fa",
+          faGlyph: "\uf00a",
+          unlocked: !!size.unlocked,
+        };
+      });
     }
 
     if (dropdown.id === "landscapeSelect") {
@@ -193,21 +202,25 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           canAfford: state.totalMoney >= (farmlandPlaced < 4 ? 0 : 25),
           imageUrl: "images/farmland.jpg",
           isFarmland: true,
+          unlocked: true,
         },
       ];
 
-      return base.concat(
-        Object.values(landscapes || {}).map((landscape) => ({
+      const landscapeList = Object.values(landscapes || {})
+        .filter((landscape) => landscape && landscape.id !== "farmland")
+        .map((landscape) => ({
           id: landscape.id,
           label: landscape.name,
           meta: landscape.cost === 0 ? "Free" : `${formatCurrency(landscape.cost || 0)}`,
-          locked: false,
+          locked: !landscape.unlocked,
           unlockCost: landscape.cost || 0,
           canAfford: state.totalMoney >= (landscape.cost || 0),
           imageUrl: landscape.image || null,
           colorData: landscape.lowColor || null,
-        }))
-      );
+          unlocked: !!landscape.unlocked,
+        }));
+
+      return base.concat(landscapeList);
     }
 
     if (dropdown.id === "buildSelect") {
@@ -221,20 +234,22 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           canAfford: true,
           imageUrl: null,
           iconType: "dollar",
+          unlocked: true,
         },
       ];
 
-      return base.concat(
-        Object.values(buildings || {}).map((building) => ({
-          id: building.id,
-          label: building.name,
-          meta: `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`,
-          locked: !building.unlocked,
-          unlockCost: building.cost || 0,
-          canAfford: state.totalMoney >= (building.cost || 0),
-          imageUrl: building.image || null,
-        }))
-      );
+      const buildList = Object.values(buildings || {}).map((building) => ({
+        id: building.id,
+        label: building.name,
+        meta: `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`,
+        locked: !building.unlocked,
+        unlockCost: building.cost || 0,
+        canAfford: state.totalMoney >= (building.cost || 0),
+        imageUrl: building.image || null,
+        unlocked: !!building.unlocked,
+      }));
+
+      return base.concat(buildList);
     }
 
     return [];

@@ -84,7 +84,8 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     ctx.shadowOffsetY = 6;
 
     drawRoundedRect(dropdown.x, dropdown.y, dropdown.width, dropdown.height, radius);
-    ctx.fillStyle = isOpen ? COLORS.buttonActive : isHover ? COLORS.buttonHover : COLORS.buttonBg;
+    const baseFill = isHover ? COLORS.buttonHover : COLORS.buttonBg;
+    ctx.fillStyle = isOpen ? baseFill : baseFill;
     ctx.fill();
 
     ctx.shadowColor = "transparent";
