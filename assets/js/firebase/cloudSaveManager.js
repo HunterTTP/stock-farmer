@@ -171,8 +171,7 @@ export function createCloudSaveManager({ auth, runtime, getRemoteFns, getCurrent
     if (!auth.currentUser || !stateData) return;
     runtime.queuedCloudState = stripViewFields(stateData);
     if (immediate) {
-      runCloudSave();
-      return;
+      return runCloudSave();
     }
     if (runtime.cloudSaveTimerId) clearTimeout(runtime.cloudSaveTimerId);
     if (runtime.cloudSaveInFlight) return;

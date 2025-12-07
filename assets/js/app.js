@@ -18,6 +18,13 @@ import { createTradeModal } from "./trading/tradeModal.js";
 import { createGameHud } from "./ui/gameHud.js";
 import { initTheme, initThemePicker, initHudPicker, setAccentColor, getAccentPalette, onAccentChange, setHudContext, DEFAULT_ACCENT } from "./ui/theme.js";
 
+const initialSnapshots = {
+  crops: JSON.parse(JSON.stringify(crops)),
+  sizes: JSON.parse(JSON.stringify(sizes)),
+  buildings: JSON.parse(JSON.stringify(buildings)),
+  landscapes: JSON.parse(JSON.stringify(landscapes)),
+};
+
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
 const ctx = canvas.getContext("2d");
@@ -29,6 +36,33 @@ const assets = createBaseAssets(state);
 const landscapeAssets = createLandscapeAssets({ landscapes, state });
 preloadCropImages(crops, state);
 
+const restoreDataset = (snapshot, target) => {
+  if (!snapshot || !target) return;
+  Object.entries(target).forEach(([key, value]) => {
+    if (!Object.prototype.hasOwnProperty.call(snapshot, key)) return;
+    const fresh = JSON.parse(JSON.stringify(snapshot[key]));
+    Object.keys(value).forEach((prop) => delete value[prop]);
+    Object.assign(value, fresh);
+  });
+};
+
+const resetDatasetsToInitial = () => {
+  restoreDataset(initialSnapshots.crops, crops);
+  restoreDataset(initialSnapshots.sizes, sizes);
+  restoreDataset(initialSnapshots.buildings, buildings);
+  restoreDataset(initialSnapshots.landscapes, landscapes);
+};
+
+const resetWorldToInitial = () => {
+  if (world.plots?.clear) world.plots.clear();
+  if (world.filled?.clear) world.filled.clear();
+  if (world.structures?.clear) world.structures.clear();
+  if (world.structureTiles?.clear) world.structureTiles.clear();
+  if (Array.isArray(world.harvestAnimations)) world.harvestAnimations.length = 0;
+  if (Array.isArray(world.costAnimations)) world.costAnimations.length = 0;
+  (config.defaultFilled || []).forEach((k) => world.filled.add(k));
+};
+
 const persistence = {
   save: (options = {}) => {
     const data = saveState({ state, world, crops, sizes, landscapes, config });
@@ -37,6 +71,19 @@ const persistence = {
   },
   saveView: () => persistence.save({ skipRemote: true }),
   load: () => loadState({ state, world, crops, sizes, landscapes, config }),
+};
+
+const saveAndPushImmediately = async () => {
+  const data = persistence.save();
+  try {
+    const maybePromise = queueCloudSave(data, true);
+    if (maybePromise && typeof maybePromise.then === "function") {
+      await maybePromise;
+    }
+  } catch (error) {
+    console.error("Failed to push reset state to cloud", error);
+  }
+  return data;
 };
 
 persistence.load();
@@ -73,12 +120,22 @@ const onMoneyChanged = () => {
 };
 
 function resetFarm() {
-  try {
-    localStorage.clear();
-  } catch (err) {
-    console.error("Failed to clear storage", err);
-  }
-  window.location.reload();
+  const defaultScale = state.defaultScale || 1;
+  resetDatasetsToInitial();
+  const freshState = createInitialState(config);
+  resetWorldToInitial();
+  Object.keys(state).forEach((key) => delete state[key]);
+  Object.assign(state, freshState);
+  state.defaultScale = defaultScale;
+  state.scale = defaultScale;
+  applyDefaultSelection(state);
+  viewport.centerView();
+  state.savedScaleFromState = state.scale;
+  state.savedOffsetX = state.offsetX;
+  state.savedOffsetY = state.offsetY;
+  recalcPlacedCounts(world, crops, state);
+  state.needsRender = true;
+  saveAndPushImmediately().finally(() => window.location.reload());
 }
 
 async function clearCacheAndLogout() {
@@ -93,11 +150,16 @@ function resetSettingsOnly() {
     state.hudDropdownScale = 1.0;
     state.hudFontSize = 1.0;
     state.hudOpacity = 0.95;
-    persistence.save();
+    state.scale = state.defaultScale || 1;
+    viewport.centerView();
+    state.savedScaleFromState = state.scale;
+    state.savedOffsetX = state.offsetX;
+    state.savedOffsetY = state.offsetY;
+    saveAndPushImmediately().finally(() => window.location.reload());
   } catch (err) {
     console.error("Failed to clear settings", err);
+    window.location.reload();
   }
-  window.location.reload();
 }
 
 ui = createUIControls({
