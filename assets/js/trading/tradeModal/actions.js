@@ -3,19 +3,7 @@ function getSelectedTicker(modalState, tickers, getTickerFn) {
 }
 
 export function createTradeActions(context) {
-  const {
-    state,
-    tickers,
-    modalState,
-    getTicker,
-    fmtCurrency,
-    holdingsMap,
-    getShareCount,
-    sanitizeHoldings,
-    onMoneyChanged,
-    saveState,
-    renderers,
-  } = context;
+  const { state, tickers, modalState, getTicker, fmtCurrency, holdingsMap, getShareCount, sanitizeHoldings, onMoneyChanged, saveState, renderers } = context;
 
   function tradeBuy() {
     const ticker = getSelectedTicker(modalState, tickers, getTicker);
@@ -82,7 +70,6 @@ export function createTradeActions(context) {
       btn.dataset.confirm = "true";
       btn.classList.remove("btn-accent-ghost");
       btn.classList.add("btn-accent");
-      btn.textContent = "Confirm";
     }
   }
 

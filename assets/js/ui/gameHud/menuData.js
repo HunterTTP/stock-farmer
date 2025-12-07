@@ -137,9 +137,13 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       return cropKeys.map((key, index) => {
         const crop = crops[key];
         const status = getCropStatus(crop);
-        let meta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+        const baseMeta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+        const metaLines = [{ text: baseMeta, type: "meta" }];
         if (status) {
-          meta = `Planted: ${status.count} | ${status.harvestText}`;
+          metaLines.push({ text: `Planted: ${status.count} | ${status.harvestText}`, type: "status" });
+        }
+        if (!crop.unlocked && crop.unlockCost > 0) {
+          metaLines.push({ text: `Unlock for ${formatCurrency(crop.unlockCost)}`, type: "unlock" });
         }
 
         const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
@@ -149,7 +153,8 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
         return {
           id: crop.id,
           label: crop.name,
-          meta,
+          meta: baseMeta,
+          metaLines,
           locked: !crop.unlocked,
           unlockCost: crop.unlockCost || 0,
           canAfford,

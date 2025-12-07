@@ -87,22 +87,21 @@ export function createCropMenus({ dom, state, crops, formatCurrency, onMoneyChan
       meta.className = "text-[11px] text-neutral-400 truncate";
       meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       textWrap.appendChild(title);
+      textWrap.appendChild(meta);
       const status = getCropStatus(crop, now);
       if (status) {
         const statusLine = document.createElement("div");
         statusLine.className = "text-[11px] text-accent-soft truncate";
-        statusLine.textContent = `Planted: ${status.count} - Harvest: ${status.harvestText}`;
+        statusLine.textContent = `Planted: ${status.count} | ${status.harvestText}`;
         textWrap.appendChild(statusLine);
       }
-      textWrap.appendChild(meta);
-      item.appendChild(textWrap);
-
       if (!crop.unlocked && crop.unlockCost > 0) {
         const lockHint = document.createElement("div");
         lockHint.className = "text-[11px] font-semibold text-amber-300";
         lockHint.textContent = `Unlock for ${formatCurrency(crop.unlockCost)}`;
-        item.appendChild(lockHint);
+        textWrap.appendChild(lockHint);
       }
+      item.appendChild(textWrap);
 
       item.addEventListener("click", () => {
         if (gatedLocked) return;

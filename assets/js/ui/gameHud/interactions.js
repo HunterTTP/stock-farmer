@@ -19,17 +19,23 @@ export function createHudInteractions({
       if (dropdown) {
         const bounds = menuRenderer.getMenuBounds(dropdown);
         if (!bounds) return null;
-        const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll, contentOffsetY } = bounds;
+        const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeights, items, maxScroll, contentOffsetY } = bounds;
         const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
 
         if (x >= menuX && x <= menuX + menuWidth && y >= menuY && y <= menuY + menuHeight) {
           const relY = y - menuY - contentOffsetY + scrollOffset;
-          const itemIndex = Math.floor(relY / itemHeight);
-          if (itemIndex >= 0 && itemIndex < items.length) {
-            const itemYBase = menuY + contentOffsetY + itemIndex * itemHeight - scrollOffset;
-            if (itemYBase >= menuY + contentOffsetY - itemHeight && itemYBase < menuY + contentOffsetY + menuContentHeight) {
-              return { type: "menuItem", id: `menuItem_${dropdown.id}_${itemIndex}`, dropdown, itemIndex, item: items[itemIndex] };
+          const fallbackHeight = Math.max(1, Math.round(menuContentHeight / Math.max(1, items.length)));
+          let cursor = 0;
+          for (let i = 0; i < items.length; i += 1) {
+            const h = itemHeights?.[i];
+            const itemHeight = Number.isFinite(h) && h > 0 ? h : fallbackHeight;
+            if (relY >= cursor && relY < cursor + itemHeight && itemHeight > 0) {
+              const itemYBase = menuY + contentOffsetY + cursor - scrollOffset;
+              if (itemYBase + itemHeight > menuY + contentOffsetY && itemYBase < menuY + contentOffsetY + menuContentHeight) {
+                return { type: "menuItem", id: `menuItem_${dropdown.id}_${i}`, dropdown, itemIndex: i, item: items[i] };
+              }
             }
+            cursor += itemHeight;
           }
           return { type: "menu", id: "menu" };
         }

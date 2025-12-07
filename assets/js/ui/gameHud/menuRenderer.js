@@ -3,6 +3,43 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
 
   const getDropdownScale = () => hudState.layout?.dropdownScale || 1;
 
+  const normalizeMetaLines = (item) => {
+    if (Array.isArray(item.metaLines)) {
+      return item.metaLines
+        .map((line) => {
+          if (typeof line === "string") return { text: line, type: "meta" };
+          return { text: line?.text || "", type: line?.type || "meta" };
+        })
+        .filter((line) => line.text && line.text.trim().length > 0);
+    }
+    const fallbackText = item.locked && item.unlockCost > 0 ? `Unlock for ${formatCurrency(item.unlockCost)}` : item.meta;
+    if (!fallbackText) return [];
+    const type = item.locked && item.unlockCost > 0 ? "unlock" : "meta";
+    return [{ text: fallbackText, type }];
+  };
+
+  const getMaxMetaLines = (items) => items.reduce((max, item) => Math.max(max, normalizeMetaLines(item).length), 0);
+
+  const getMetaColor = (line, item) => {
+    if (line.type === "unlock") return item.canAfford ? COLORS.gold : COLORS.goldDimmed;
+    if (line.type === "status") return COLORS.accent;
+    return COLORS.textSecondary;
+  };
+
+  const calculateItemHeight = (maxMetaLines, scale, labelFontSize, metaFontSize) => {
+    const previewSize = Math.round(36 * scale);
+    const paddingY = Math.round(10 * scale);
+    const metaGap = Math.round(2 * scale);
+    const labelGap = maxMetaLines > 0 ? Math.round(4 * scale) : 0;
+    const textHeight =
+      labelFontSize +
+      labelGap +
+      (maxMetaLines > 0 ? maxMetaLines * metaFontSize + Math.max(0, maxMetaLines - 1) * metaGap : 0);
+    const minHeightForPreview = previewSize + paddingY * 2;
+    const minHeightForText = textHeight + paddingY * 2;
+    return Math.max(Math.round(48 * scale), minHeightForPreview, minHeightForText);
+  };
+
   const measureMenuWidth = (items, layout, dropdown) => {
     const scale = getDropdownScale();
     const previewSize = Math.round(36 * scale);
@@ -21,11 +58,8 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       const labelWidth = ctx.measureText(item.label).width;
 
       ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
-      let metaText = item.meta;
-      if (item.locked && item.unlockCost > 0) {
-        metaText = `Unlock for ${formatCurrency(item.unlockCost)}`;
-      }
-      const metaWidth = ctx.measureText(metaText || "").width;
+      const metaLines = normalizeMetaLines(item);
+      const metaWidth = metaLines.reduce((max, line) => Math.max(max, ctx.measureText(line.text).width), 0);
 
       const textWidth = Math.max(labelWidth, metaWidth);
       const totalWidth = textOffset + textWidth + padding + scrollbarWidth + extraMenuPad;
@@ -42,7 +76,10 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     const layout = hudState.layout?.layout || layoutManager.getLayout();
     const toolbar = hudState.layout?.toolbar;
     const scale = getDropdownScale();
-    const itemHeight = Math.max(32, Math.round(48 * scale));
+    const labelFontSize = Math.max(8, layout.fontSize * scale);
+    const metaFontSize = Math.max(8, (layout.fontSize - 2) * scale);
+    const metaLinesList = items.map((item) => normalizeMetaLines(item));
+    const itemHeights = metaLinesList.map((metaLines) => calculateItemHeight(metaLines.length, scale, labelFontSize, metaFontSize));
     const padding = Math.max(10, Math.round((layout.padding || 12) * scale));
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
@@ -52,7 +89,7 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     const menuChrome = Math.round(16 * scale);
 
     let maxVisibleHeight = Math.min(baseMaxHeight, availableHeight);
-    const totalContentHeight = items.length * itemHeight;
+    const totalContentHeight = itemHeights.reduce((sum, h) => sum + h, 0);
     let menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
     let menuHeight = menuContentHeight + menuChrome;
 
@@ -89,7 +126,8 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       menuWidth,
       menuHeight,
       menuContentHeight,
-      itemHeight,
+      itemHeights,
+      metaLinesList,
       maxScroll,
       scrollable,
       totalContentHeight,
@@ -115,7 +153,8 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       menuWidth,
       menuHeight,
       menuContentHeight,
-      itemHeight,
+      itemHeights,
+      metaLinesList,
       scrollable,
       maxScroll,
       totalContentHeight,
@@ -153,9 +192,13 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     drawRoundedRect(menuX + contentInsetX, menuY + contentOffsetY, menuWidth - contentInsetX * 2, menuContentHeight, clipRadius);
     ctx.clip();
 
+    let runningOffset = 0;
     items.forEach((item, i) => {
-      const itemYBase = menuY + contentOffsetY + i * itemHeight - scrollOffset;
+      const itemHeight = itemHeights[i] || calculateItemHeight(getMaxMetaLines([item]), scale, labelFontSize, metaFontSize);
+      const itemYBase = menuY + contentOffsetY + runningOffset - scrollOffset;
+      const nextOffset = runningOffset + itemHeight;
       if (itemYBase + itemHeight < menuY + contentOffsetY || itemYBase > menuY + contentOffsetY + menuContentHeight) {
+        runningOffset = nextOffset;
         return;
       }
 
@@ -201,24 +244,33 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
         drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
       }
 
+      const metaLines = (metaLinesList && metaLinesList[i]) || normalizeMetaLines(item);
+      const textX = itemX + textOffset;
       ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
 
-      const labelY = itemY + itemH / 2 - Math.round(7 * scale);
-      ctx.fillText(item.label, itemX + textOffset, labelY);
+      if (metaLines.length > 0) {
+        ctx.textBaseline = "top";
+        ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
+        let textY = itemY + Math.round(8 * scale);
+        ctx.fillText(item.label, textX, textY);
 
-      ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
-      const metaY = itemY + itemH / 2 + Math.round(8 * scale);
-
-      if (item.locked && item.unlockCost > 0) {
-        ctx.fillStyle = item.canAfford ? COLORS.gold : COLORS.goldDimmed;
-        ctx.fillText(`Unlock for ${formatCurrency(item.unlockCost)}`, itemX + textOffset, metaY);
+        textY += labelFontSize + Math.round(4 * scale);
+        ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
+        const metaGap = Math.round(2 * scale);
+        metaLines.forEach((line, idx) => {
+          ctx.fillStyle = getMetaColor(line, item);
+          ctx.fillText(line.text, textX, textY);
+          textY += metaFontSize + (idx === metaLines.length - 1 ? 0 : metaGap);
+        });
       } else {
-        ctx.fillStyle = COLORS.textSecondary;
-        ctx.fillText(item.meta, itemX + textOffset, metaY);
+        ctx.textBaseline = "middle";
+        ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
+        ctx.fillText(item.label, textX, itemY + itemH / 2);
       }
+
+      runningOffset = nextOffset;
     });
 
     ctx.restore();

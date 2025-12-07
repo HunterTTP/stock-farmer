@@ -124,6 +124,8 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     }
 
     if (meta) {
+      const metaIsStatus = dropdown.id === "cropSelect" && typeof meta === "string" && meta.startsWith("Planted:");
+      const metaColor = metaIsStatus ? COLORS.accent : COLORS.textSecondary;
       const lineHeight = layout.fontSize + 2;
       const totalTextHeight = lineHeight * 2;
       const textStartY = dropdown.y + (dropdown.height - totalTextHeight) / 2 + lineHeight / 2;
@@ -134,7 +136,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
       ctx.fillText(label, textX, textStartY);
 
       ctx.font = `400 ${scaledFontSize - 2}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = COLORS.textSecondary;
+      ctx.fillStyle = metaColor;
       ctx.fillText(meta, textX, textStartY + lineHeight);
     } else {
       ctx.textBaseline = "middle";
