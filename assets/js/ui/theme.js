@@ -86,7 +86,7 @@ export function getAccentPalette() {
 }
 
 export function onAccentChange(cb) {
-    if (typeof cb !== "function") return () => {};
+    if (typeof cb !== "function") return () => { };
     listeners.add(cb);
     return () => listeners.delete(cb);
 }
@@ -114,6 +114,128 @@ function wireColorPicker(container) {
         });
     });
     window.clickColor = handleAccentSelect;
+}
+
+let hudContext = null;
+
+function wireHudSliders(container) {
+    if (!container || !hudContext) return;
+    const { state, saveState, gameHud } = hudContext;
+
+    const dockScaleSlider = container.querySelector("#hudDockScaleSlider");
+    const dockScaleValue = container.querySelector("#hudDockScaleValue");
+    const dropdownScaleSlider = container.querySelector("#hudDropdownScaleSlider");
+    const dropdownScaleValue = container.querySelector("#hudDropdownScaleValue");
+    const fontSlider = container.querySelector("#hudFontSizeSlider");
+    const fontValue = container.querySelector("#hudFontSizeValue");
+    const showTextToggle = container.querySelector("#hudShowDockTextToggle");
+
+    if (dockScaleSlider && dockScaleValue) {
+        dockScaleSlider.value = state.hudDockScale || 1.0;
+        dockScaleValue.textContent = `${(state.hudDockScale || 1.0).toFixed(1)}x`;
+        dockScaleSlider.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            state.hudDockScale = val;
+            dockScaleValue.textContent = `${val.toFixed(1)}x`;
+            if (gameHud) gameHud.computeLayout();
+            state.needsRender = true;
+        });
+        dockScaleSlider.addEventListener("change", () => {
+            if (saveState) saveState();
+        });
+    }
+
+    if (dropdownScaleSlider && dropdownScaleValue) {
+        dropdownScaleSlider.value = state.hudDropdownScale || 1.0;
+        dropdownScaleValue.textContent = `${(state.hudDropdownScale || 1.0).toFixed(1)}x`;
+        dropdownScaleSlider.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            state.hudDropdownScale = val;
+            dropdownScaleValue.textContent = `${val.toFixed(1)}x`;
+            if (gameHud) gameHud.computeLayout();
+            state.needsRender = true;
+        });
+        dropdownScaleSlider.addEventListener("change", () => {
+            if (saveState) saveState();
+        });
+    }
+
+    if (fontSlider && fontValue) {
+        fontSlider.value = state.hudFontSize || 1.0;
+        fontValue.textContent = `${(state.hudFontSize || 1.0).toFixed(1)}x`;
+        fontSlider.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            state.hudFontSize = val;
+            fontValue.textContent = `${val.toFixed(1)}x`;
+            if (gameHud) gameHud.computeLayout();
+            state.needsRender = true;
+        });
+        fontSlider.addEventListener("change", () => {
+            if (saveState) saveState();
+        });
+    }
+
+    if (showTextToggle) {
+        const updateToggleVisual = () => {
+            const isOn = state.hudShowDockText !== false;
+            showTextToggle.setAttribute("aria-checked", isOn);
+            showTextToggle.classList.toggle("bg-accent", isOn);
+            showTextToggle.classList.toggle("bg-neutral-600", !isOn);
+            const thumb = showTextToggle.querySelector("span");
+            if (thumb) {
+                thumb.classList.toggle("translate-x-4", isOn);
+                thumb.classList.toggle("translate-x-0.5", !isOn);
+            }
+        };
+        updateToggleVisual();
+        showTextToggle.addEventListener("click", () => {
+            state.hudShowDockText = !state.hudShowDockText;
+            updateToggleVisual();
+            if (gameHud) gameHud.computeLayout();
+            state.needsRender = true;
+            if (saveState) saveState();
+        });
+    }
+
+    const visibleToggle = container.querySelector("#hudVisibleToggle");
+    if (visibleToggle) {
+        const updateVisibleToggle = () => {
+            const isOn = state.hudVisible !== false;
+            visibleToggle.setAttribute("aria-checked", isOn);
+            visibleToggle.classList.toggle("bg-accent", isOn);
+            visibleToggle.classList.toggle("bg-neutral-600", !isOn);
+            const thumb = visibleToggle.querySelector("span");
+            if (thumb) {
+                thumb.classList.toggle("translate-x-4", isOn);
+                thumb.classList.toggle("translate-x-0.5", !isOn);
+            }
+        };
+        updateVisibleToggle();
+        visibleToggle.addEventListener("click", () => {
+            state.hudVisible = !state.hudVisible;
+            updateVisibleToggle();
+            state.needsRender = true;
+            if (saveState) saveState();
+        });
+    }
+}
+
+export function setHudContext(ctx) {
+    hudContext = ctx;
+}
+
+export async function initHudPicker() {
+    const slot = document.getElementById("hudCardSlot");
+    if (!slot) return;
+    try {
+        const res = await fetch("fragments/hud-settings.html");
+        if (!res.ok) throw new Error("Failed to load HUD settings");
+        const html = await res.text();
+        slot.innerHTML = html;
+    } catch (err) {
+        slot.innerHTML = "";
+    }
+    wireHudSliders(slot);
 }
 
 export async function initThemePicker() {

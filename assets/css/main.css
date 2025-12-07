@@ -251,3 +251,57 @@ button,
 .bg-accent-soft {
   background-color: var(--accent-softer);
 }
+
+.farm-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(60, 60, 60, 0.8);
+  border-radius: 999px;
+  height: 6px;
+}
+
+.farm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--accent-strong);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.farm-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.farm-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--accent-strong);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.farm-slider::-moz-range-track {
+  background: rgba(60, 60, 60, 0.8);
+  border-radius: 999px;
+  height: 6px;
+}
+
+.farm-slider:focus {
+  outline: none;
+}
+
+.farm-slider:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}

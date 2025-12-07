@@ -35,6 +35,11 @@ export function createInitialState(config) {
     selectedLandscapeKey: null,
     farmlandPlaced: 0,
     accentColor: null,
+    hudDockScale: 1.0,
+    hudDropdownScale: 1.0,
+    hudFontSize: 1.0,
+    hudShowDockText: true,
+    hudVisible: true,
   };
 }
 
@@ -263,6 +268,13 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
     if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
     if (typeof data.accentColor === "string") state.accentColor = data.accentColor;
+    if (Number.isFinite(data.hudDockScale)) state.hudDockScale = data.hudDockScale;
+    else if (Number.isFinite(data.hudScale)) state.hudDockScale = data.hudScale;
+    if (Number.isFinite(data.hudDropdownScale)) state.hudDropdownScale = data.hudDropdownScale;
+    else if (Number.isFinite(data.hudScale)) state.hudDropdownScale = data.hudScale;
+    if (Number.isFinite(data.hudFontSize)) state.hudFontSize = data.hudFontSize;
+    if (typeof data.hudShowDockText === "boolean") state.hudShowDockText = data.hudShowDockText;
+    if (typeof data.hudVisible === "boolean") state.hudVisible = data.hudVisible;
 
 
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
@@ -321,6 +333,11 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     selectedLandscapeKey: state.selectedLandscapeKey || null,
     farmlandPlaced: state.farmlandPlaced || 0,
     accentColor: state.accentColor || null,
+    hudDockScale: state.hudDockScale || 1.0,
+    hudDropdownScale: state.hudDropdownScale || 1.0,
+    hudFontSize: state.hudFontSize || 1.0,
+    hudShowDockText: state.hudShowDockText !== false,
+    hudVisible: state.hudVisible !== false,
   };
 
   state.lastSavedAt = updatedAt;
@@ -405,8 +422,24 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   if (typeof data.accentColor === "string") {
     state.accentColor = data.accentColor;
   }
-  if (typeof data.accentColor === "string") {
-    state.accentColor = data.accentColor;
+  if (Number.isFinite(data.hudDockScale)) {
+    state.hudDockScale = data.hudDockScale;
+  } else if (Number.isFinite(data.hudScale)) {
+    state.hudDockScale = data.hudScale;
+  }
+  if (Number.isFinite(data.hudDropdownScale)) {
+    state.hudDropdownScale = data.hudDropdownScale;
+  } else if (Number.isFinite(data.hudScale)) {
+    state.hudDropdownScale = data.hudScale;
+  }
+  if (Number.isFinite(data.hudFontSize)) {
+    state.hudFontSize = data.hudFontSize;
+  }
+  if (typeof data.hudShowDockText === "boolean") {
+    state.hudShowDockText = data.hudShowDockText;
+  }
+  if (typeof data.hudVisible === "boolean") {
+    state.hudVisible = data.hudVisible;
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "selectedCropKey")) {

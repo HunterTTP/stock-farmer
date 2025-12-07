@@ -16,7 +16,7 @@ import { formatCurrency } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
 import { createTradeModal } from "./trading/tradeModal.js";
 import { createGameHud } from "./ui/gameHud.js";
-import { initTheme, initThemePicker, setAccentColor, getAccentPalette, onAccentChange } from "./ui/theme.js";
+import { initTheme, initThemePicker, initHudPicker, setAccentColor, getAccentPalette, onAccentChange, setHudContext } from "./ui/theme.js";
 
 initTheme();
 
@@ -89,8 +89,15 @@ async function clearCacheAndLogout() {
 function resetSettingsOnly() {
   try {
     localStorage.removeItem("stockFarmerAccentColor");
+    state.accentColor = null;
+    state.hudDockScale = 1.0;
+    state.hudDropdownScale = 1.0;
+    state.hudFontSize = 1.0;
+    state.hudShowDockText = true;
+    state.hudVisible = true;
+    persistence.save();
   } catch (err) {
-    console.error("Failed to clear theme settings", err);
+    console.error("Failed to clear settings", err);
   }
   window.location.reload();
 }
@@ -131,6 +138,8 @@ gameHud = createGameHud({
   openConfirmModal: ui.openConfirmModal,
 });
 
+setHudContext({ state, saveState: persistence.save, gameHud });
+initHudPicker();
 initThemePicker();
 
 registerGameContext({

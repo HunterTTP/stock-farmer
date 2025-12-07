@@ -87,6 +87,8 @@
           id="recenterBtn">Recenter</button>
       </div>
 
+      <div id="hudCardSlot"></div>
+
       <div id="themeCardSlot"></div>
 
       <div class="rounded-xl border farm-border farm-bg-card p-4 shadow-inner shadow-black/20 space-y-2">
@@ -170,8 +172,7 @@
                 <input id="login-password" name="password" type="password" autocomplete="current-password"
                   class="w-full rounded-md farm-input px-3 py-2 text-base" placeholder="********" required />
               </div>
-              <button type="submit"
-                class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Log
+              <button type="submit" class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Log
                 In</button>
               <p id="login-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
               <div class="flex items-center justify-between">
@@ -260,8 +261,7 @@
         <p id="reset-modal-status" class="text-xs min-h-[1rem] text-neutral-300" aria-live="polite"></p>
       </div>
       <div class="px-5 pb-5 flex gap-2">
-        <button id="resetSend"
-          class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Send
+        <button id="resetSend" class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Send
           reset email</button>
       </div>
     </div>
@@ -281,8 +281,7 @@
       </div>
       <div class="px-4 py-4 text-sm farm-text leading-relaxed">Log Out?</div>
       <div class="px-4 pb-4 flex gap-2">
-        <button id="logoutConfirm"
-          class="w-1/2 py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none">Log
+        <button id="logoutConfirm" class="w-1/2 py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none">Log
           Out</button>
         <button id="logoutCancel"
           class="w-1/2 py-2 rounded-md border farm-border farm-btn farm-text text-sm font-medium focus:outline-none">

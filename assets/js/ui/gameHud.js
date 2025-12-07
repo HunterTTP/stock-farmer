@@ -84,37 +84,52 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const layout = getLayout();
         const canvasWidth = canvas.clientWidth;
         const canvasHeight = canvas.clientHeight;
+        const dockScaleBase = 0.9;
+        const dockScale = (state.hudDockScale || 1.0) * dockScaleBase;
+        const dropdownScale = state.hudDropdownScale || 1.0;
+        const hudFontSize = state.hudFontSize || 1.0;
+        const showDockText = state.hudShowDockText !== false;
+
+        const dockScaledPadding = Math.round(layout.padding * dockScale);
+        const dockScaledGap = Math.round(layout.gap * dockScale);
+        const dockScaledToolbarPadding = Math.round(layout.toolbarPadding * dockScale);
+        const scaledFontSize = Math.round(layout.fontSize * hudFontSize);
 
         const modeCount = MODE_ORDER.length;
-        const availableWidth = canvasWidth - layout.padding * 2;
-        const targetToolbarWidth = Math.min(layout.toolbarMaxWidth || availableWidth, availableWidth);
+        const availableWidth = canvasWidth - dockScaledPadding * 2;
+        const targetToolbarWidth = Math.min((layout.toolbarMaxWidth || availableWidth) * dockScale, availableWidth);
         const buttonSize = Math.max(
-            layout.minModeButtonSize,
+            layout.minModeButtonSize * dockScale,
             Math.min(
-                layout.maxModeButtonSize,
-                (targetToolbarWidth - layout.toolbarPadding * 2 - (modeCount - 1) * layout.gap) / modeCount
+                layout.maxModeButtonSize * dockScale,
+                (targetToolbarWidth - dockScaledToolbarPadding * 2 - (modeCount - 1) * dockScaledGap) / modeCount
             )
         );
-        const totalModeWidth = modeCount * buttonSize + (modeCount - 1) * layout.gap + layout.toolbarPadding * 2;
-        const toolbarHeight = buttonSize + layout.toolbarPadding * 2;
+        const totalModeWidth = modeCount * buttonSize + (modeCount - 1) * dockScaledGap + dockScaledToolbarPadding * 2;
+        const toolbarContentHeight = showDockText ? buttonSize : buttonSize * 0.75;
+        const toolbarHeight = toolbarContentHeight + dockScaledToolbarPadding * 2;
         const toolbarX = (canvasWidth - totalModeWidth) / 2;
-        const toolbarY = canvasHeight - toolbarHeight - layout.padding;
+        const hudBottomOffset = 20;
+        const toolbarY = canvasHeight - toolbarHeight - dockScaledPadding - hudBottomOffset;
 
         const modeButtons = MODE_ORDER.map((mode, i) => ({
             id: mode,
             type: "modeButton",
-            x: toolbarX + layout.toolbarPadding + i * (buttonSize + layout.gap),
-            y: toolbarY + layout.toolbarPadding,
+            x: toolbarX + dockScaledToolbarPadding + i * (buttonSize + dockScaledGap),
+            y: toolbarY + dockScaledToolbarPadding,
             width: buttonSize,
-            height: buttonSize,
+            height: toolbarContentHeight,
             mode,
         }));
 
         const toolbar = { x: toolbarX, y: toolbarY, width: totalModeWidth, height: toolbarHeight };
 
-        const dropdownHeight = Math.min(72, Math.max(52, Math.round(layout.modeButtonSize * 1.05)));
-        const dropdownY = toolbarY - layout.gap - dropdownHeight;
-        const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, layout);
+        const dropdownScaledGap = Math.round(layout.gap * dropdownScale);
+        const dropdownScaledPadding = Math.round(layout.padding * dropdownScale);
+        const dropdownHeight = Math.min(72 * dropdownScale, Math.max(52 * dropdownScale, Math.round(layout.modeButtonSize * 1.05 * dropdownScale)));
+        const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;
+        const dropdownLayout = { ...layout, padding: dropdownScaledPadding, gap: dropdownScaledGap, fontSize: scaledFontSize };
+        const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, dropdownLayout, toolbar);
 
         const moneyHeight = 34;
         const moneyText = "$" + formatCurrency(state.totalMoney, true);
@@ -128,33 +143,58 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const moneyChangeX = moneyX - 80 - 8;
         const moneyChange = { id: "moneyChange", type: "moneyChange", x: moneyChangeX, y: moneyY, width: 80, height: moneyHeight };
 
-        hudState.layout = { layout, modeButtons, dropdowns, moneyDisplay, moneyChange, toolbar };
+        hudState.layout = {
+            layout: { ...layout, fontSize: scaledFontSize, iconSize: Math.round(layout.iconSize * dockScale) },
+            modeButtons,
+            dropdowns,
+            moneyDisplay,
+            moneyChange,
+            toolbar,
+            showDockText,
+            dockScale,
+            dropdownScale
+        };
         return hudState.layout;
     }
 
-    function computeDropdownLayout(canvasWidth, y, height, layout) {
+    function computeDropdownLayout(canvasWidth, y, height, layout, toolbar) {
         const active = state.activeMode || "plant";
         const dropdowns = [];
+        const maxMenuWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
+        const minX = toolbar ? toolbar.x : layout.padding;
+        const maxX = toolbar ? toolbar.x + toolbar.width : canvasWidth - layout.padding;
+        const availableWidth = maxX - minX;
 
         if (active === "plant") {
-            const cropW = measureDropdownWidth("cropSelect", layout);
-            const sizeW = measureDropdownWidth("sizeSelect", layout);
-            const totalW = cropW + layout.gap + sizeW;
-            const startX = (canvasWidth - totalW) / 2;
-            dropdowns.push({ id: "cropSelect", type: "dropdown", x: startX, y, width: cropW, height, menu: "cropMenu" });
-            dropdowns.push({ id: "sizeSelect", type: "dropdown", x: startX + cropW + layout.gap, y, width: sizeW, height, menu: "sizeMenu" });
+            let cropW = measureDropdownWidth("cropSelect", layout);
+            let sizeW = measureDropdownWidth("sizeSelect", layout);
+            let totalW = cropW + layout.gap + sizeW;
+
+            if (totalW > availableWidth) {
+                const scale = availableWidth / totalW;
+                cropW = Math.floor(cropW * scale);
+                sizeW = Math.floor(sizeW * scale);
+                totalW = cropW + layout.gap + sizeW;
+            }
+
+            const startX = minX + (availableWidth - totalW) / 2;
+            dropdowns.push({ id: "cropSelect", type: "dropdown", x: startX, y, width: cropW, height, menu: "cropMenu", maxMenuWidth });
+            dropdowns.push({ id: "sizeSelect", type: "dropdown", x: startX + cropW + layout.gap, y, width: sizeW, height, menu: "sizeMenu", maxMenuWidth });
         } else if (active === "harvest") {
-            const sizeW = measureDropdownWidth("harvestSizeSelect", layout);
-            const startX = (canvasWidth - sizeW) / 2;
-            dropdowns.push({ id: "harvestSizeSelect", type: "dropdown", x: startX, y, width: sizeW, height, menu: "harvestSizeMenu" });
+            let sizeW = measureDropdownWidth("harvestSizeSelect", layout);
+            if (sizeW > availableWidth) sizeW = availableWidth;
+            const startX = minX + (availableWidth - sizeW) / 2;
+            dropdowns.push({ id: "harvestSizeSelect", type: "dropdown", x: startX, y, width: sizeW, height, menu: "harvestSizeMenu", maxMenuWidth });
         } else if (active === "landscape") {
-            const w = measureDropdownWidth("landscapeSelect", layout);
-            const startX = (canvasWidth - w) / 2;
-            dropdowns.push({ id: "landscapeSelect", type: "dropdown", x: startX, y, width: w, height, menu: "landscapeMenu" });
+            let w = measureDropdownWidth("landscapeSelect", layout);
+            if (w > availableWidth) w = availableWidth;
+            const startX = minX + (availableWidth - w) / 2;
+            dropdowns.push({ id: "landscapeSelect", type: "dropdown", x: startX, y, width: w, height, menu: "landscapeMenu", maxMenuWidth });
         } else if (active === "build") {
-            const w = measureDropdownWidth("buildSelect", layout);
-            const startX = (canvasWidth - w) / 2;
-            dropdowns.push({ id: "buildSelect", type: "dropdown", x: startX, y, width: w, height, menu: "buildMenu" });
+            let w = measureDropdownWidth("buildSelect", layout);
+            if (w > availableWidth) w = availableWidth;
+            const startX = minX + (availableWidth - w) / 2;
+            dropdowns.push({ id: "buildSelect", type: "dropdown", x: startX, y, width: w, height, menu: "buildMenu", maxMenuWidth });
         }
 
         return dropdowns;
@@ -272,6 +312,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
     function drawButton(btn, isActive, isHover, isPressed) {
         const layout = hudState.layout?.layout || getLayout();
+        const showText = hudState.layout?.showDockText !== false;
         const radius = 14;
 
         ctx.save();
@@ -302,19 +343,21 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.lineWidth = isActive ? 2 : 1;
         ctx.stroke();
 
-        const iconY = btn.y + btn.height * 0.38;
-        const labelY = btn.y + btn.height * 0.78;
         const iconSize = layout.iconSize;
+        const iconY = showText ? btn.y + btn.height * 0.38 : btn.y + btn.height / 2;
 
         drawModeIcon(btn.x + btn.width / 2, iconY, iconSize, btn.mode, isActive);
 
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
-        ctx.fillStyle = isActive ? COLORS.accent : COLORS.text;
+        if (showText) {
+            const labelY = btn.y + btn.height * 0.78;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+            ctx.fillStyle = isActive ? COLORS.accent : COLORS.text;
 
-        const label = btn.mode.charAt(0).toUpperCase() + btn.mode.slice(1);
-        ctx.fillText(label, btn.x + btn.width / 2, labelY);
+            const label = btn.mode.charAt(0).toUpperCase() + btn.mode.slice(1);
+            ctx.fillText(label, btn.x + btn.width / 2, labelY);
+        }
 
         ctx.restore();
     }
@@ -413,11 +456,14 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
     function drawDropdown(dropdown, isOpen, isHover) {
         const layout = hudState.layout?.layout || getLayout();
+        const dropdownScale = hudState.layout?.dropdownScale || 1.0;
         const radius = 12;
-        const previewSize = 28;
-        const previewMargin = 10;
+        const basePreviewSize = 28;
+        const previewSize = Math.min(basePreviewSize * dropdownScale, dropdown.height - 12);
+        const previewMargin = Math.round(10 * dropdownScale);
         const previewData = getDropdownPreviewData(dropdown);
         const hasPreview = previewData && (previewData.imageUrl || previewData.colorData || previewData.iconType);
+        const verticalPadding = 4;
 
         ctx.save();
 
@@ -443,6 +489,10 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.lineWidth = isOpen ? 1.5 : 1;
         ctx.stroke();
 
+        ctx.save();
+        drawRoundedRect(dropdown.x + 1, dropdown.y + verticalPadding, dropdown.width - 2, dropdown.height - verticalPadding * 2, radius - 1);
+        ctx.clip();
+
         let textX = dropdown.x + 12;
         if (hasPreview) {
             const previewX = dropdown.x + previewMargin;
@@ -461,24 +511,31 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
         const label = getDropdownLabel(dropdown);
         const meta = getDropdownMeta(dropdown);
+        const scaledFontSize = Math.round(layout.fontSize * dropdownScale);
+        const lineHeight = scaledFontSize + 2;
 
         ctx.textAlign = "left";
 
         if (meta) {
-            ctx.textBaseline = "middle";
-            ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
-            ctx.fillStyle = COLORS.text;
-            ctx.fillText(label, textX, dropdown.y + dropdown.height / 2 - 7);
+            const totalTextHeight = lineHeight * 2;
+            const textStartY = dropdown.y + (dropdown.height - totalTextHeight) / 2 + lineHeight / 2;
 
-            ctx.font = `400 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
+            ctx.textBaseline = "middle";
+            ctx.font = `600 ${scaledFontSize}px system-ui, -apple-system, sans-serif`;
+            ctx.fillStyle = COLORS.text;
+            ctx.fillText(label, textX, textStartY);
+
+            ctx.font = `400 ${scaledFontSize - 2}px system-ui, -apple-system, sans-serif`;
             ctx.fillStyle = COLORS.textSecondary;
-            ctx.fillText(meta, textX, dropdown.y + dropdown.height / 2 + 8);
+            ctx.fillText(meta, textX, textStartY + lineHeight);
         } else {
             ctx.textBaseline = "middle";
-            ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
+            ctx.font = `600 ${scaledFontSize}px system-ui, -apple-system, sans-serif`;
             ctx.fillStyle = COLORS.text;
             ctx.fillText(label, textX, dropdown.y + dropdown.height / 2);
         }
+
+        ctx.restore();
 
         drawChevron(dropdown.x + dropdown.width - 20, dropdown.y + dropdown.height / 2, 6, isOpen);
 
@@ -877,19 +934,21 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         if (!items || items.length === 0) return;
 
         const layout = hudState.layout?.layout || getLayout();
+        const toolbar = hudState.layout?.toolbar;
         const itemHeight = 48;
         const maxVisibleHeight = 300;
         const totalContentHeight = items.length * itemHeight;
         const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
         const menuHeight = menuContentHeight + 16;
-        const menuWidth = measureMenuWidth(items, layout, dropdown);
+        const measuredWidth = measureMenuWidth(items, layout, dropdown);
+        const maxMenuWidth = dropdown.maxMenuWidth || (toolbar ? toolbar.width : canvas.clientWidth - (layout.padding || 12) * 2);
+        const menuWidth = Math.min(measuredWidth, maxMenuWidth);
 
-        // Ensure menu doesn't go off screen horizontally
         const padding = layout.padding || 12;
-        let menuX = dropdown.x;
         const canvasWidth = canvas.clientWidth;
+        const toolbarCenterX = toolbar ? toolbar.x + toolbar.width / 2 : canvasWidth / 2;
+        let menuX = toolbarCenterX - menuWidth / 2;
 
-        // Clamp menu position to stay on screen
         if (menuX + menuWidth > canvasWidth - padding) {
             menuX = canvasWidth - menuWidth - padding;
         }
@@ -1167,6 +1226,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     }
 
     function render() {
+        if (state.hudVisible === false) return;
+
         const computed = computeLayout();
 
         drawToolbar();
@@ -1222,19 +1283,21 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     function getMenuBounds(dropdown) {
         const items = getMenuItems(dropdown);
         const layout = hudState.layout?.layout || getLayout();
+        const toolbar = hudState.layout?.toolbar;
         const itemHeight = 44;
         const maxVisibleHeight = 280;
         const totalContentHeight = items.length * itemHeight;
         const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
         const menuHeight = menuContentHeight + 16;
-        const menuWidth = measureMenuWidth(items, layout);
+        const measuredWidth = measureMenuWidth(items, layout, dropdown);
+        const maxMenuWidth = dropdown.maxMenuWidth || (toolbar ? toolbar.width : canvas.clientWidth - (layout.padding || 12) * 2);
+        const menuWidth = Math.min(measuredWidth, maxMenuWidth);
 
-        // Ensure menu doesn't go off screen horizontally (same as drawMenu)
         const padding = layout.padding || 12;
-        let menuX = dropdown.x;
         const canvasWidth = canvas.clientWidth;
+        const toolbarCenterX = toolbar ? toolbar.x + toolbar.width / 2 : canvasWidth / 2;
+        let menuX = toolbarCenterX - menuWidth / 2;
 
-        // Clamp menu position to stay on screen
         if (menuX + menuWidth > canvasWidth - padding) {
             menuX = canvasWidth - menuWidth - padding;
         }
