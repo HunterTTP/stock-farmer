@@ -1,7 +1,7 @@
 export const crops = {
-  wheat: {
-    id: "wheat",
-    name: "Wheat",
+  carrot: {
+    id: "carrot",
+    name: "Carrot",
     growMinutes: 0.5,
     baseValue: 1,
     unlocked: true,
@@ -10,9 +10,9 @@ export const crops = {
     limit: -1,
     placed: 0,
   },
-  carrot: {
-    id: "carrot",
-    name: "Carrot",
+  wheat: {
+    id: "wheat",
+    name: "Wheat",
     growMinutes: 2,
     baseValue: 4,
     unlocked: false,

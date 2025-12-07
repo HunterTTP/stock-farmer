@@ -24,8 +24,8 @@ export function createInitialState(config) {
     stockHoldings: {},
 
     activeMode: "plant",
-    selectedCropKey: "wheat",
-    previousCropKey: "wheat",
+    selectedCropKey: "carrot",
+    previousCropKey: "carrot",
     selectedStockKey: null,
     selectedSizeKey: "single",
     buildingHoldTimeoutId: null,
@@ -54,8 +54,8 @@ export function createInitialWorld(config) {
 }
 
 export function applyDefaultSelection(state) {
-  state.selectedCropKey = "wheat";
-  state.previousCropKey = "wheat";
+  state.selectedCropKey = "carrot";
+  state.previousCropKey = "carrot";
   state.selectedStockKey = null;
   state.stockHoldings = {};
   state.selectedSizeKey = "single";
