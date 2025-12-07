@@ -14,6 +14,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         menuScrollOffset: 0,
         menuDragStart: null,
         menuDragScrollStart: 0,
+        sliderX: null,
+        sliderTargetX: null,
     };
 
     const LAYOUT = {
@@ -41,6 +43,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         itemSelected: accentPalette.accentSoft || hexToRgba(accentPalette.accent, 0.22),
         itemSelectedBorder: accentPalette.accentBorder || hexToRgba(accentPalette.accent, 0.85),
         text: "#e0e0e0",
+        textHover: "#ffffff",
         textSecondary: "rgba(165, 165, 165, 0.85)",
         accent: accentPalette.accent,
         accentDark: accentPalette.accentDark || hexToRgba(accentPalette.accent, 0.8),
@@ -84,10 +87,11 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const layout = getLayout();
         const canvasWidth = canvas.clientWidth;
         const canvasHeight = canvas.clientHeight;
-        const dockScaleBase = 0.9;
+        const dockScaleBase = 0.81;
         const dockScale = (state.hudDockScale || 1.0) * dockScaleBase;
         const dropdownScale = state.hudDropdownScale || 1.0;
-        const hudFontSize = state.hudFontSize || 1.0;
+        const fontSizeBase = 1.1;
+        const hudFontSize = (state.hudFontSize || 1.0) * fontSizeBase;
         const showDockText = state.hudShowDockText !== false;
 
         const dockScaledPadding = Math.round(layout.padding * dockScale);
@@ -288,9 +292,9 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
     function drawToolbar() {
         const computed = hudState.layout;
-        if (!computed || !computed.toolbar) return;
+        if (!computed || !computed.toolbar || !computed.modeButtons) return;
 
-        const { toolbar } = computed;
+        const { toolbar, modeButtons } = computed;
         const radius = 20;
 
         ctx.save();
@@ -299,7 +303,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.shadowOffsetY = 4;
 
         drawRoundedRect(toolbar.x, toolbar.y, toolbar.width, toolbar.height, radius);
-        ctx.fillStyle = COLORS.toolbarBg;
+        ctx.fillStyle = "rgba(30, 30, 30, 0.95)";
         ctx.fill();
 
         ctx.shadowColor = "transparent";
@@ -307,41 +311,67 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
+        for (let i = 1; i < modeButtons.length; i++) {
+            const btn = modeButtons[i];
+            const dividerX = btn.x - (computed.layout?.gap || 10) / 2;
+            const dividerTop = toolbar.y + toolbar.height * 0.25;
+            const dividerBottom = toolbar.y + toolbar.height * 0.75;
+            ctx.beginPath();
+            ctx.moveTo(dividerX, dividerTop);
+            ctx.lineTo(dividerX, dividerBottom);
+            ctx.strokeStyle = "rgba(100, 100, 100, 0.3)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        const activeBtn = modeButtons.find(btn => btn.mode === state.activeMode);
+        if (activeBtn) {
+            const segmentRadius = 14;
+            const padding = 3;
+            const targetX = activeBtn.x - padding;
+
+            if (hudState.sliderX === null) {
+                hudState.sliderX = targetX;
+            }
+
+            hudState.sliderTargetX = targetX;
+
+            const lerpSpeed = 0.15;
+            const diff = hudState.sliderTargetX - hudState.sliderX;
+            if (Math.abs(diff) > 0.5) {
+                hudState.sliderX += diff * lerpSpeed;
+                state.needsRender = true;
+            } else {
+                hudState.sliderX = hudState.sliderTargetX;
+            }
+
+            ctx.save();
+            ctx.shadowColor = hexToRgba(COLORS.accent, 0.3);
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 2;
+            drawRoundedRect(
+                hudState.sliderX,
+                activeBtn.y - padding,
+                activeBtn.width + padding * 2,
+                activeBtn.height + padding * 2,
+                segmentRadius
+            );
+            ctx.fillStyle = COLORS.buttonActive;
+            ctx.fill();
+            ctx.strokeStyle = COLORS.buttonActiveBorder;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.restore();
+        }
+
         ctx.restore();
     }
 
     function drawButton(btn, isActive, isHover, isPressed) {
         const layout = hudState.layout?.layout || getLayout();
         const showText = hudState.layout?.showDockText !== false;
-        const radius = 14;
 
         ctx.save();
-
-        if (isActive || isHover || isPressed) {
-            ctx.shadowColor = isActive ? hexToRgba(COLORS.accent, 0.3) : "rgba(0, 0, 0, 0.2)";
-            ctx.shadowBlur = isActive ? 12 : 8;
-            ctx.shadowOffsetY = 2;
-        }
-
-        drawRoundedRect(btn.x, btn.y, btn.width, btn.height, radius);
-
-        let bgColor;
-        if (isActive) {
-            bgColor = COLORS.buttonActive;
-        } else if (isPressed) {
-            bgColor = "rgba(60, 60, 60, 0.95)";
-        } else if (isHover) {
-            bgColor = COLORS.buttonHover;
-        } else {
-            bgColor = COLORS.buttonBg;
-        }
-        ctx.fillStyle = bgColor;
-        ctx.fill();
-
-        ctx.shadowColor = "transparent";
-        ctx.strokeStyle = isActive ? COLORS.buttonActiveBorder : COLORS.buttonBorder;
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.stroke();
 
         const iconSize = layout.iconSize;
         const iconY = showText ? btn.y + btn.height * 0.38 : btn.y + btn.height / 2;
@@ -353,7 +383,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
-            ctx.fillStyle = isActive ? COLORS.accent : COLORS.text;
+            ctx.fillStyle = isActive ? COLORS.accent : (isHover ? COLORS.textHover : COLORS.text);
 
             const label = btn.mode.charAt(0).toUpperCase() + btn.mode.slice(1);
             ctx.fillText(label, btn.x + btn.width / 2, labelY);
