@@ -1,4 +1,4 @@
-﻿export function createUIControls({ dom, state, crops, sizes, buildings, landscapes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache }) {
+﻿export function createUIControls({ dom, state, crops, sizes, buildings, landscapes, formatCurrency, onMoneyChanged, saveState, centerView, resetFarm, clearCache, resetSettings }) {
   let pendingConfirmAction = null;
   let pendingCancelAction = null;
   let openMenuKey = null;
@@ -727,6 +727,15 @@
         openConfirmModal("Clear all cached data? If you are not logged in your progress will be lost.", clearCache, "Clear Cache", null, {
           confirmText: "Yes",
           cancelText: "No",
+          confirmVariant: "danger",
+        });
+      });
+    }
+    if (dom.resetSettingsBtn && typeof resetSettings === "function") {
+      dom.resetSettingsBtn.addEventListener("click", () => {
+        openConfirmModal("Reset settings (like theme and view) and reload?", resetSettings, "Reset Settings", null, {
+          confirmText: "Reset",
+          cancelText: "Cancel",
           confirmVariant: "danger",
         });
       });

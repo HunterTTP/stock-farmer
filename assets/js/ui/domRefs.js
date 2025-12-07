@@ -37,6 +37,7 @@ export function getDomRefs() {
 
 
     clearCacheBtn: document.getElementById("clearCacheBtn"),
+    resetSettingsBtn: document.getElementById("resetSettingsBtn"),
     installBtn: document.getElementById("installBtn"),
     authTrigger: document.getElementById("authTrigger"),
     logoutBtn: document.getElementById("logoutBtn"),

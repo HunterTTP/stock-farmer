@@ -86,6 +86,15 @@ async function clearCacheAndLogout() {
   await logOutAndReset({ clearCaches: true, showAuthOnReload: true });
 }
 
+function resetSettingsOnly() {
+  try {
+    localStorage.removeItem("stockFarmerAccentColor");
+  } catch (err) {
+    console.error("Failed to clear theme settings", err);
+  }
+  window.location.reload();
+}
+
 ui = createUIControls({
   dom,
   state,
@@ -99,6 +108,7 @@ ui = createUIControls({
   centerView: viewport.centerView,
   resetFarm,
   clearCache: clearCacheAndLogout,
+  resetSettings: resetSettingsOnly,
 });
 
 tradeModal = createTradeModal({
