@@ -1,9 +1,9 @@
 export function formatCurrency(amount, allowCents = true) {
   const rounded = Math.round(amount * 100) / 100;
   if (allowCents) {
-    return rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return "$" + rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  return Math.round(rounded).toLocaleString();
+  return "$" + Math.round(rounded).toLocaleString();
 }
 
 export function cropImageSrc(cropId) {

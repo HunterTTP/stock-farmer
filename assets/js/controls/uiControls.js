@@ -218,7 +218,7 @@
       title.textContent = crop.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = `Sell $${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+      meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       textWrap.appendChild(title);
       const status = getCropStatus(crop, now);
       if (status) {
@@ -233,7 +233,7 @@
       if (!crop.unlocked && crop.unlockCost > 0) {
         const lockHint = document.createElement("div");
         lockHint.className = "text-[11px] font-semibold text-amber-300";
-        lockHint.textContent = `Unlock for $${formatCurrency(crop.unlockCost)}`;
+        lockHint.textContent = `Unlock for ${formatCurrency(crop.unlockCost)}`;
         item.appendChild(lockHint);
       }
 
@@ -242,7 +242,7 @@
         if (!crop.unlocked) {
           if (crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost) {
             openConfirmModal(
-              `Unlock ${crop.name} for $${formatCurrency(crop.unlockCost)}?`,
+              `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
               () => {
                 state.totalMoney -= crop.unlockCost;
                 crop.unlocked = true;
@@ -303,7 +303,7 @@
       if (locked && typeof size.unlockCost === "number") {
         const cost = document.createElement("span");
         cost.className = "text-[11px] font-semibold text-amber-300 ml-3";
-        cost.textContent = `Unlock for $${formatCurrency(size.unlockCost)}`;
+        cost.textContent = `Unlock for ${formatCurrency(size.unlockCost)}`;
         row.appendChild(cost);
       }
 
@@ -312,8 +312,8 @@
         if (gatedLocked) return;
         if (locked) {
           if (!canAffordUnlock) return;
-            openConfirmModal(
-            `Unlock ${size.name} for $${formatCurrency(size.unlockCost)}?`,
+          openConfirmModal(
+            `Unlock ${size.name} for ${formatCurrency(size.unlockCost)}?`,
             () => {
               state.totalMoney -= size.unlockCost;
               size.unlocked = true;
@@ -392,7 +392,7 @@
       title.textContent = item.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | $${formatCurrency(item.cost || 0)}`;
+      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
       text.appendChild(title);
       text.appendChild(meta);
       row.appendChild(text);
@@ -498,7 +498,7 @@
         meta.textContent = farmlandPlaced < 4 ? "Free" : formatCurrency(25);
       } else {
         const costValue = item.cost || 0;
-        meta.textContent = costValue === 0 ? "Free" : `$${formatCurrency(costValue)}`;
+        meta.textContent = costValue === 0 ? "Free" : `${formatCurrency(costValue)}`;
       }
       text.appendChild(title);
       text.appendChild(meta);

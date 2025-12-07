@@ -132,7 +132,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, dropdownLayout, toolbar);
 
         const moneyHeight = 34;
-        const moneyText = "$" + formatCurrency(state.totalMoney, true);
+        const moneyText = formatCurrency(state.totalMoney, true);
         ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
         const moneyTextWidth = ctx.measureText(moneyText).width;
         const moneyWidth = 24 + moneyTextWidth;
@@ -572,7 +572,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 if (status) {
                     return `Planted: ${status.count} | ${status.harvestText}`;
                 }
-                return `$${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+                return `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
             }
             return null;
         }
@@ -583,7 +583,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
             if (landscape) {
                 const cost = landscape.isFarmland && state.farmlandPlaced < 4 ? 0 : landscape.cost || 0;
-                return cost === 0 ? "Free" : `$${formatCurrency(cost)}`;
+                return cost === 0 ? "Free" : `${formatCurrency(cost)}`;
             }
             return null;
         }
@@ -593,7 +593,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             }
             const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
             if (building) {
-                return `${building.width}x${building.height} | $${formatCurrency(building.cost || 0)}`;
+                return `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
             }
             return null;
         }
@@ -649,7 +649,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
         ctx.fillStyle = "#d4af37";
 
-        const moneyText = "$" + formatCurrency(state.totalMoney, true);
+        const moneyText = formatCurrency(state.totalMoney, true);
         const textX = elem.x + 12;
         const textY = elem.y + elem.height / 2;
         ctx.fillText(moneyText, textX, textY);
@@ -917,7 +917,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             ctx.font = `400 ${layout.fontSize - 3}px system-ui, -apple-system, sans-serif`;
             let metaText = item.meta;
             if (item.locked && item.unlockCost > 0) {
-                metaText = `Unlock for $${formatCurrency(item.unlockCost)}`;
+                metaText = `Unlock for ${formatCurrency(item.unlockCost)}`;
             }
             const metaWidth = ctx.measureText(metaText || "").width;
 
@@ -1039,7 +1039,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
             if (item.locked && item.unlockCost > 0) {
                 ctx.fillStyle = item.canAfford ? COLORS.gold : COLORS.goldDimmed;
-                ctx.fillText(`Unlock for $${formatCurrency(item.unlockCost)}`, itemX + textOffset, metaY);
+                ctx.fillText(`Unlock for ${formatCurrency(item.unlockCost)}`, itemX + textOffset, metaY);
             } else {
                 ctx.fillStyle = COLORS.textSecondary;
                 ctx.fillText(item.meta, itemX + textOffset, metaY);
@@ -1101,7 +1101,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             const cropKeys = Object.keys(crops);
             return Object.values(crops).map((crop, index) => {
                 const status = getCropStatus(crop);
-                let meta = `$${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+                let meta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
                 if (status) {
                     meta = `Planted: ${status.count} | ${status.harvestText}`;
                 }
@@ -1164,7 +1164,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 items.push({
                     id: l.id,
                     label: l.name,
-                    meta: cost === 0 ? "Free" : `$${formatCurrency(cost)}`,
+                    meta: cost === 0 ? "Free" : `${formatCurrency(cost)}`,
                     locked: false,
                     unlockCost: 0,
                     canAfford: true,
@@ -1190,7 +1190,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 items.push({
                     id: b.id,
                     label: b.name,
-                    meta: `${b.width}x${b.height} | $${formatCurrency(b.cost || 0)}`,
+                    meta: `${b.width}x${b.height} | ${formatCurrency(b.cost || 0)}`,
                     locked: false,
                     unlockCost: 0,
                     canAfford: true,
