@@ -16,9 +16,7 @@ import { formatCurrency } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
 import { createTradeModal } from "./trading/tradeModal.js";
 import { createGameHud } from "./ui/gameHud.js";
-import { initTheme, initThemePicker, initHudPicker, setAccentColor, getAccentPalette, onAccentChange, setHudContext } from "./ui/theme.js";
-
-initTheme();
+import { initTheme, initThemePicker, initHudPicker, setAccentColor, getAccentPalette, onAccentChange, setHudContext, DEFAULT_ACCENT } from "./ui/theme.js";
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -46,6 +44,7 @@ if (!localStorage.getItem(config.saveKey)) {
   applyDefaultSelection(state);
 }
 recalcPlacedCounts(world, crops, state);
+initTheme(state.accentColor);
 
 let themeSyncReady = false;
 onAccentChange((palette) => {
@@ -88,8 +87,8 @@ async function clearCacheAndLogout() {
 
 function resetSettingsOnly() {
   try {
-    localStorage.removeItem("stockFarmerAccentColor");
-    state.accentColor = null;
+    state.accentColor = DEFAULT_ACCENT;
+    setAccentColor(DEFAULT_ACCENT);
     state.hudDockScale = 1.0;
     state.hudDropdownScale = 1.0;
     state.hudFontSize = 1.0;

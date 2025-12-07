@@ -1,4 +1,5 @@
 import { buildSaveData, applyLoadedData, recalcPlacedCounts } from "../state/state.js";
+import { setAccentColor, DEFAULT_ACCENT } from "../ui/theme.js";
 
 export const SESSION_STORAGE_KEY = "stock-farmer-session-id";
 export const AUTH_MODAL_FLAG = "stockFarmer.authModalOpen";
@@ -110,6 +111,12 @@ export function createAuthHelpers({ auth, runtime }) {
       updatedAt: resolvedUpdatedAt,
     };
     applyLoadedData(payload, runtime.gameContext);
+    try {
+      const accent = runtime.gameContext.state?.accentColor || DEFAULT_ACCENT;
+      setAccentColor(accent);
+    } catch (error) {
+      console.error("Failed to apply accent after load", error);
+    }
     try {
       recalcPlacedCounts(runtime.gameContext.world, runtime.gameContext.crops, runtime.gameContext.state);
     } catch (error) {

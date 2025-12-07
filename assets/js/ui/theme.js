@@ -1,7 +1,6 @@
 import { hexToRgba, darkenHex } from "../utils/colorUtils.js";
 
-const STORAGE_KEY = "stockFarmerAccentColor";
-const DEFAULT_ACCENT = "#87FF85";
+export const DEFAULT_ACCENT = "#87FF85";
 
 let palette = buildPalette(DEFAULT_ACCENT);
 const listeners = new Set();
@@ -52,31 +51,13 @@ function applyPalette(nextPalette) {
     listeners.forEach((cb) => cb({ ...palette }));
 }
 
-function loadStoredAccent() {
-    try {
-        return localStorage.getItem(STORAGE_KEY);
-    } catch (err) {
-        return null;
-    }
-}
-
-function persistAccent(accent) {
-    try {
-        localStorage.setItem(STORAGE_KEY, accent);
-    } catch (err) {
-        return;
-    }
-}
-
-export function initTheme() {
-    const stored = normalizeHex(loadStoredAccent());
-    const basePalette = buildPalette(stored || DEFAULT_ACCENT);
+export function initTheme(initialAccent = null) {
+    const basePalette = buildPalette(initialAccent || DEFAULT_ACCENT);
     applyPalette(basePalette);
 }
 
 export function setAccentColor(next) {
     const normalized = normalizeHex(next) || palette.accent || DEFAULT_ACCENT;
-    persistAccent(normalized);
     applyPalette(buildPalette(normalized));
     if (pickerInput) pickerInput.value = normalized;
 }
