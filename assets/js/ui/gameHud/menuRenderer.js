@@ -180,7 +180,7 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       } else if (item.iconType === "faSquares") {
         drawPreviewImage(previewX, previewY, previewSize, null, null, null, item.gridSize || 1);
       } else if (item.iconType === "fa" && item.faGlyph) {
-        drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph);
+        drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph, null, item.faWeight || 900);
       } else {
         drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
       }

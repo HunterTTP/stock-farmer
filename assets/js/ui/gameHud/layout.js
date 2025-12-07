@@ -84,7 +84,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const canvasHeight = canvas.clientHeight;
     const dockScaleBase = 0.81;
     const dockScale = (state.hudDockScale || 1.0) * dockScaleBase;
-    const dropdownScale = state.hudDropdownScale || 1.0;
+    const dropdownScale = (state.hudDropdownScale || 1.0) * 0.9;
     const fontSizeBase = 1.1;
     const hudFontSize = (state.hudFontSize || 1.0) * fontSizeBase;
     const showDockText = false;

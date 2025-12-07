@@ -9,11 +9,11 @@ const MODE_ICONS = {
 export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
   const imageCache = {};
 
-  const drawFaIcon = (glyph, x, y, size, color = COLORS.text) => {
+  const drawFaIcon = (glyph, x, y, size, color = COLORS.text, weight = 900) => {
     if (!glyph) return;
     ctx.save();
     ctx.fillStyle = color;
-    ctx.font = `900 ${size}px 'Font Awesome 6 Free'`;
+    ctx.font = `${weight} ${size}px 'Font Awesome 6 Free'`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(glyph, x + size / 2, y + size / 2 + 0.5);
@@ -85,7 +85,7 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     ctx.restore();
   };
 
-  const drawPreviewImage = (x, y, size, imageSrc, colorData, faGlyph = null, gridSize = null) => {
+  const drawPreviewImage = (x, y, size, imageSrc, colorData, faGlyph = null, gridSize = null, faWeight = 900) => {
     const radius = 4;
     const padding = 1;
 
@@ -104,13 +104,18 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     const innerSize = size - padding * 2;
 
     if (faGlyph) {
-      drawFaIcon(faGlyph, innerX, innerY, innerSize, COLORS.text);
+      drawFaIcon(faGlyph, innerX, innerY, innerSize, COLORS.text, faWeight);
     } else if (Number.isInteger(gridSize) && gridSize > 0) {
       drawSquaresIcon(innerX, innerY, innerSize, Math.max(1, gridSize));
     } else if (imageSrc) {
       const img = getOrLoadImage(imageSrc);
       if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, innerX, innerY, innerSize, innerSize);
+        const ratio = Math.min(innerSize / img.width, innerSize / img.height);
+        const targetW = img.width * ratio;
+        const targetH = img.height * ratio;
+        const dx = innerX + (innerSize - targetW) / 2;
+        const dy = innerY + (innerSize - targetH) / 2;
+        ctx.drawImage(img, dx, dy, targetW, targetH);
       }
     } else if (colorData) {
       const gradient = ctx.createLinearGradient(innerX, innerY, innerX + innerSize, innerY + innerSize);

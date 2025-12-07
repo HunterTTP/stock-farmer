@@ -103,7 +103,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
       } else if (previewData.iconType === "faSquares") {
         drawPreviewImage(previewX, previewY, previewSize, null, null, null, previewData.gridSize || 1);
       } else if (previewData.iconType === "fa" && previewData.faGlyph) {
-        drawPreviewImage(previewX, previewY, previewSize, null, null, previewData.faGlyph);
+        drawPreviewImage(previewX, previewY, previewSize, null, null, previewData.faGlyph, null, previewData.faWeight || 900);
       } else if (previewData.iconType === "trash") {
         drawTrashIcon(previewX, previewY, previewSize);
       } else if (previewData.iconType === "dollar") {

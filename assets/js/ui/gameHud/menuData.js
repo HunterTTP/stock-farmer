@@ -252,6 +252,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           imageUrl: null,
           iconType: "fa",
           faGlyph: "\uf155",
+          faWeight: 100,
           unlocked: true,
         },
       ];
