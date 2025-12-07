@@ -34,6 +34,7 @@ export function createInitialState(config) {
     selectedBuildKey: null,
     selectedLandscapeKey: null,
     farmlandPlaced: 0,
+    accentColor: null,
   };
 }
 
@@ -261,6 +262,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
     const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
     if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
+    if (typeof data.accentColor === "string") state.accentColor = data.accentColor;
 
 
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
@@ -318,6 +320,7 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     selectedBuildKey: state.selectedBuildKey || null,
     selectedLandscapeKey: state.selectedLandscapeKey || null,
     farmlandPlaced: state.farmlandPlaced || 0,
+    accentColor: state.accentColor || null,
   };
 
   state.lastSavedAt = updatedAt;
@@ -397,6 +400,13 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
     Object.entries(data.cropLimits).forEach(([id, limit]) => {
       if (crops[id] && typeof limit === "number") crops[id].limit = limit;
     });
+  }
+
+  if (typeof data.accentColor === "string") {
+    state.accentColor = data.accentColor;
+  }
+  if (typeof data.accentColor === "string") {
+    state.accentColor = data.accentColor;
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "selectedCropKey")) {

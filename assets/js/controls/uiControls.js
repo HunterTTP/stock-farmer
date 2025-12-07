@@ -3,7 +3,9 @@
   let pendingCancelAction = null;
   let openMenuKey = null;
   const confirmVariantClasses = {
-    primary: "py-2 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-500 focus:outline-none",
+    primary: "py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none",
+    accent: "py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none",
+    blue: "py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none",
     danger: "py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500 focus:outline-none",
   };
   const defaultCancelBtnClass = "py-2 rounded-md border border-neutral-700 bg-neutral-800 text-white text-sm font-medium hover:bg-neutral-700 focus:outline-none";
@@ -150,8 +152,8 @@
     entries.forEach(({ key, el }) => {
       if (!el) return;
       const isActive = key === active;
-      el.classList.toggle("border-emerald-500", isActive);
-      el.classList.toggle("shadow-emerald-500/20", isActive);
+      el.classList.toggle("border-accent", isActive);
+      el.classList.toggle("shadow-accent", isActive);
       el.classList.toggle("border-neutral-800", !isActive);
       el.classList.add("bg-neutral-900/80", "text-white");
       el.setAttribute("aria-pressed", isActive ? "true" : "false");
@@ -201,7 +203,7 @@
       item.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
       if (!crop.unlocked && !canAffordUnlock) item.classList.add("opacity-50", "cursor-not-allowed");
       if (gatedLocked) item.classList.add("opacity-50", "cursor-not-allowed");
-      if (crop.id === state.selectedCropKey) item.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (crop.id === state.selectedCropKey) item.classList.add("border-accent", "bg-neutral-900/70");
 
       const img = document.createElement("img");
       img.src = cropThumbSrc(crop.id);
@@ -216,12 +218,12 @@
       title.textContent = crop.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+      meta.textContent = `Sell $${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       textWrap.appendChild(title);
       const status = getCropStatus(crop, now);
       if (status) {
         const statusLine = document.createElement("div");
-        statusLine.className = "text-[11px] text-sky-300 truncate";
+        statusLine.className = "text-[11px] text-accent-soft truncate";
         statusLine.textContent = `Planted: ${status.count} - Harvest: ${status.harvestText}`;
         textWrap.appendChild(statusLine);
       }
@@ -231,7 +233,7 @@
       if (!crop.unlocked && crop.unlockCost > 0) {
         const lockHint = document.createElement("div");
         lockHint.className = "text-[11px] font-semibold text-amber-300";
-        lockHint.textContent = formatCurrency(crop.unlockCost);
+        lockHint.textContent = `Unlock for $${formatCurrency(crop.unlockCost)}`;
         item.appendChild(lockHint);
       }
 
@@ -240,7 +242,7 @@
         if (!crop.unlocked) {
           if (crop.unlockCost > 0 && state.totalMoney >= crop.unlockCost) {
             openConfirmModal(
-              `Unlock ${crop.name} for ${formatCurrency(crop.unlockCost)}?`,
+              `Unlock ${crop.name} for $${formatCurrency(crop.unlockCost)}?`,
               () => {
                 state.totalMoney -= crop.unlockCost;
                 crop.unlocked = true;
@@ -287,7 +289,7 @@
       const row = document.createElement("button");
       row.type = "button";
       row.className = "w-full px-3 py-2 rounded-lg flex items-center justify-between text-sm border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (size.id === state.selectedSizeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (size.id === state.selectedSizeKey) row.classList.add("border-accent", "bg-neutral-900/70");
       if (locked && !canAffordUnlock) row.classList.add("opacity-50", "cursor-not-allowed");
       if (gatedLocked) row.classList.add("opacity-50", "cursor-not-allowed");
 
@@ -301,7 +303,7 @@
       if (locked && typeof size.unlockCost === "number") {
         const cost = document.createElement("span");
         cost.className = "text-[11px] font-semibold text-amber-300 ml-3";
-        cost.textContent = formatCurrency(size.unlockCost);
+        cost.textContent = `Unlock for $${formatCurrency(size.unlockCost)}`;
         row.appendChild(cost);
       }
 
@@ -310,8 +312,8 @@
         if (gatedLocked) return;
         if (locked) {
           if (!canAffordUnlock) return;
-          openConfirmModal(
-            `Unlock ${size.name} for ${formatCurrency(size.unlockCost)}?`,
+            openConfirmModal(
+            `Unlock ${size.name} for $${formatCurrency(size.unlockCost)}?`,
             () => {
               state.totalMoney -= size.unlockCost;
               size.unlocked = true;
@@ -366,14 +368,21 @@
       const row = document.createElement("button");
       row.type = "button";
       row.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (item.id === state.selectedBuildKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (item.id === state.selectedBuildKey) row.classList.add("border-accent", "bg-neutral-900/70");
       const thumbWrap = document.createElement("div");
       thumbWrap.className = "w-8 h-8 rounded-sm border border-neutral-800 bg-neutral-900/60 flex items-center justify-center overflow-hidden";
-      const thumb = document.createElement("img");
-      thumb.src = item.image || "images/farmland.jpg";
-      thumb.alt = item.name;
-      thumb.className = "max-w-full max-h-full object-contain";
-      thumbWrap.appendChild(thumb);
+      if (item.id === "sell") {
+        const icon = document.createElement("div");
+        icon.className = "text-accent font-black text-lg leading-none";
+        icon.textContent = "$";
+        thumbWrap.appendChild(icon);
+      } else {
+        const thumb = document.createElement("img");
+        thumb.src = item.image || "images/farmland.jpg";
+        thumb.alt = item.name;
+        thumb.className = "max-w-full max-h-full object-contain";
+        thumbWrap.appendChild(thumb);
+      }
       row.appendChild(thumbWrap);
 
       const text = document.createElement("div");
@@ -383,7 +392,7 @@
       title.textContent = item.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | $${formatCurrency(item.cost || 0)}`;
       text.appendChild(title);
       text.appendChild(meta);
       row.appendChild(text);
@@ -458,14 +467,21 @@
       const row = document.createElement("button");
       row.type = "button";
       row.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
-      if (item.id === state.selectedLandscapeKey) row.classList.add("border-emerald-500", "bg-neutral-900/70");
+      if (item.id === state.selectedLandscapeKey) row.classList.add("border-accent", "bg-neutral-900/70");
       const thumbWrap = document.createElement("div");
       thumbWrap.className = "w-8 h-8 rounded-sm border border-neutral-800 bg-neutral-900/60 flex items-center justify-center overflow-hidden";
-      const thumb = document.createElement("img");
-      thumb.src = item.image || "images/farmland.jpg";
-      thumb.alt = item.name;
-      thumb.className = "max-w-full max-h-full object-contain";
-      thumbWrap.appendChild(thumb);
+      if (item.id === "sell") {
+        const icon = document.createElement("div");
+        icon.className = "text-accent font-black text-lg leading-none";
+        icon.textContent = "$";
+        thumbWrap.appendChild(icon);
+      } else {
+        const thumb = document.createElement("img");
+        thumb.src = item.image || "images/farmland.jpg";
+        thumb.alt = item.name;
+        thumb.className = "max-w-full max-h-full object-contain";
+        thumbWrap.appendChild(thumb);
+      }
       row.appendChild(thumbWrap);
 
       const text = document.createElement("div");
@@ -482,7 +498,7 @@
         meta.textContent = farmlandPlaced < 4 ? "Free" : formatCurrency(25);
       } else {
         const costValue = item.cost || 0;
-        meta.textContent = costValue === 0 ? "Free" : formatCurrency(costValue);
+        meta.textContent = costValue === 0 ? "Free" : `$${formatCurrency(costValue)}`;
       }
       text.appendChild(title);
       text.appendChild(meta);
@@ -574,7 +590,7 @@
       dom.plantCropLabel.classList.add("whitespace-normal");
       const base = crop ? crop.name : "Crop";
       if (cropStatus) {
-        dom.plantCropLabel.innerHTML = `<span class="block leading-tight">${base}</span><span class="block text-[11px] text-sky-300 leading-tight">Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}</span>`;
+        dom.plantCropLabel.innerHTML = `<span class="block leading-tight">${base}</span><span class="block text-[11px] text-accent-soft leading-tight">Planted: ${cropStatus.count} - Harvest: ${cropStatus.harvestText}</span>`;
       } else {
         dom.plantCropLabel.textContent = base;
       }
@@ -612,9 +628,8 @@
     const valueText = `${isGain ? "+" : "-"}${formatCurrency(Math.abs(amount), true)}`;
     el.textContent = valueText;
     el.classList.remove("hidden");
-    el.classList.remove("text-red-400");
-    el.classList.remove("text-emerald-300");
-    if (isGain) el.classList.add("text-emerald-300");
+    el.classList.remove("text-red-400", "text-accent", "text-accent-soft");
+    if (isGain) el.classList.add("text-accent");
     else el.classList.add("text-red-400");
     requestAnimationFrame(() => {
       el.classList.remove("opacity-0");

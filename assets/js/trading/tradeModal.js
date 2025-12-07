@@ -214,7 +214,7 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
           <td class="px-2 py-1.5 ${plClass}">${(pct >= 0 ? "+" : "") + pct.toFixed(2)}%</td>
           <td class="px-2 py-1.5 ${plClass}">${fmtCurrency(pl)}</td>
           <td class="px-2 py-1.5">
-            <button class="lot-sell-btn rounded-full bg-neutral-800 hover:bg-neutral-700 text-white px-2.5 py-1 text-[0.65rem] font-medium active:scale-[0.97] transition text-left">
+            <button class="lot-sell-btn rounded-full btn-accent-ghost px-2.5 py-1 text-[0.65rem] font-medium active:scale-[0.97] transition text-left">
               Sell
             </button>
           </td>
@@ -349,15 +349,18 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
   }
 
   function handleLotSellClick(btn, symbol, lotIndex) {
-    if (btn.dataset.confirm === "true") {
+    const confirming = btn.dataset.confirm === "true";
+    if (confirming) {
       btn.dataset.confirm = "";
-      btn.classList.remove("bg-emerald-500", "text-neutral-950");
-      btn.classList.add("bg-neutral-800", "hover:bg-neutral-700", "text-white");
+      btn.classList.remove("btn-accent");
+      btn.classList.add("btn-accent-ghost");
+      btn.textContent = "Sell";
       sellLot(symbol, lotIndex);
     } else {
       btn.dataset.confirm = "true";
-      btn.classList.remove("bg-neutral-800", "hover:bg-neutral-700", "text-white");
-      btn.classList.add("bg-emerald-500", "text-neutral-950");
+      btn.classList.remove("btn-accent-ghost");
+      btn.classList.add("btn-accent");
+      btn.textContent = "Confirm";
     }
   }
 
@@ -380,12 +383,14 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
     const isBuy = tab === "buy";
     tradeSectionEl.classList.toggle("hidden", !isBuy);
     positionsSectionEl.classList.toggle("hidden", isBuy);
-    tradeTabBtn.classList.toggle("bg-neutral-800", isBuy);
-    tradeTabBtn.classList.toggle("text-white", isBuy);
+    tradeTabBtn.classList.toggle("bg-accent-soft", isBuy);
+    tradeTabBtn.classList.toggle("text-accent", isBuy);
     tradeTabBtn.classList.toggle("text-neutral-400", !isBuy);
-    positionsTabBtn.classList.toggle("bg-neutral-800", !isBuy);
-    positionsTabBtn.classList.toggle("text-white", !isBuy);
+    tradeTabBtn.classList.toggle("bg-transparent", !isBuy);
+    positionsTabBtn.classList.toggle("bg-accent-soft", !isBuy);
+    positionsTabBtn.classList.toggle("text-accent", !isBuy);
     positionsTabBtn.classList.toggle("text-neutral-400", isBuy);
+    positionsTabBtn.classList.toggle("bg-transparent", isBuy);
   }
 
   function initTabs() {

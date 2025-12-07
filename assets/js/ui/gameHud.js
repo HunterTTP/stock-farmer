@@ -1,3 +1,6 @@
+import { hexToRgba } from "../utils/colorUtils.js";
+import { getAccentPalette, onAccentChange } from "./theme.js";
+
 export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, buildings, formatCurrency, onMoneyChanged, saveState, openConfirmModal }) {
     const hudState = {
         openMenuKey: null,
@@ -14,36 +17,57 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     };
 
     const LAYOUT = {
-        mobile: { modeButtonSize: 52, gap: 6, padding: 12, fontSize: 11, iconSize: 22, toolbarPadding: 8 },
-        tablet: { modeButtonSize: 58, gap: 8, padding: 16, fontSize: 12, iconSize: 26, toolbarPadding: 10 },
-        desktop: { modeButtonSize: 64, gap: 10, padding: 20, fontSize: 13, iconSize: 28, toolbarPadding: 12 },
+        mobile: { modeButtonSize: 46, minModeButtonSize: 44, maxModeButtonSize: 78, gap: 10, padding: 10, fontSize: 11, iconSize: 21, toolbarPadding: 8, toolbarMaxWidth: 680 },
+        tablet: { modeButtonSize: 52, minModeButtonSize: 50, maxModeButtonSize: 86, gap: 12, padding: 14, fontSize: 12, iconSize: 24, toolbarPadding: 10, toolbarMaxWidth: 760 },
+        desktop: { modeButtonSize: 48, minModeButtonSize: 44, maxModeButtonSize: 72, gap: 12, padding: 12, fontSize: 11, iconSize: 22, toolbarPadding: 10, toolbarMaxWidth: 720 },
     };
 
+    const GOLD = "#d4af37";
+    const GOLD_DIM = "rgba(212, 175, 55, 0.6)";
+
+    const accentPalette = getAccentPalette();
     const COLORS = {
         toolbarBg: "rgba(38, 38, 38, 0.96)",
         toolbarBorder: "rgba(80, 80, 80, 0.6)",
         buttonBg: "rgba(50, 50, 50, 0.92)",
         buttonHover: "rgba(60, 60, 60, 0.95)",
-        buttonActive: "rgba(70, 85, 100, 0.95)",
+        buttonActive: hexToRgba(accentPalette.accent, 0.32),
         buttonBorder: "rgba(80, 80, 80, 0.5)",
-        buttonActiveBorder: "rgba(96, 165, 194, 0.9)",
+        buttonActiveBorder: accentPalette.accentBorder || hexToRgba(accentPalette.accent, 0.85),
         panelBg: "rgba(32, 32, 32, 0.97)",
         panelBorder: "rgba(80, 80, 80, 0.5)",
         itemBg: "rgba(45, 45, 45, 0.85)",
         itemHover: "rgba(55, 55, 55, 0.92)",
-        itemSelected: "rgba(70, 100, 120, 0.25)",
-        itemSelectedBorder: "rgba(96, 165, 194, 0.9)",
+        itemSelected: accentPalette.accentSoft || hexToRgba(accentPalette.accent, 0.22),
+        itemSelectedBorder: accentPalette.accentBorder || hexToRgba(accentPalette.accent, 0.85),
         text: "#e0e0e0",
         textSecondary: "rgba(165, 165, 165, 0.85)",
-        accent: "#60a5c2",
-        accentDark: "#4a8da0",
-        money: "#60a5c2",
+        accent: accentPalette.accent,
+        accentDark: accentPalette.accentDark || hexToRgba(accentPalette.accent, 0.8),
+        money: accentPalette.accent,
         moneyBg: "rgba(38, 38, 38, 0.92)",
         moneyLoss: "#d94040",
-        gold: "#60a5c2",
-        goldDimmed: "rgba(96, 165, 194, 0.5)",
+        gold: GOLD,
+        goldDimmed: GOLD_DIM,
         shadow: "rgba(0, 0, 0, 0.45)",
     };
+
+    const applyAccentColors = (palette) => {
+        const p = palette || getAccentPalette();
+        COLORS.accent = p.accent;
+        COLORS.accentDark = p.accentDark || hexToRgba(p.accent, 0.8);
+        COLORS.money = p.accent;
+        COLORS.buttonActiveBorder = p.accentBorder || hexToRgba(p.accent, 0.85);
+        COLORS.itemSelectedBorder = p.accentBorder || hexToRgba(p.accent, 0.85);
+        COLORS.itemSelected = p.accentSoft || hexToRgba(p.accent, 0.22);
+        COLORS.buttonActive = p.accentSoft || hexToRgba(p.accent, 0.32);
+    };
+
+    applyAccentColors(accentPalette);
+    onAccentChange((p) => {
+        applyAccentColors(p);
+        state.needsRender = true;
+    });
 
     const imageCache = {};
 
@@ -62,7 +86,15 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const canvasHeight = canvas.clientHeight;
 
         const modeCount = MODE_ORDER.length;
-        const buttonSize = layout.modeButtonSize;
+        const availableWidth = canvasWidth - layout.padding * 2;
+        const targetToolbarWidth = Math.min(layout.toolbarMaxWidth || availableWidth, availableWidth);
+        const buttonSize = Math.max(
+            layout.minModeButtonSize,
+            Math.min(
+                layout.maxModeButtonSize,
+                (targetToolbarWidth - layout.toolbarPadding * 2 - (modeCount - 1) * layout.gap) / modeCount
+            )
+        );
         const totalModeWidth = modeCount * buttonSize + (modeCount - 1) * layout.gap + layout.toolbarPadding * 2;
         const toolbarHeight = buttonSize + layout.toolbarPadding * 2;
         const toolbarX = (canvasWidth - totalModeWidth) / 2;
@@ -244,7 +276,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.save();
 
         if (isActive || isHover || isPressed) {
-            ctx.shadowColor = isActive ? "rgba(96, 165, 194, 0.3)" : "rgba(0, 0, 0, 0.2)";
+            ctx.shadowColor = isActive ? hexToRgba(COLORS.accent, 0.3) : "rgba(0, 0, 0, 0.2)";
             ctx.shadowBlur = isActive ? 12 : 8;
             ctx.shadowOffsetY = 2;
         }
@@ -482,7 +514,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 if (status) {
                     return `Planted: ${status.count} | ${status.harvestText}`;
                 }
-                return `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+                return `$${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
             }
             return null;
         }
@@ -493,7 +525,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
             if (landscape) {
                 const cost = landscape.isFarmland && state.farmlandPlaced < 4 ? 0 : landscape.cost || 0;
-                return cost === 0 ? "Free" : formatCurrency(cost);
+                return cost === 0 ? "Free" : `$${formatCurrency(cost)}`;
             }
             return null;
         }
@@ -503,7 +535,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             }
             const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
             if (building) {
-                return `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
+                return `${building.width}x${building.height} | $${formatCurrency(building.cost || 0)}`;
             }
             return null;
         }
@@ -575,23 +607,23 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.save();
 
         const gradient = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
-        gradient.addColorStop(0, "#96c8e8");
-        gradient.addColorStop(0.7, "#60a5c2");
-        gradient.addColorStop(1, "#4a8da0");
+        gradient.addColorStop(0, hexToRgba(COLORS.accent, 0.75));
+        gradient.addColorStop(0.7, COLORS.accent);
+        gradient.addColorStop(1, COLORS.accentDark);
 
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        ctx.strokeStyle = "rgba(100, 150, 180, 0.6)";
+        ctx.strokeStyle = hexToRgba(COLORS.accent, 0.6);
         ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.font = `bold ${size * 0.55}px system-ui`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = "rgba(50, 90, 110, 0.8)";
+        ctx.fillStyle = hexToRgba(COLORS.accent, 0.8);
         ctx.fillText("$", cx, cy + 1);
 
         ctx.restore();
@@ -611,7 +643,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.fillStyle = COLORS.moneyBg;
         ctx.fill();
 
-        ctx.strokeStyle = isGain ? "rgba(96, 165, 194, 0.5)" : "rgba(231, 76, 60, 0.5)";
+        ctx.strokeStyle = isGain ? hexToRgba(COLORS.accent, 0.5) : "rgba(231, 76, 60, 0.5)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
@@ -782,22 +814,22 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.save();
 
         const gradient = ctx.createRadialGradient(cx - coinR * 0.25, cy - coinR * 0.25, 0, cx, cy, coinR);
-        gradient.addColorStop(0, "#96c8e8");
-        gradient.addColorStop(0.6, "#60a5c2");
-        gradient.addColorStop(1, "#4a8da0");
+        gradient.addColorStop(0, hexToRgba(COLORS.accent, 0.75));
+        gradient.addColorStop(0.6, COLORS.accent);
+        gradient.addColorStop(1, COLORS.accentDark);
 
         ctx.beginPath();
         ctx.arc(cx, cy, coinR, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-        ctx.strokeStyle = "rgba(100, 150, 180, 0.7)";
+        ctx.strokeStyle = hexToRgba(COLORS.accent, 0.7);
         ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.font = `bold ${coinR * 1.2}px system-ui`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = "rgba(50, 90, 110, 0.9)";
+        ctx.fillStyle = hexToRgba(COLORS.accent, 0.85);
         ctx.fillText("$", cx, cy + 0.5);
 
         ctx.restore();
@@ -826,7 +858,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             ctx.font = `400 ${layout.fontSize - 3}px system-ui, -apple-system, sans-serif`;
             let metaText = item.meta;
             if (item.locked && item.unlockCost > 0) {
-                metaText = `Unlock for ${formatCurrency(item.unlockCost)}`;
+                metaText = `Unlock for $${formatCurrency(item.unlockCost)}`;
             }
             const metaWidth = ctx.measureText(metaText || "").width;
 
@@ -967,7 +999,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             ctx.roundRect(scrollTrackX, scrollTrackY, 5, scrollTrackHeight, 2.5);
             ctx.fill();
 
-            ctx.fillStyle = "rgba(96, 165, 194, 0.8)";
+            ctx.fillStyle = hexToRgba(COLORS.accent, 0.8);
             ctx.beginPath();
             ctx.roundRect(scrollTrackX, scrollThumbY, 5, scrollThumbHeight, 2.5);
             ctx.fill();
@@ -1007,7 +1039,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             const cropKeys = Object.keys(crops);
             return Object.values(crops).map((crop, index) => {
                 const status = getCropStatus(crop);
-                let meta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+                let meta = `$${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
                 if (status) {
                     meta = `Planted: ${status.count} | ${status.harvestText}`;
                 }
@@ -1070,7 +1102,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 items.push({
                     id: l.id,
                     label: l.name,
-                    meta: cost === 0 ? "Free" : formatCurrency(cost),
+                    meta: cost === 0 ? "Free" : `$${formatCurrency(cost)}`,
                     locked: false,
                     unlockCost: 0,
                     canAfford: true,
@@ -1096,7 +1128,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
                 items.push({
                     id: b.id,
                     label: b.name,
-                    meta: `${b.width}x${b.height} | ${formatCurrency(b.cost || 0)}`,
+                    meta: `${b.width}x${b.height} | $${formatCurrency(b.cost || 0)}`,
                     locked: false,
                     unlockCost: 0,
                     canAfford: true,

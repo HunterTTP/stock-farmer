@@ -69,11 +69,11 @@
         </div>
         <div class="space-y-2">
           <button id="authTrigger"
-            class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-blue-600 hover:bg-blue-500 border-blue-500 text-white focus:outline-none">
+            class="w-full text-sm font-semibold px-3 py-2 rounded-md btn-accent focus:outline-none">
             Log In
           </button>
           <button id="logoutBtn"
-            class="w-full text-sm font-semibold px-3 py-2 rounded-md border bg-blue-600 hover:bg-blue-500 border-blue-500 text-white focus:outline-none hidden">Log
+            class="w-full text-sm font-semibold px-3 py-2 rounded-md btn-accent focus:outline-none hidden">Log
             Out</button>
         </div>
       </div>
@@ -86,6 +86,8 @@
           class="w-full border farm-border farm-btn text-sm font-semibold px-3 py-2 rounded-md flex items-center justify-center text-center farm-text"
           id="recenterBtn">Recenter</button>
       </div>
+
+      <div id="themeCardSlot"></div>
 
       <div class="rounded-xl border farm-border farm-bg-card p-4 shadow-inner shadow-black/20 space-y-2">
         <p class="text-xs uppercase tracking-wide farm-text-secondary mb-2">Admin</p>
@@ -110,7 +112,7 @@
             <input id="moneyCheatInput" type="number" min="0" step="1000"
               class="w-full rounded-md farm-input px-3 py-2 text-sm" placeholder="$100000" />
             <button id="moneyCheatApply" type="button"
-              class="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold border border-blue-500 focus:outline-none">
+              class="px-3 py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none">
               Apply
             </button>
           </div>
@@ -164,13 +166,13 @@
                   class="w-full rounded-md farm-input px-3 py-2 text-base" placeholder="********" required />
               </div>
               <button type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Log
+                class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Log
                 In</button>
               <p id="login-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
               <div class="flex items-center justify-between">
-                <button type="button" id="reset-password" class="text-xs text-blue-300 hover:text-blue-200">Forgot
+                <button type="button" id="reset-password" class="text-xs text-accent-soft hover:text-accent">Forgot
                   password?</button>
-                <p id="reset-message" class="text-[11px] text-blue-400" aria-live="polite"></p>
+                <p id="reset-message" class="text-[11px] text-accent-soft" aria-live="polite"></p>
               </div>
             </form>
           </div>
@@ -196,7 +198,7 @@
                   class="w-full rounded-md farm-input px-3 py-2 text-base" placeholder="********" required />
               </div>
               <button type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Create
+                class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Create
                 Account</button>
               <p id="signup-error" class="text-xs text-red-400 min-h-[1rem]" aria-live="polite"></p>
             </form>
@@ -221,7 +223,7 @@
       <div id="confirmMessage" class="px-4 py-4 text-sm farm-text leading-relaxed"></div>
       <div class="px-4 pb-4 flex gap-2">
         <button id="confirmConfirm"
-          class="w-1/2 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500 focus:outline-none">Yes</button>
+          class="w-1/2 py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none">Yes</button>
         <button id="confirmCancel"
           class="w-1/2 py-2 rounded-md border border-red-700 bg-red-700/70 text-white text-sm font-medium hover:bg-red-600 focus:outline-none">No</button>
       </div>
@@ -254,7 +256,7 @@
       </div>
       <div class="px-5 pb-5 flex gap-2">
         <button id="resetSend"
-          class="w-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold text-white rounded-md px-4 py-2 transition">Send
+          class="w-full btn-accent text-sm font-semibold rounded-md px-4 py-2 transition">Send
           reset email</button>
       </div>
     </div>
@@ -275,7 +277,7 @@
       <div class="px-4 py-4 text-sm farm-text leading-relaxed">Log Out?</div>
       <div class="px-4 pb-4 flex gap-2">
         <button id="logoutConfirm"
-          class="w-1/2 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500 focus:outline-none">Log
+          class="w-1/2 py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none">Log
           Out</button>
         <button id="logoutCancel"
           class="w-1/2 py-2 rounded-md border farm-border farm-btn farm-text text-sm font-medium focus:outline-none">
@@ -360,7 +362,7 @@
                     <div class="text-[0.6rem] uppercase farm-text-secondary">Wallet</div>
                     <div class="flex items-center gap-1 leading-none">
                       <div id="tradeMoneyChange"
-                        class="trade-delta text-[0.65rem] font-semibold text-blue-400 opacity-0 transition-opacity duration-200 pointer-events-none">
+                        class="trade-delta text-[0.65rem] font-semibold text-emerald-300 opacity-0 transition-opacity duration-200 pointer-events-none">
                       </div>
                       <div class="text-xs font-semibold farm-text" id="tradeWalletValue">$0.00</div>
                     </div>
@@ -377,7 +379,7 @@
                   <div class="text-[0.65rem] farm-text-secondary">Shares</div>
                   <div class="flex items-stretch gap-2">
                     <button id="buyBtn"
-                      class="w-32 rounded-xl bg-blue-600 hover:bg-blue-500 text-white py-1.5 px-3 text-[0.75rem] font-semibold active:scale-[0.98] transition text-left">
+                      class="w-32 rounded-xl btn-accent py-1.5 px-3 text-[0.75rem] font-semibold active:scale-[0.98] transition text-left">
                       Buy
                     </button>
                     <div class="flex-1 flex items-center gap-1.5">

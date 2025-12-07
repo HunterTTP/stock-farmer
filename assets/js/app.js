@@ -16,6 +16,9 @@ import { formatCurrency } from "./utils/helpers.js";
 import { registerGameContext, queueCloudSave, logOutAndReset } from "./firebase-auth.js";
 import { createTradeModal } from "./trading/tradeModal.js";
 import { createGameHud } from "./ui/gameHud.js";
+import { initTheme, initThemePicker, setAccentColor, getAccentPalette, onAccentChange } from "./ui/theme.js";
+
+initTheme();
 
 const canvas = document.getElementById("gridCanvas");
 if (!canvas) throw new Error("Canvas element #gridCanvas not found");
@@ -43,6 +46,16 @@ if (!localStorage.getItem(config.saveKey)) {
   applyDefaultSelection(state);
 }
 recalcPlacedCounts(world, crops, state);
+
+let themeSyncReady = false;
+onAccentChange((palette) => {
+  state.accentColor = palette.accent;
+  if (themeSyncReady) persistence.save();
+});
+const initialAccent = state.accentColor || getAccentPalette().accent;
+setAccentColor(initialAccent);
+state.accentColor = initialAccent;
+themeSyncReady = true;
 
 const viewport = createViewport({ canvas, ctx, state, config });
 
@@ -107,6 +120,8 @@ gameHud = createGameHud({
   saveState: persistence.save,
   openConfirmModal: ui.openConfirmModal,
 });
+
+initThemePicker();
 
 registerGameContext({
   state,

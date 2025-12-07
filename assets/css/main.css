@@ -4,6 +4,17 @@ body {
   margin: 0;
 }
 
+:root {
+  --accent: #4bbe4b;
+  --accent-strong: #3c983c;
+  --accent-soft: rgba(75, 190, 75, 0.18);
+  --accent-softer: rgba(75, 190, 75, 0.12);
+  --accent-border: rgba(75, 190, 75, 0.78);
+  --accent-ring: rgba(75, 190, 75, 0.36);
+  --accent-contrast: #0b1114;
+  --accent-dimmed: rgba(75, 190, 75, 0.5);
+}
+
 body {
   display: flex;
   flex-direction: column;
@@ -81,7 +92,7 @@ body {
 }
 
 .farm-accent {
-  color: #60a5c2;
+  color: var(--accent);
 }
 
 .farm-btn {
@@ -100,9 +111,9 @@ body {
 }
 
 .farm-input:focus {
-  border-color: rgba(96, 165, 194, 0.7);
+  border-color: var(--accent-border);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(96, 165, 194, 0.2);
+  box-shadow: 0 0 0 2px var(--accent-ring);
 }
 
 .dropdown-menu {
@@ -165,7 +176,7 @@ button,
 
 .scrollbar-modern {
   scrollbar-width: thin;
-  scrollbar-color: rgba(96, 165, 194, 0.5) transparent;
+  scrollbar-color: var(--accent-dimmed) transparent;
 }
 
 .scrollbar-modern::-webkit-scrollbar {
@@ -178,7 +189,7 @@ button,
 }
 
 .scrollbar-modern::-webkit-scrollbar-thumb {
-  background-color: rgba(96, 165, 194, 0.5);
+  background-color: var(--accent-dimmed);
   border-radius: 9999px;
 }
 
@@ -186,4 +197,57 @@ button,
   width: 0;
   height: 0;
   display: none;
+}
+
+.btn-accent {
+  background-color: var(--accent);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-contrast);
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-strong);
+}
+
+.btn-accent:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
+.btn-accent-ghost {
+  background-color: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+
+.btn-accent-ghost:hover {
+  background-color: var(--accent-softer);
+}
+
+.btn-accent-ghost:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.text-accent-soft {
+  color: var(--accent);
+  opacity: 0.82;
+}
+
+.border-accent {
+  border-color: var(--accent);
+}
+
+.shadow-accent {
+  box-shadow: 0 0 0 1px var(--accent-border), 0 8px 24px var(--accent-ring);
+}
+
+.bg-accent-soft {
+  background-color: var(--accent-softer);
 }
