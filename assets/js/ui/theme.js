@@ -168,18 +168,29 @@ function wireHudSliders(container) {
             if (!Number.isFinite(parsed)) return 1.0;
             return Math.min(fontMax, Math.max(fontMin, parsed));
         };
+        const formatFontSizeLabel = (clampedVal, layout) => {
+            if (layout?.layout?.fontSize) {
+                return `${Math.round(layout.layout.fontSize)}px`;
+            }
+            const fontSizeBase = 1.1;
+            const fontSizeOffset = 0.1;
+            const fallbackBase = 12;
+            const scaled = Math.round(fallbackBase * (clampedVal + fontSizeOffset) * fontSizeBase);
+            return `${scaled}px`;
+        };
         const initialFont = clampFont(state.hudFontSize || 1.0);
         if (initialFont !== state.hudFontSize && Number.isFinite(state.hudFontSize)) {
             state.hudFontSize = initialFont;
         }
         fontSlider.value = initialFont;
-        fontValue.textContent = `${initialFont.toFixed(1)}x`;
+        const initialLayout = gameHud ? gameHud.computeLayout() : null;
+        fontValue.textContent = formatFontSizeLabel(initialFont, initialLayout);
         fontSlider.addEventListener("input", (e) => {
             const val = clampFont(e.target.value);
             fontSlider.value = val;
             state.hudFontSize = val;
-            fontValue.textContent = `${val.toFixed(1)}x`;
-            if (gameHud) gameHud.computeLayout();
+            const computedLayout = gameHud ? gameHud.computeLayout() : null;
+            fontValue.textContent = formatFontSizeLabel(val, computedLayout);
             state.needsRender = true;
         });
         fontSlider.addEventListener("change", () => {

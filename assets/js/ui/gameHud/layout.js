@@ -87,8 +87,8 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const dropdownScale = (state.hudDropdownScale || 1.0) * 0.9;
     const fontSizeBase = 1.1;
     const fontSizeOffset = 0.1; // Rebase so 1.0x renders like the previous 1.1x selection
-    const fontSliderMin = 0.4;
-    const fontSliderMax = 1.4;
+    const fontSliderMin = 0.5;
+    const fontSliderMax = 1.5;
     const hudFontSetting = Number.isFinite(state.hudFontSize) ? state.hudFontSize : 1.0;
     const clampedHudFont = Math.max(fontSliderMin, Math.min(fontSliderMax, hudFontSetting));
     const hudFontSize = (clampedHudFont + fontSizeOffset) * fontSizeBase;
