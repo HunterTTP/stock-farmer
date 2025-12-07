@@ -96,7 +96,20 @@ export function createPointerControls({ canvas, state, config, viewport, actions
               state.buildingHoldTimeoutId = null;
               state.buildingHoldTriggered = true;
               actions.promptSellStructures(sellTargets, kind);
-            }, config.hoeDestroyWindowMs);
+            }, config.destroyHoldWindowMs);
+          }
+        }
+      } else if (state.activeMode === "plant") {
+        const tile = viewport.tileFromClient(e.clientX, e.clientY);
+        if (tile) {
+          const cropTargets = actions.collectCropDestroyTargets(tile.row, tile.col);
+          if (cropTargets.length > 0) {
+            const destroyTargets = cropTargets.slice();
+            state.buildingHoldTimeoutId = setTimeout(() => {
+              state.buildingHoldTimeoutId = null;
+              state.buildingHoldTriggered = true;
+              actions.promptDestroyCrops(destroyTargets);
+            }, config.destroyHoldWindowMs);
           }
         }
       }

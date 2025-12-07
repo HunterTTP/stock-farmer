@@ -1,5 +1,5 @@
 export function buildCropOperations(context) {
-  const { state, world, crops, config, onMoneyChanged, renderCropOptions, saveState, currentSizeOption } = context;
+  const { state, world, crops, config, onMoneyChanged, renderCropOptions, saveState, currentSizeOption, openConfirmModal } = context;
   const getCropGrowTimeMs = (crop) => {
     if (!crop) return 0;
     if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
@@ -47,31 +47,43 @@ export function buildCropOperations(context) {
     saveState();
   }
 
-  function collectHoeDestroyTargets(baseRow, baseCol) {
+  function collectCropDestroyTargets(baseRow, baseCol) {
     const targets = [];
     const sizeOption = currentSizeOption();
     const size = Math.max(1, sizeOption.size || 1);
-    const now = performance.now();
     for (let dr = 0; dr < size; dr++) {
       for (let dc = 0; dc < size; dc++) {
         const row = baseRow + dr;
         const col = baseCol + dc;
         if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) continue;
         const key = row + "," + col;
-        const plot = world.plots.get(key);
-        const crop = plot ? crops[plot.cropKey] : null;
-        const plantedAt = Number(plot?.plantedAt);
-        const growMs = getCropGrowTimeMs(crop);
-        if (plot && crop && Number.isFinite(plantedAt) && now - plantedAt < growMs) targets.push(key);
+        if (world.plots.has(key)) targets.push(key);
       }
     }
     return targets;
   }
 
+  function promptDestroyCrops(keys) {
+    const uniqueKeys = Array.from(new Set(keys || []));
+    if (!uniqueKeys.length) return;
+    const count = uniqueKeys.length;
+    const label = count === 1 ? "crop" : "crops";
+    openConfirmModal(
+      `Destroy ${count} ${label}? No money will be earned.`,
+      () => {
+        uniqueKeys.forEach((key) => destroyPlot(key));
+      },
+      "Destroy Crops",
+      null,
+      { confirmVariant: "danger", confirmText: "Destroy" }
+    );
+  }
+
   return {
-    collectHoeDestroyTargets,
+    collectCropDestroyTargets,
     destroyPlot,
     harvestPlot,
     recomputeLastPlantedForCrop,
+    promptDestroyCrops,
   };
 }

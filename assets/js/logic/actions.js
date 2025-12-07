@@ -21,9 +21,10 @@ export function createActions(args) {
   return {
     determineActionForTile,
     computeHoverPreview,
-    collectHoeDestroyTargets: cropOps.collectHoeDestroyTargets,
+    collectCropDestroyTargets: cropOps.collectCropDestroyTargets,
     collectStructureSellTargets: structureSelling.collectStructureSellTargets,
     promptSellStructures: structureSelling.promptSellStructures,
+    promptDestroyCrops: cropOps.promptDestroyCrops,
     handleTileAction,
     handleTap,
     destroyPlot: cropOps.destroyPlot,

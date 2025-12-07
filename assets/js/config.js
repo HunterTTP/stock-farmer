@@ -5,7 +5,7 @@ export const config = {
   visibleRowsAtStart: 3,
   minScale: 0.05,
   maxScale: 3,
-  hoeDestroyWindowMs: 350,
+  destroyHoldWindowMs: 350,
   saveKey: "stockFarmerState",
   defaultFilled: ["24,24", "24,25", "25,24", "25,25"],
 };
