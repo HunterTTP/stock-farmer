@@ -39,7 +39,7 @@ export function createInitialState(config) {
     hudDropdownScale: 1.0,
     hudFontSize: 1.0,
     hudShowDockText: true,
-    hudOpacity: 1.0,
+    hudOpacity: 0.95,
   };
 }
 
