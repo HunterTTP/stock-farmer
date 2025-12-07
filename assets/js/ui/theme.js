@@ -161,10 +161,22 @@ function wireHudSliders(container) {
     }
 
     if (fontSlider && fontValue) {
-        fontSlider.value = state.hudFontSize || 1.0;
-        fontValue.textContent = `${(state.hudFontSize || 1.0).toFixed(1)}x`;
+        const fontMin = Number.isFinite(parseFloat(fontSlider.min)) ? parseFloat(fontSlider.min) : 0.4;
+        const fontMax = Number.isFinite(parseFloat(fontSlider.max)) ? parseFloat(fontSlider.max) : 1.4;
+        const clampFont = (val) => {
+            const parsed = parseFloat(val);
+            if (!Number.isFinite(parsed)) return 1.0;
+            return Math.min(fontMax, Math.max(fontMin, parsed));
+        };
+        const initialFont = clampFont(state.hudFontSize || 1.0);
+        if (initialFont !== state.hudFontSize && Number.isFinite(state.hudFontSize)) {
+            state.hudFontSize = initialFont;
+        }
+        fontSlider.value = initialFont;
+        fontValue.textContent = `${initialFont.toFixed(1)}x`;
         fontSlider.addEventListener("input", (e) => {
-            const val = parseFloat(e.target.value);
+            const val = clampFont(e.target.value);
+            fontSlider.value = val;
             state.hudFontSize = val;
             fontValue.textContent = `${val.toFixed(1)}x`;
             if (gameHud) gameHud.computeLayout();
