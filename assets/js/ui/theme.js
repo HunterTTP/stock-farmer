@@ -1,7 +1,7 @@
 import { hexToRgba, darkenHex } from "../utils/colorUtils.js";
 
 const STORAGE_KEY = "stockFarmerAccentColor";
-const DEFAULT_ACCENT = "#4BBE4B";
+const DEFAULT_ACCENT = "#87FF85";
 
 let palette = buildPalette(DEFAULT_ACCENT);
 const listeners = new Set();
@@ -197,24 +197,20 @@ function wireHudSliders(container) {
         });
     }
 
-    const visibleToggle = container.querySelector("#hudVisibleToggle");
-    if (visibleToggle) {
-        const updateVisibleToggle = () => {
-            const isOn = state.hudVisible !== false;
-            visibleToggle.setAttribute("aria-checked", isOn);
-            visibleToggle.classList.toggle("bg-accent", isOn);
-            visibleToggle.classList.toggle("bg-neutral-600", !isOn);
-            const thumb = visibleToggle.querySelector("span");
-            if (thumb) {
-                thumb.classList.toggle("translate-x-4", isOn);
-                thumb.classList.toggle("translate-x-0.5", !isOn);
-            }
-        };
-        updateVisibleToggle();
-        visibleToggle.addEventListener("click", () => {
-            state.hudVisible = !state.hudVisible;
-            updateVisibleToggle();
+    const transparencySlider = container.querySelector("#hudTransparencySlider");
+    const transparencyValue = container.querySelector("#hudTransparencyValue");
+    if (transparencySlider && transparencyValue) {
+        const currentOpacity = typeof state.hudOpacity === "number" ? state.hudOpacity : 1.0;
+        transparencySlider.value = Math.round(currentOpacity * 100);
+        transparencyValue.textContent = `${Math.round(currentOpacity * 100)}%`;
+        transparencySlider.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value) / 100;
+            state.hudOpacity = val;
+            transparencyValue.textContent = `${Math.round(val * 100)}%`;
+            if (gameHud) gameHud.computeLayout();
             state.needsRender = true;
+        });
+        transparencySlider.addEventListener("change", () => {
             if (saveState) saveState();
         });
     }

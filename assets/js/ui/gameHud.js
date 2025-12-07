@@ -1256,9 +1256,13 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     }
 
     function render() {
-        if (state.hudVisible === false) return;
+        const opacity = typeof state.hudOpacity === "number" ? state.hudOpacity : 1.0;
+        if (opacity <= 0) return;
 
         const computed = computeLayout();
+
+        ctx.save();
+        ctx.globalAlpha = opacity;
 
         drawToolbar();
 
@@ -1282,6 +1286,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         if (openDropdown) {
             drawMenu(openDropdown);
         }
+
+        ctx.restore();
     }
 
     function updateMoneyChangeAnimation() {
@@ -1470,6 +1476,9 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
     function handleModeButtonClick(mode) {
         if (mode === "trade") {
+            state.activeMode = "trade";
+            hudState.openMenuKey = null;
+            state.needsRender = true;
             const tradeModal = document.getElementById("tradeModal");
             if (tradeModal) {
                 tradeModal.classList.remove("hidden");

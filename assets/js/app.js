@@ -94,7 +94,7 @@ function resetSettingsOnly() {
     state.hudDropdownScale = 1.0;
     state.hudFontSize = 1.0;
     state.hudShowDockText = true;
-    state.hudVisible = true;
+    state.hudOpacity = 1.0;
     persistence.save();
   } catch (err) {
     console.error("Failed to clear settings", err);
