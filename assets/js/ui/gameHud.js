@@ -553,9 +553,6 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.fill();
 
         ctx.shadowColor = "transparent";
-        ctx.strokeStyle = "#d4af37";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
 
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
