@@ -18,6 +18,7 @@ export function createHudInteractions({
       const dropdown = computed.dropdowns.find((d) => d.menu === hudState.openMenuKey);
       if (dropdown) {
         const bounds = menuRenderer.getMenuBounds(dropdown);
+        if (!bounds) return null;
         const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll } = bounds;
         const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
 
@@ -85,7 +86,7 @@ export function createHudInteractions({
         const dropdown = computed.dropdowns.find((d) => d.menu === hudState.openMenuKey);
         if (dropdown) {
           const bounds = menuRenderer.getMenuBounds(dropdown);
-          if (bounds.scrollable) {
+          if (bounds && bounds.scrollable) {
             hudState.menuScrollOffset = Math.max(0, Math.min(bounds.maxScroll, hudState.menuDragScrollStart + deltaY));
             state.needsRender = true;
           }
@@ -137,7 +138,7 @@ export function createHudInteractions({
     if (!dropdown) return false;
 
     const bounds = menuRenderer.getMenuBounds(dropdown);
-    if (!bounds.scrollable) return false;
+    if (!bounds || !bounds.scrollable) return false;
 
     hudState.menuScrollOffset = Math.max(0, Math.min(bounds.maxScroll, hudState.menuScrollOffset + deltaY));
     state.needsRender = true;

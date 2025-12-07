@@ -12,7 +12,6 @@ function createWaterTileAsset({ lowColor, highColor } = {}) {
   const COLS = 32;
   const LOOP_DURATION = 5;
   const CYCLES_PER_LOOP = 2;
-  // Default palette matches the provided example; variants override below.
   const low = lowColor || { r: 40, g: 132, b: 189 };
   const high = highColor || { r: 108, g: 179, b: 224 };
 

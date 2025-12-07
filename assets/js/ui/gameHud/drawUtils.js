@@ -1,14 +1,13 @@
 const MODE_ICONS = {
-  plant: "\uf4d8", // seedling
-  harvest: "\uf72d", // wheat-awn
-  landscape: "\uf1bb", // tree
-  build: "\uf6e3", // hammer
-  trade: "\uf201", // chart-line
+  plant: "\uf4d8",
+  harvest: "\uf72d",
+  landscape: "\uf1bb",
+  build: "\uf6e3",
+  trade: "\uf201",
 };
 
 export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
   const imageCache = {};
-  const faFont = "900 22px 'Font Awesome 6 Free'";
 
   const drawFaIcon = (glyph, x, y, size, color = COLORS.text) => {
     if (!glyph) return;

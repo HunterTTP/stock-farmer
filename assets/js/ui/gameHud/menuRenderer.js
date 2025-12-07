@@ -30,21 +30,27 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     return Math.max(maxWidth, 180 + extraMenuPad);
   };
 
-  const getMenuBounds = (dropdown) => {
+  const computeMenuGeometry = (dropdown) => {
     const items = menuData.getMenuItems(dropdown);
+    if (!items || !items.length) return null;
+
     const layout = hudState.layout?.layout || layoutManager.getLayout();
     const toolbar = hudState.layout?.toolbar;
-    const itemHeight = 44;
-    const maxVisibleHeight = 280;
-    const totalContentHeight = items.length * itemHeight;
-    const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
-    const menuHeight = menuContentHeight + 16;
-    const measuredWidth = measureMenuWidth(items, layout, dropdown);
-    const maxMenuWidth = dropdown.maxMenuWidth || (toolbar ? toolbar.width : canvas.clientWidth - (layout.padding || 12) * 2);
-    const menuWidth = Math.min(measuredWidth, maxMenuWidth);
-
+    const itemHeight = 48;
     const padding = layout.padding || 12;
     const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+    const baseMaxHeight = Math.min(360, Math.max(180, canvasHeight * 0.65));
+    const availableHeight = Math.max(140, dropdown.y - padding - 10);
+
+    let maxVisibleHeight = Math.min(baseMaxHeight, availableHeight);
+    const totalContentHeight = items.length * itemHeight;
+    let menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
+    let menuHeight = menuContentHeight + 16;
+
+    const measuredWidth = measureMenuWidth(items, layout, dropdown);
+    const maxMenuWidth = dropdown.maxMenuWidth || (toolbar ? toolbar.width : canvasWidth - padding * 2);
+    let menuWidth = Math.min(measuredWidth, maxMenuWidth);
     const toolbarCenterX = toolbar ? toolbar.x + toolbar.width / 2 : canvasWidth / 2;
     let menuX = toolbarCenterX - menuWidth / 2;
 
@@ -55,26 +61,61 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       menuX = padding;
     }
 
-    const menuY = dropdown.y - menuHeight - 10;
-    const scrollable = totalContentHeight > maxVisibleHeight;
-    const maxScroll = scrollable ? totalContentHeight - maxVisibleHeight : 0;
-    return { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll, scrollable };
+    let menuY = dropdown.y - menuHeight - 10;
+    if (menuY < padding) {
+      const adjustedContentHeight = Math.max(140, Math.min(menuContentHeight - (padding - menuY), maxVisibleHeight));
+      menuContentHeight = Math.min(adjustedContentHeight, totalContentHeight);
+      menuHeight = menuContentHeight + 16;
+      maxVisibleHeight = menuContentHeight;
+      menuY = padding;
+    }
+
+    const scrollable = totalContentHeight > menuContentHeight;
+    const maxScroll = scrollable ? totalContentHeight - menuContentHeight : 0;
+
+    return {
+      items,
+      layout,
+      menuX,
+      menuY,
+      menuWidth,
+      menuHeight,
+      menuContentHeight,
+      itemHeight,
+      maxScroll,
+      scrollable,
+      totalContentHeight,
+      maxVisibleHeight,
+    };
+  };
+
+  const getMenuBounds = (dropdown) => {
+    const geometry = computeMenuGeometry(dropdown);
+    if (!geometry) return null;
+    return geometry;
   };
 
   const drawMenu = (dropdown) => {
-    const items = menuData.getMenuItems(dropdown);
-    if (!items || items.length === 0) return;
-
-    const layout = hudState.layout?.layout || layoutManager.getLayout();
-    const bounds = getMenuBounds(dropdown);
-    const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, maxVisibleHeight, totalContentHeight } = bounds;
-    const itemHeight = 48;
+    const geometry = computeMenuGeometry(dropdown);
+    if (!geometry) return;
+    const {
+      items,
+      layout,
+      menuX,
+      menuY,
+      menuWidth,
+      menuHeight,
+      menuContentHeight,
+      itemHeight,
+      scrollable,
+      maxScroll,
+      totalContentHeight,
+      maxVisibleHeight,
+    } = geometry;
     const radius = 14;
     const previewSize = 36;
     const previewMargin = 10;
     const textOffset = previewSize + previewMargin * 2;
-    const scrollable = totalContentHeight > maxVisibleHeight;
-    const maxScroll = scrollable ? totalContentHeight - maxVisibleHeight : 0;
     const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
 
     ctx.save();
