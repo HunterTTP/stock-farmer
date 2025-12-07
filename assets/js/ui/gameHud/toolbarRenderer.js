@@ -55,19 +55,10 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     const scale = hudState.layout?.dockScale || 1;
     const iconSize = (hudState.layout?.layout?.iconSize || 22) * scale;
     const cx = btn.x + btn.width / 2;
-    const cy = btn.y + btn.height / 2 - (hudState.layout?.showDockText ? 4 : 0);
+    const cy = btn.y + btn.height / 2;
 
     drawModeIcon(cx, cy, iconSize, btn.mode, isActive);
 
-    if (hudState.layout?.showDockText) {
-      ctx.save();
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.font = `600 ${hudState.layout.layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = isHover || isActive ? COLORS.textHover : COLORS.textSecondary;
-      ctx.fillText(btn.mode.charAt(0).toUpperCase() + btn.mode.slice(1), cx, cy + iconSize / 2 + 4);
-      ctx.restore();
-    }
   };
 
   const drawDropdown = (dropdown, isOpen, isHover) => {
@@ -97,9 +88,10 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
 
     ctx.save();
     const previewSize = dropdown.height - 12;
-    const previewX = dropdown.x + 10;
+    const innerPadX = 12;
+    const previewX = dropdown.x + innerPadX;
     const previewY = dropdown.y + (dropdown.height - previewSize) / 2;
-    const textX = previewX + previewSize + 10;
+    const textX = previewX + previewSize + 12;
     const scaledFontSize = layout.fontSize;
 
     ctx.textAlign = "left";
@@ -108,6 +100,10 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     if (hasPreview) {
       if (previewData.iconType === "grid") {
         drawGridIcon(previewX, previewY, previewSize, previewData.gridSize || 1);
+      } else if (previewData.iconType === "faSquares") {
+        drawPreviewImage(previewX, previewY, previewSize, null, null, null, previewData.gridSize || 1);
+      } else if (previewData.iconType === "fa" && previewData.faGlyph) {
+        drawPreviewImage(previewX, previewY, previewSize, null, null, previewData.faGlyph);
       } else if (previewData.iconType === "trash") {
         drawTrashIcon(previewX, previewY, previewSize);
       } else if (previewData.iconType === "dollar") {
@@ -139,7 +135,8 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
 
     ctx.restore();
 
-    drawChevron(dropdown.x + dropdown.width - 20, dropdown.y + dropdown.height / 2, 6, isOpen);
+    drawChevron(dropdown.x + dropdown.width - innerPadX, dropdown.y + dropdown.height / 2, 6, isOpen);
+    ctx.restore();
   };
 
   const drawMoneyDisplay = (elem) => {

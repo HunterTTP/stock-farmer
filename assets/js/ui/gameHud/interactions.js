@@ -168,20 +168,25 @@ export function createHudInteractions({
 
   const handleMenuItemClick = (dropdown, item) => {
     if (item.locked && item.unlockCost > 0) {
-      if (item.canAfford) {
-        openConfirmModal(
-          `Unlock ${item.label} for ${formatCurrency(item.unlockCost)}?`,
-          () => {
-            state.totalMoney -= item.unlockCost;
-            unlockItem(dropdown.id, item.id);
-            selectItem(dropdown.id, item.id);
-            onMoneyChanged();
-            state.needsRender = true;
-            saveState();
-          },
-          "Confirm Unlock"
-        );
+      const cost = item.unlockCost || 0;
+      if (!item.canAfford || state.totalMoney < cost) {
+        hudState.openMenuKey = null;
+        state.needsRender = true;
+        return;
       }
+      openConfirmModal(
+        `Unlock ${item.label} for ${formatCurrency(cost)}?`,
+        () => {
+          if (state.totalMoney < cost) return;
+          state.totalMoney -= cost;
+          unlockItem(dropdown.id, item.id);
+          selectItem(dropdown.id, item.id);
+          onMoneyChanged();
+          state.needsRender = true;
+          saveState();
+        },
+        "Confirm Unlock"
+      );
       hudState.openMenuKey = null;
       state.needsRender = true;
       return;

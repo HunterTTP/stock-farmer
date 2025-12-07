@@ -39,7 +39,6 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     hudDockScale: state.hudDockScale || 1.0,
     hudDropdownScale: state.hudDropdownScale || 1.0,
     hudFontSize: state.hudFontSize || 1.0,
-    hudShowDockText: state.hudShowDockText !== false,
     hudOpacity: typeof state.hudOpacity === "number" ? state.hudOpacity : 1.0,
   };
 

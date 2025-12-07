@@ -1,6 +1,6 @@
 const MODE_ICONS = {
   plant: "\uf4d8",
-  harvest: "\uf72d",
+  harvest: "\uf4c0",
   landscape: "\uf1bb",
   build: "\uf6e3",
   trade: "\uf201",
@@ -69,7 +69,23 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     return img;
   };
 
-  const drawPreviewImage = (x, y, size, imageSrc, colorData, faGlyph = null) => {
+  const drawSquaresIcon = (x, y, size, gridSize) => {
+    const cell = size / gridSize;
+    const inset = 1;
+    ctx.save();
+    ctx.fillStyle = COLORS.accent;
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
+        const sx = x + c * cell + inset;
+        const sy = y + r * cell + inset;
+        const s = cell - inset * 2;
+        ctx.fillRect(sx, sy, s, s);
+      }
+    }
+    ctx.restore();
+  };
+
+  const drawPreviewImage = (x, y, size, imageSrc, colorData, faGlyph = null, gridSize = null) => {
     const radius = 4;
     const padding = 1;
 
@@ -89,6 +105,8 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
 
     if (faGlyph) {
       drawFaIcon(faGlyph, innerX, innerY, innerSize, COLORS.text);
+    } else if (Number.isInteger(gridSize) && gridSize > 0) {
+      drawSquaresIcon(innerX, innerY, innerSize, Math.max(1, gridSize));
     } else if (imageSrc) {
       const img = getOrLoadImage(imageSrc);
       if (img && img.complete && img.naturalWidth > 0) {
@@ -152,5 +170,6 @@ export function createDrawUtils({ ctx, COLORS, hexToRgba, state }) {
     drawTrashIcon,
     drawDollarIcon,
     drawFaIcon,
+    drawSquaresIcon,
   };
 }

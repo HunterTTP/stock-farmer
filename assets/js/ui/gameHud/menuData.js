@@ -106,11 +106,11 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
     }
     if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
       const size = sizes[state.selectedSizeKey];
-      return { iconType: "grid", gridSize: size?.size || 1 };
+      return { iconType: "faSquares", gridSize: size?.size || 1 };
     }
     if (dropdown.id === "landscapeSelect") {
       if (state.selectedLandscapeKey === "sell") {
-        return { iconType: "trash" };
+        return { iconType: "fa", faGlyph: "\uf2ed" };
       }
       const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
       if (landscape) {
@@ -120,7 +120,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
     }
     if (dropdown.id === "buildSelect") {
       if (state.selectedBuildKey === "sell") {
-        return { iconType: "dollar" };
+        return { iconType: "fa", faGlyph: "\uf155" };
       }
       const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
       if (building) {
@@ -134,6 +134,13 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
   const getMenuItems = (dropdown) => {
     if (dropdown.id === "cropSelect") {
       const cropKeys = Object.keys(crops);
+      let nextUnlockIndex = null;
+      cropKeys.forEach((key, index) => {
+        const crop = crops[key];
+        const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
+        if (nextUnlockIndex === null && prereqsMet && !crop.unlocked) nextUnlockIndex = index;
+      });
+
       return cropKeys.map((key, index) => {
         const crop = crops[key];
         const status = getCropStatus(crop);
@@ -142,8 +149,9 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           meta = `Planted: ${status.count} | ${status.harvestText}`;
         }
 
-        const allPreviousUnlocked = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
-        const canUnlock = allPreviousUnlocked && state.totalMoney >= (crop.unlockCost || 0);
+        const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
+        const isNextUnlock = index === nextUnlockIndex && prereqsMet;
+        const canAfford = crop.unlocked || isNextUnlock;
 
         return {
           id: crop.id,
@@ -151,9 +159,9 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           meta,
           locked: !crop.unlocked,
           unlockCost: crop.unlockCost || 0,
-          canAfford: canUnlock,
+          canAfford,
           imageUrl: `images/crops/${crop.id}/${crop.id}-phase-4.png`,
-          requiresPrevious: !allPreviousUnlocked,
+          requiresPrevious: !prereqsMet,
           unlocked: !!crop.unlocked,
         };
       });
@@ -161,20 +169,28 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
 
     if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
       const sizeKeys = Object.keys(sizes);
+      let nextUnlockIndex = null;
+      sizeKeys.forEach((key, index) => {
+        const size = sizes[key];
+        const prereqsMet = index === 0 || sizeKeys.slice(0, index).every((prevKey) => sizes[prevKey].unlocked);
+        if (nextUnlockIndex === null && prereqsMet && !size.unlocked) nextUnlockIndex = index;
+      });
+
       return sizeKeys.map((key, index) => {
         const size = sizes[key];
         const allPreviousUnlocked = index === 0 || sizeKeys.slice(0, index).every((prevKey) => sizes[prevKey].unlocked);
+        const isNextUnlock = index === nextUnlockIndex && allPreviousUnlocked;
+        const canAfford = size.unlocked || isNextUnlock;
         return {
           id: size.id,
           label: size.name,
           meta: "",
           locked: !size.unlocked,
           unlockCost: size.unlockCost || 0,
-          canAfford: allPreviousUnlocked && state.totalMoney >= (size.unlockCost || 0),
+          canAfford,
           imageUrl: null,
           gridSize: size.size || 1,
-          iconType: "fa",
-          faGlyph: "\uf00a",
+          iconType: "faSquares",
           unlocked: !!size.unlocked,
         };
       });
@@ -191,7 +207,8 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           unlockCost: 0,
           canAfford: true,
           imageUrl: null,
-          iconType: "trash",
+          iconType: "fa",
+          faGlyph: "\uf2ed",
         },
         {
           id: "farmland",
@@ -233,7 +250,8 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           unlockCost: 0,
           canAfford: true,
           imageUrl: null,
-          iconType: "dollar",
+          iconType: "fa",
+          faGlyph: "\uf155",
           unlocked: true,
         },
       ];

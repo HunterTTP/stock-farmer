@@ -87,7 +87,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const dropdownScale = state.hudDropdownScale || 1.0;
     const fontSizeBase = 1.1;
     const hudFontSize = (state.hudFontSize || 1.0) * fontSizeBase;
-    const showDockText = state.hudShowDockText !== false;
+    const showDockText = false;
 
     const dockScaledPadding = Math.round(layout.padding * dockScale);
     const dockScaledGap = Math.round(layout.gap * dockScale);
@@ -97,15 +97,19 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const modeCount = MODE_ORDER.length;
     const availableWidth = canvasWidth - dockScaledPadding * 2;
     const targetToolbarWidth = Math.min((layout.toolbarMaxWidth || availableWidth) * dockScale, availableWidth);
+    const buttonMinLimit = layout.minModeButtonSize * dockScale;
+    const buttonMaxLimit = layout.maxModeButtonSize * dockScale;
+    const minButtonWidth = buttonMinLimit;
+    const maxButtonWidth = buttonMaxLimit;
     const buttonSize = Math.max(
-      layout.minModeButtonSize * dockScale,
+      minButtonWidth,
       Math.min(
-        layout.maxModeButtonSize * dockScale,
+        maxButtonWidth,
         (targetToolbarWidth - dockScaledToolbarPadding * 2 - (modeCount - 1) * dockScaledGap) / modeCount
       )
     );
     const totalModeWidth = modeCount * buttonSize + (modeCount - 1) * dockScaledGap + dockScaledToolbarPadding * 2;
-    const toolbarContentHeight = showDockText ? buttonSize : buttonSize * 0.75;
+    const toolbarContentHeight = buttonSize * 0.75;
     const toolbarHeight = toolbarContentHeight + dockScaledToolbarPadding * 2;
     const toolbarX = (canvasWidth - totalModeWidth) / 2;
     const hudBottomOffset = 20;

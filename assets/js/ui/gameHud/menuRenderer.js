@@ -177,6 +177,10 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
         drawGridIcon(previewX, previewY, previewSize, item.gridSize || 1);
       } else if (item.iconType === "fa") {
         drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph);
+      } else if (item.iconType === "faSquares") {
+        drawPreviewImage(previewX, previewY, previewSize, null, null, null, item.gridSize || 1);
+      } else if (item.iconType === "fa" && item.faGlyph) {
+        drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph);
       } else {
         drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
       }

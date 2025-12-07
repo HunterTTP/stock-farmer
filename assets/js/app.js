@@ -93,7 +93,6 @@ function resetSettingsOnly() {
     state.hudDockScale = 1.0;
     state.hudDropdownScale = 1.0;
     state.hudFontSize = 1.0;
-    state.hudShowDockText = true;
     state.hudOpacity = 0.95;
     persistence.save();
   } catch (err) {

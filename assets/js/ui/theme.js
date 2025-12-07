@@ -128,7 +128,7 @@ function wireHudSliders(container) {
     const dropdownScaleValue = container.querySelector("#hudDropdownScaleValue");
     const fontSlider = container.querySelector("#hudFontSizeSlider");
     const fontValue = container.querySelector("#hudFontSizeValue");
-    const showTextToggle = container.querySelector("#hudShowDockTextToggle");
+    const showTextToggle = null;
 
     if (dockScaleSlider && dockScaleValue) {
         dockScaleSlider.value = state.hudDockScale || 1.0;
@@ -175,27 +175,7 @@ function wireHudSliders(container) {
         });
     }
 
-    if (showTextToggle) {
-        const updateToggleVisual = () => {
-            const isOn = state.hudShowDockText !== false;
-            showTextToggle.setAttribute("aria-checked", isOn);
-            showTextToggle.classList.toggle("bg-accent", isOn);
-            showTextToggle.classList.toggle("bg-neutral-600", !isOn);
-            const thumb = showTextToggle.querySelector("span");
-            if (thumb) {
-                thumb.classList.toggle("translate-x-4", isOn);
-                thumb.classList.toggle("translate-x-0.5", !isOn);
-            }
-        };
-        updateToggleVisual();
-        showTextToggle.addEventListener("click", () => {
-            state.hudShowDockText = !state.hudShowDockText;
-            updateToggleVisual();
-            if (gameHud) gameHud.computeLayout();
-            state.needsRender = true;
-            if (saveState) saveState();
-        });
-    }
+    if (showTextToggle) { }
 
     const transparencySlider = container.querySelector("#hudTransparencySlider");
     const transparencyValue = container.querySelector("#hudTransparencyValue");
