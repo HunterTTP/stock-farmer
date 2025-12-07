@@ -120,7 +120,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
     }
     if (dropdown.id === "buildSelect") {
       if (state.selectedBuildKey === "sell") {
-        return { iconType: "fa", faGlyph: "\uf155" };
+        return { iconType: "fa", faGlyph: "\uf81d" };
       }
       const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
       if (building) {
@@ -134,13 +134,6 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
   const getMenuItems = (dropdown) => {
     if (dropdown.id === "cropSelect") {
       const cropKeys = Object.keys(crops);
-      let nextUnlockIndex = null;
-      cropKeys.forEach((key, index) => {
-        const crop = crops[key];
-        const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
-        if (nextUnlockIndex === null && prereqsMet && !crop.unlocked) nextUnlockIndex = index;
-      });
-
       return cropKeys.map((key, index) => {
         const crop = crops[key];
         const status = getCropStatus(crop);
@@ -150,8 +143,8 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
         }
 
         const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
-        const isNextUnlock = index === nextUnlockIndex && prereqsMet;
-        const canAfford = crop.unlocked || isNextUnlock;
+        const hasMoney = state.totalMoney >= (crop.unlockCost || 0);
+        const canAfford = crop.unlocked || (prereqsMet && hasMoney);
 
         return {
           id: crop.id,
@@ -169,18 +162,11 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
 
     if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
       const sizeKeys = Object.keys(sizes);
-      let nextUnlockIndex = null;
-      sizeKeys.forEach((key, index) => {
-        const size = sizes[key];
-        const prereqsMet = index === 0 || sizeKeys.slice(0, index).every((prevKey) => sizes[prevKey].unlocked);
-        if (nextUnlockIndex === null && prereqsMet && !size.unlocked) nextUnlockIndex = index;
-      });
-
       return sizeKeys.map((key, index) => {
         const size = sizes[key];
         const allPreviousUnlocked = index === 0 || sizeKeys.slice(0, index).every((prevKey) => sizes[prevKey].unlocked);
-        const isNextUnlock = index === nextUnlockIndex && allPreviousUnlocked;
-        const canAfford = size.unlocked || isNextUnlock;
+        const hasMoney = state.totalMoney >= (size.unlockCost || 0);
+        const canAfford = size.unlocked || (allPreviousUnlocked && hasMoney);
         return {
           id: size.id,
           label: size.name,
@@ -251,8 +237,9 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           canAfford: true,
           imageUrl: null,
           iconType: "fa",
-          faGlyph: "\uf155",
-          faWeight: 100,
+          faGlyph: "\uf81d",
+          faWeight: 900,
+          faScale: 0.9,
           unlocked: true,
         },
       ];

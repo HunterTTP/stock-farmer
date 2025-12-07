@@ -53,7 +53,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     ctx.restore();
 
     const scale = hudState.layout?.dockScale || 1;
-    const iconSize = (hudState.layout?.layout?.iconSize || 22) * scale;
+    const iconSize = (hudState.layout?.layout?.iconSize || 22) * scale * 1.12;
     const cx = btn.x + btn.width / 2;
     const cy = btn.y + btn.height / 2;
 
@@ -103,7 +103,16 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
       } else if (previewData.iconType === "faSquares") {
         drawPreviewImage(previewX, previewY, previewSize, null, null, null, previewData.gridSize || 1);
       } else if (previewData.iconType === "fa" && previewData.faGlyph) {
-        drawPreviewImage(previewX, previewY, previewSize, null, null, previewData.faGlyph, null, previewData.faWeight || 900);
+        drawPreviewImage(
+          previewX,
+          previewY,
+          previewSize * (previewData.faScale || 1),
+          null,
+          null,
+          previewData.faGlyph,
+          null,
+          previewData.faWeight || 900
+        );
       } else if (previewData.iconType === "trash") {
         drawTrashIcon(previewX, previewY, previewSize);
       } else if (previewData.iconType === "dollar") {
@@ -156,7 +165,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = "#d4af37";
+    ctx.fillStyle = "#ffffff";
 
     const moneyText = formatCurrency(state.totalMoney, true);
     const textX = elem.x + 12;

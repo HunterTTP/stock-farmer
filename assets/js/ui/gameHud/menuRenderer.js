@@ -176,11 +176,11 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       } else if (item.iconType === "grid") {
         drawGridIcon(previewX, previewY, previewSize, item.gridSize || 1);
       } else if (item.iconType === "fa") {
-        drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph);
+        const faSize = previewSize * (item.faScale || 1);
+        const faWeight = item.faWeight || 900;
+        drawPreviewImage(previewX, previewY, faSize, null, null, item.faGlyph, null, faWeight);
       } else if (item.iconType === "faSquares") {
         drawPreviewImage(previewX, previewY, previewSize, null, null, null, item.gridSize || 1);
-      } else if (item.iconType === "fa" && item.faGlyph) {
-        drawPreviewImage(previewX, previewY, previewSize, null, null, item.faGlyph, null, item.faWeight || 900);
       } else {
         drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
       }
