@@ -26,6 +26,14 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     return COLORS.textSecondary;
   };
 
+  const computeTextBlock = (metaLines, labelFontSize, metaFontSize, scale) => {
+    const labelToMetaGap = Math.round(4 * scale);
+    const metaGap = Math.round(2 * scale);
+    const metaHeight = metaLines.length > 0 ? metaLines.length * metaFontSize + Math.max(0, metaLines.length - 1) * metaGap : 0;
+    const blockHeight = labelFontSize + (metaLines.length > 0 ? labelToMetaGap + metaHeight : 0);
+    return { blockHeight, labelToMetaGap, metaGap };
+  };
+
   const calculateItemHeight = (maxMetaLines, scale, labelFontSize, metaFontSize) => {
     const previewSize = Math.round(36 * scale);
     const paddingY = Math.round(10 * scale);
@@ -252,12 +260,12 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
         ctx.textBaseline = "top";
         ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
         ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
-        let textY = itemY + Math.round(8 * scale);
+        const { blockHeight, labelToMetaGap, metaGap } = computeTextBlock(metaLines, labelFontSize, metaFontSize, scale);
+        let textY = itemY + (itemH - blockHeight) / 2;
         ctx.fillText(item.label, textX, textY);
 
-        textY += labelFontSize + Math.round(4 * scale);
+        textY += labelFontSize + labelToMetaGap;
         ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
-        const metaGap = Math.round(2 * scale);
         metaLines.forEach((line, idx) => {
           ctx.fillStyle = getMetaColor(line, item);
           ctx.fillText(line.text, textX, textY);

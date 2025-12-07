@@ -1,6 +1,10 @@
 const installBtn = document.getElementById("installBtn");
 let deferredPrompt = null;
 
+const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent || "");
+const isStandalone = () =>
+  window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
 function setInstallButton(enabled) {
   if (!installBtn) return;
   installBtn.disabled = !enabled;
@@ -8,18 +12,17 @@ function setInstallButton(enabled) {
   installBtn.classList.toggle("cursor-not-allowed", !enabled);
 }
 
-const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent || "");
-const isStandalone = () =>
-  window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-
 const hideInstallIfStandalone = () => {
   if (!installBtn) return;
   if (isStandalone()) {
     installBtn.classList.add("hidden");
+    setInstallButton(false);
   } else {
     installBtn.classList.remove("hidden");
   }
 };
+
+hideInstallIfStandalone();
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
