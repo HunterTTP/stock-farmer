@@ -17,9 +17,9 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     };
 
     const LAYOUT = {
-        mobile: { modeButtonSize: 46, minModeButtonSize: 44, maxModeButtonSize: 78, gap: 10, padding: 10, fontSize: 11, iconSize: 21, toolbarPadding: 8, toolbarMaxWidth: 680 },
-        tablet: { modeButtonSize: 52, minModeButtonSize: 50, maxModeButtonSize: 86, gap: 12, padding: 14, fontSize: 12, iconSize: 24, toolbarPadding: 10, toolbarMaxWidth: 760 },
-        desktop: { modeButtonSize: 48, minModeButtonSize: 44, maxModeButtonSize: 72, gap: 12, padding: 12, fontSize: 11, iconSize: 22, toolbarPadding: 10, toolbarMaxWidth: 720 },
+        mobile: { modeButtonSize: 46, minModeButtonSize: 44, maxModeButtonSize: 78, gap: 10, padding: 10, fontSize: 12, iconSize: 22, toolbarPadding: 8, toolbarMaxWidth: 680 },
+        tablet: { modeButtonSize: 52, minModeButtonSize: 50, maxModeButtonSize: 86, gap: 12, padding: 14, fontSize: 13, iconSize: 25, toolbarPadding: 10, toolbarMaxWidth: 760 },
+        desktop: { modeButtonSize: 48, minModeButtonSize: 44, maxModeButtonSize: 72, gap: 12, padding: 12, fontSize: 12, iconSize: 23, toolbarPadding: 10, toolbarMaxWidth: 720 },
     };
 
     const GOLD = "#d4af37";
@@ -112,7 +112,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
         const toolbar = { x: toolbarX, y: toolbarY, width: totalModeWidth, height: toolbarHeight };
 
-        const dropdownHeight = 44;
+        const dropdownHeight = Math.min(72, Math.max(52, Math.round(layout.modeButtonSize * 1.05)));
         const dropdownY = toolbarY - layout.gap - dropdownHeight;
         const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, layout);
 
@@ -171,6 +171,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const paddingLeft = hasPreview ? 10 : 12;
         const chevronWidth = 28;
         const paddingRight = 8;
+        const widthMultiplier = Math.min(1.85, Math.max(1.4, layout.modeButtonSize / 38));
+        const listPadding = 16;
 
         ctx.font = meta ? `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif` : `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
         const labelWidth = ctx.measureText(label).width;
@@ -182,8 +184,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             textWidth = Math.max(labelWidth, metaWidth);
         }
 
-        // Make dropdowns 30% wider for better usability
-        return Math.ceil((paddingLeft + previewWidth + textWidth + chevronWidth + paddingRight) * 1.3);
+        return Math.ceil((paddingLeft + previewWidth + textWidth + chevronWidth + paddingRight + listPadding) * widthMultiplier);
     }
 
     function getDropdownPreviewData(dropdown) {
@@ -842,12 +843,13 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.restore();
     }
 
-    function measureMenuWidth(items, layout) {
+    function measureMenuWidth(items, layout, dropdown) {
         const previewSize = 32;
         const previewMargin = 8;
         const textOffset = previewSize + previewMargin * 2;
         const padding = 32;
         const scrollbarWidth = 16;
+        const extraMenuPad = dropdown?.id === "cropSelect" ? 80 : 0;
 
         let maxWidth = 0;
 
@@ -863,11 +865,11 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             const metaWidth = ctx.measureText(metaText || "").width;
 
             const textWidth = Math.max(labelWidth, metaWidth);
-            const totalWidth = textOffset + textWidth + padding + scrollbarWidth;
+            const totalWidth = textOffset + textWidth + padding + scrollbarWidth + extraMenuPad;
             if (totalWidth > maxWidth) maxWidth = totalWidth;
         });
 
-        return Math.max(maxWidth, 180);
+        return Math.max(maxWidth, 180 + extraMenuPad);
     }
 
     function drawMenu(dropdown) {
@@ -880,7 +882,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const totalContentHeight = items.length * itemHeight;
         const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
         const menuHeight = menuContentHeight + 16;
-        const menuWidth = measureMenuWidth(items, layout);
+        const menuWidth = measureMenuWidth(items, layout, dropdown);
 
         // Ensure menu doesn't go off screen horizontally
         const padding = layout.padding || 12;
@@ -932,7 +934,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
             const itemX = menuX + 10;
             const itemY = itemYBase;
-            const itemW = menuWidth - 20;
+            const rightPad = scrollable ? 22 : 10;
+            const itemW = menuWidth - (10 + rightPad);
             const itemH = itemHeight - 6;
             const isSelected = isItemSelected(dropdown, item);
             const isHover = hudState.hoverElement?.id === `menuItem_${dropdown.id}_${i}`;
@@ -977,7 +980,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
             if (item.locked && item.unlockCost > 0) {
                 ctx.fillStyle = item.canAfford ? COLORS.gold : COLORS.goldDimmed;
-                ctx.fillText(`Unlock for ${formatCurrency(item.unlockCost)}`, itemX + textOffset, metaY);
+                ctx.fillText(`Unlock for $${formatCurrency(item.unlockCost)}`, itemX + textOffset, metaY);
             } else {
                 ctx.fillStyle = COLORS.textSecondary;
                 ctx.fillText(item.meta, itemX + textOffset, metaY);
@@ -987,7 +990,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.restore();
 
         if (scrollable) {
-            const scrollTrackX = menuX + menuWidth - 12;
+            const scrollTrackX = menuX + menuWidth - 16;
             const scrollTrackY = menuY + 14;
             const scrollTrackHeight = menuContentHeight - 12;
             const scrollThumbHeight = Math.max(30, (maxVisibleHeight / totalContentHeight) * scrollTrackHeight);
