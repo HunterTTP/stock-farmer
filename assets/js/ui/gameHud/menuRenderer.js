@@ -1,21 +1,26 @@
 export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, drawUtils, hudState, canvas, hexToRgba, layoutManager }) {
   const { drawRoundedRect, drawPreviewImage, drawGridIcon, drawTrashIcon, drawDollarIcon } = drawUtils;
 
+  const getDropdownScale = () => hudState.layout?.dropdownScale || 1;
+
   const measureMenuWidth = (items, layout, dropdown) => {
-    const previewSize = 32;
-    const previewMargin = 8;
+    const scale = getDropdownScale();
+    const previewSize = Math.round(36 * scale);
+    const previewMargin = Math.round(10 * scale);
     const textOffset = previewSize + previewMargin * 2;
-    const padding = 32;
-    const scrollbarWidth = 16;
-    const extraMenuPad = dropdown?.id === "cropSelect" ? 80 : 0;
+    const padding = Math.round(32 * scale);
+    const scrollbarWidth = Math.round(16 * scale);
+    const extraMenuPad = dropdown?.id === "cropSelect" ? Math.round(80 * scale) : 0;
+    const labelFontSize = Math.max(8, layout.fontSize * scale);
+    const metaFontSize = Math.max(8, (layout.fontSize - 2) * scale);
 
     let maxWidth = 0;
 
     items.forEach((item) => {
-      ctx.font = `600 ${layout.fontSize - 1}px system-ui, -apple-system, sans-serif`;
+      ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
       const labelWidth = ctx.measureText(item.label).width;
 
-      ctx.font = `400 ${layout.fontSize - 3}px system-ui, -apple-system, sans-serif`;
+      ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
       let metaText = item.meta;
       if (item.locked && item.unlockCost > 0) {
         metaText = `Unlock for ${formatCurrency(item.unlockCost)}`;
@@ -27,7 +32,7 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       if (totalWidth > maxWidth) maxWidth = totalWidth;
     });
 
-    return Math.max(maxWidth, 180 + extraMenuPad);
+    return Math.max(maxWidth, Math.round(180 * scale) + extraMenuPad);
   };
 
   const computeMenuGeometry = (dropdown) => {
@@ -36,17 +41,20 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
 
     const layout = hudState.layout?.layout || layoutManager.getLayout();
     const toolbar = hudState.layout?.toolbar;
-    const itemHeight = 48;
-    const padding = layout.padding || 12;
+    const scale = getDropdownScale();
+    const itemHeight = Math.max(32, Math.round(48 * scale));
+    const padding = Math.max(10, Math.round((layout.padding || 12) * scale));
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
     const baseMaxHeight = Math.min(360, Math.max(180, canvasHeight * 0.65));
-    const availableHeight = Math.max(140, dropdown.y - padding - 10);
+    const availableHeight = Math.max(140, dropdown.y - padding - Math.round(10 * scale));
+    const contentOffsetY = Math.round(8 * scale);
+    const menuChrome = Math.round(16 * scale);
 
     let maxVisibleHeight = Math.min(baseMaxHeight, availableHeight);
     const totalContentHeight = items.length * itemHeight;
     let menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
-    let menuHeight = menuContentHeight + 16;
+    let menuHeight = menuContentHeight + menuChrome;
 
     const measuredWidth = measureMenuWidth(items, layout, dropdown);
     const maxMenuWidth = dropdown.maxMenuWidth || (toolbar ? toolbar.width : canvasWidth - padding * 2);
@@ -61,11 +69,11 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       menuX = padding;
     }
 
-    let menuY = dropdown.y - menuHeight - 10;
+    let menuY = dropdown.y - menuHeight - Math.round(10 * scale);
     if (menuY < padding) {
       const adjustedContentHeight = Math.max(140, Math.min(menuContentHeight - (padding - menuY), maxVisibleHeight));
       menuContentHeight = Math.min(adjustedContentHeight, totalContentHeight);
-      menuHeight = menuContentHeight + 16;
+      menuHeight = menuContentHeight + menuChrome;
       maxVisibleHeight = menuContentHeight;
       menuY = padding;
     }
@@ -86,6 +94,7 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       scrollable,
       totalContentHeight,
       maxVisibleHeight,
+      contentOffsetY,
     };
   };
 
@@ -111,12 +120,18 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
       maxScroll,
       totalContentHeight,
       maxVisibleHeight,
+      contentOffsetY,
     } = geometry;
-    const radius = 14;
-    const previewSize = 36;
-    const previewMargin = 10;
+    const scale = getDropdownScale();
+    const radius = Math.round(14 * scale);
+    const previewSize = Math.round(36 * scale);
+    const previewMargin = Math.round(10 * scale);
     const textOffset = previewSize + previewMargin * 2;
+    const labelFontSize = Math.max(8, layout.fontSize * scale);
+    const metaFontSize = Math.max(8, (layout.fontSize - 2) * scale);
     const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
+    const contentInsetX = Math.round(6 * scale);
+    const clipRadius = Math.round(8 * scale);
 
     ctx.save();
 
@@ -135,24 +150,25 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     ctx.stroke();
 
     ctx.save();
-    drawRoundedRect(menuX + 6, menuY + 8, menuWidth - 12, menuContentHeight, 8);
+    drawRoundedRect(menuX + contentInsetX, menuY + contentOffsetY, menuWidth - contentInsetX * 2, menuContentHeight, clipRadius);
     ctx.clip();
 
     items.forEach((item, i) => {
-      const itemYBase = menuY + 8 + i * itemHeight - scrollOffset;
-      if (itemYBase + itemHeight < menuY + 8 || itemYBase > menuY + 8 + menuContentHeight) {
+      const itemYBase = menuY + contentOffsetY + i * itemHeight - scrollOffset;
+      if (itemYBase + itemHeight < menuY + contentOffsetY || itemYBase > menuY + contentOffsetY + menuContentHeight) {
         return;
       }
 
-      const itemX = menuX + 10;
+      const itemX = menuX + Math.round(10 * scale);
       const itemY = itemYBase;
-      const rightPad = scrollable ? 24 : 12;
-      const itemW = menuWidth - (10 + rightPad);
-      const itemH = itemHeight - 6;
+      const rightPad = scrollable ? Math.round(24 * scale) : Math.round(12 * scale);
+      const itemW = menuWidth - (Math.round(10 * scale) + rightPad);
+      const itemH = itemHeight - Math.round(6 * scale);
+      const itemRadius = Math.round(8 * scale);
       const isSelected = menuData.isItemSelected(dropdown, item);
       const isHover = hudState.hoverElement?.id === `menuItem_${dropdown.id}_${i}`;
 
-      drawRoundedRect(itemX, itemY, itemW, itemH, 8);
+      drawRoundedRect(itemX, itemY, itemW, itemH, itemRadius);
       if (isSelected) {
         ctx.fillStyle = COLORS.itemSelected;
         ctx.fill();
@@ -187,14 +203,14 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
 
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
       ctx.fillStyle = item.locked && !item.canAfford ? COLORS.textSecondary : COLORS.text;
 
-      const labelY = itemY + itemH / 2 - 7;
+      const labelY = itemY + itemH / 2 - Math.round(7 * scale);
       ctx.fillText(item.label, itemX + textOffset, labelY);
 
-      ctx.font = `400 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
-      const metaY = itemY + itemH / 2 + 8;
+      ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
+      const metaY = itemY + itemH / 2 + Math.round(8 * scale);
 
       if (item.locked && item.unlockCost > 0) {
         ctx.fillStyle = item.canAfford ? COLORS.gold : COLORS.goldDimmed;
@@ -208,21 +224,23 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
     ctx.restore();
 
     if (scrollable) {
-      const scrollTrackX = menuX + menuWidth - 16;
-      const scrollTrackY = menuY + 14;
-      const scrollTrackHeight = menuContentHeight - 12;
-      const scrollThumbHeight = Math.max(30, (maxVisibleHeight / totalContentHeight) * scrollTrackHeight);
+      const scrollTrackX = menuX + menuWidth - Math.round(16 * scale);
+      const scrollTrackY = menuY + contentOffsetY + Math.round(6 * scale);
+      const scrollTrackHeight = menuContentHeight - Math.round(12 * scale);
+      const scrollThumbHeight = Math.max(Math.round(30 * scale), (maxVisibleHeight / totalContentHeight) * scrollTrackHeight);
       const scrollThumbY = scrollTrackY + (scrollOffset / maxScroll) * (scrollTrackHeight - scrollThumbHeight);
+      const scrollTrackWidth = Math.max(4, Math.round(5 * scale));
+      const scrollRadius = Math.max(2, Math.round(2.5 * scale));
 
       ctx.save();
       ctx.fillStyle = "rgba(80, 80, 80, 0.5)";
       ctx.beginPath();
-      ctx.roundRect(scrollTrackX, scrollTrackY, 5, scrollTrackHeight, 2.5);
+      ctx.roundRect(scrollTrackX, scrollTrackY, scrollTrackWidth, scrollTrackHeight, scrollRadius);
       ctx.fill();
 
       ctx.fillStyle = hexToRgba(COLORS.accent, 0.8);
       ctx.beginPath();
-      ctx.roundRect(scrollTrackX, scrollThumbY, 5, scrollThumbHeight, 2.5);
+      ctx.roundRect(scrollTrackX, scrollThumbY, scrollTrackWidth, scrollThumbHeight, scrollRadius);
       ctx.fill();
       ctx.restore();
     }

@@ -19,15 +19,15 @@ export function createHudInteractions({
       if (dropdown) {
         const bounds = menuRenderer.getMenuBounds(dropdown);
         if (!bounds) return null;
-        const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll } = bounds;
+        const { menuX, menuY, menuWidth, menuHeight, menuContentHeight, itemHeight, items, maxScroll, contentOffsetY } = bounds;
         const scrollOffset = Math.max(0, Math.min(hudState.menuScrollOffset, maxScroll));
 
         if (x >= menuX && x <= menuX + menuWidth && y >= menuY && y <= menuY + menuHeight) {
-          const relY = y - menuY - 8 + scrollOffset;
+          const relY = y - menuY - contentOffsetY + scrollOffset;
           const itemIndex = Math.floor(relY / itemHeight);
           if (itemIndex >= 0 && itemIndex < items.length) {
-            const itemYBase = menuY + 8 + itemIndex * itemHeight - scrollOffset;
-            if (itemYBase >= menuY + 8 - itemHeight && itemYBase < menuY + 8 + menuContentHeight) {
+            const itemYBase = menuY + contentOffsetY + itemIndex * itemHeight - scrollOffset;
+            if (itemYBase >= menuY + contentOffsetY - itemHeight && itemYBase < menuY + contentOffsetY + menuContentHeight) {
               return { type: "menuItem", id: `menuItem_${dropdown.id}_${itemIndex}`, dropdown, itemIndex, item: items[itemIndex] };
             }
           }

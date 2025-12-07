@@ -63,7 +63,8 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
 
   const drawDropdown = (dropdown, isOpen, isHover) => {
     const layout = hudState.layout?.layout || layoutManager.getLayout();
-    const radius = 12 * (hudState.layout?.dropdownScale || 1);
+    const dropdownScale = hudState.layout?.dropdownScale || 1;
+    const radius = Math.round(12 * dropdownScale);
     const label = menuData.getDropdownLabel(dropdown);
     const meta = menuData.getDropdownMeta(dropdown);
     const previewData = menuData.getDropdownPreviewData(dropdown);
@@ -87,12 +88,12 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     ctx.restore();
 
     ctx.save();
-    const previewSize = dropdown.height - 12;
-    const innerPadX = 12;
+    const previewSize = dropdown.height - Math.round(12 * dropdownScale);
+    const innerPadX = Math.round(12 * dropdownScale);
     const previewX = dropdown.x + innerPadX;
     const previewY = dropdown.y + (dropdown.height - previewSize) / 2;
-    const textX = previewX + previewSize + 12;
-    const scaledFontSize = layout.fontSize;
+    const textX = previewX + previewSize + innerPadX;
+    const scaledFontSize = layout.fontSize * dropdownScale;
 
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
@@ -144,7 +145,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
 
     ctx.restore();
 
-    drawChevron(dropdown.x + dropdown.width - innerPadX, dropdown.y + dropdown.height / 2, 6, isOpen);
+    drawChevron(dropdown.x + dropdown.width - innerPadX, dropdown.y + dropdown.height / 2, 6 * dropdownScale, isOpen);
     ctx.restore();
   };
 

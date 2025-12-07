@@ -136,7 +136,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const dropdownScaledPadding = Math.round(layout.padding * dropdownScale);
     const dropdownHeight = Math.min(72 * dropdownScale, Math.max(52 * dropdownScale, Math.round(layout.modeButtonSize * 1.05 * dropdownScale)));
     const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;
-    const dropdownLayout = { ...layout, padding: dropdownScaledPadding, gap: dropdownScaledGap, fontSize: scaledFontSize };
+    const dropdownLayout = { ...layout, padding: dropdownScaledPadding, gap: dropdownScaledGap, fontSize: Math.round(scaledFontSize * dropdownScale) };
     const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, dropdownLayout, toolbar);
 
     const moneyHeight = 34;
