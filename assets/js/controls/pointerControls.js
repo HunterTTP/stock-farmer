@@ -3,13 +3,6 @@ import { clampScale } from "../utils/helpers.js";
 export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState, saveViewState, gameHud }) {
   let hudHandlingPointer = false;
 
-  function cancelHoeHold() {
-    if (state.hoeHoldTimeoutId) {
-      clearTimeout(state.hoeHoldTimeoutId);
-      state.hoeHoldTimeoutId = null;
-    }
-  }
-
   function cancelBuildingHold() {
     if (state.buildingHoldTimeoutId) {
       clearTimeout(state.buildingHoldTimeoutId);
@@ -68,6 +61,8 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         hudHandlingPointer = true;
         e.preventDefault();
         return;
+      } else {
+        gameHud.closeAllMenus();
       }
     }
 
@@ -82,7 +77,6 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.pinchStartScale = state.scale;
       state.pinchCenter = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
       state.tapStart = null;
-      cancelHoeHold();
       cancelBuildingHold();
     } else if (state.activePointers.size === 1) {
       state.isPinching = false;
@@ -90,22 +84,8 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       state.dragStart = { x: e.clientX, y: e.clientY };
       state.dragOffsetStart = { x: state.offsetX, y: state.offsetY };
       state.tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now() };
-      if (state.activeMode === "harvest") {
-        const tile = viewport.tileFromClient(e.clientX, e.clientY);
-        if (tile) {
-          const targets = actions.collectHoeDestroyTargets(tile.row, tile.col);
-          if (targets.length > 0) {
-            const destroyTargets = targets.slice();
-            state.hoeHoldTimeoutId = setTimeout(() => {
-              state.hoeHoldTimeoutId = null;
-              state.hoeHoldTriggered = true;
-              const count = destroyTargets.length;
-              const label = count === 1 ? "crop" : "crops";
-              openConfirmModal(`Destroy ${count} ${label}? No money will be earned.`, () => destroyTargets.forEach((k) => actions.destroyPlot(k)), count === 1 ? "Destroy Crop" : "Destroy Crops");
-            }, config.hoeDestroyWindowMs);
-          }
-        }
-      } else if (state.activeMode === "build" || state.activeMode === "landscape") {
+
+      if (state.activeMode === "build" || state.activeMode === "landscape") {
         const tile = viewport.tileFromClient(e.clientX, e.clientY);
         if (tile) {
           const kind = state.activeMode === "landscape" ? "landscape" : "building";
@@ -158,7 +138,6 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         const dy = e.clientY - state.tapStart.y;
         if (dx * dx + dy * dy > 25) {
           state.tapStart = null;
-          cancelHoeHold();
           cancelBuildingHold();
         }
       }
@@ -174,15 +153,13 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       return;
     }
 
-    cancelHoeHold();
     cancelBuildingHold();
     state.activePointers.delete(e.pointerId);
     canvas.releasePointerCapture(e.pointerId);
     if (state.activePointers.size < 2) state.isPinching = false;
     if (state.activePointers.size === 0) state.isDragging = false;
 
-    if (state.hoeHoldTriggered || state.buildingHoldTriggered) {
-      state.hoeHoldTriggered = false;
+    if (state.buildingHoldTriggered) {
       state.buildingHoldTriggered = false;
       state.tapStart = null;
     } else if (state.tapStart && state.tapStart.id === e.pointerId) {
@@ -228,11 +205,9 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     canvas.addEventListener("wheel", onWheel, { passive: false });
 
     document.addEventListener("pointerleave", () => {
-      cancelHoeHold();
       cancelBuildingHold();
     });
   }
 
   return { bind, updateHoverFromEvent };
 }
-

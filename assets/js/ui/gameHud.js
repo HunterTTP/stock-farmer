@@ -20,28 +20,28 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     };
 
     const COLORS = {
-        toolbarBg: "rgba(35, 30, 25, 0.96)",
-        toolbarBorder: "rgba(85, 75, 60, 0.6)",
-        buttonBg: "rgba(55, 48, 40, 0.92)",
-        buttonHover: "rgba(70, 60, 48, 0.95)",
-        buttonActive: "rgba(120, 70, 30, 0.95)",
-        buttonBorder: "rgba(85, 75, 60, 0.5)",
-        buttonActiveBorder: "rgba(230, 140, 60, 0.9)",
-        panelBg: "rgba(30, 26, 22, 0.97)",
-        panelBorder: "rgba(85, 75, 60, 0.5)",
-        itemBg: "rgba(45, 40, 35, 0.85)",
-        itemHover: "rgba(60, 52, 44, 0.92)",
-        itemSelected: "rgba(140, 80, 30, 0.25)",
-        itemSelectedBorder: "rgba(230, 140, 60, 0.9)",
-        text: "#e8e4dc",
-        textSecondary: "rgba(180, 170, 155, 0.85)",
-        accent: "#e6913c",
-        accentDark: "#c97020",
-        money: "#f0c830",
-        moneyBg: "rgba(35, 30, 25, 0.92)",
+        toolbarBg: "rgba(38, 38, 38, 0.96)",
+        toolbarBorder: "rgba(80, 80, 80, 0.6)",
+        buttonBg: "rgba(50, 50, 50, 0.92)",
+        buttonHover: "rgba(60, 60, 60, 0.95)",
+        buttonActive: "rgba(70, 85, 100, 0.95)",
+        buttonBorder: "rgba(80, 80, 80, 0.5)",
+        buttonActiveBorder: "rgba(96, 165, 194, 0.9)",
+        panelBg: "rgba(32, 32, 32, 0.97)",
+        panelBorder: "rgba(80, 80, 80, 0.5)",
+        itemBg: "rgba(45, 45, 45, 0.85)",
+        itemHover: "rgba(55, 55, 55, 0.92)",
+        itemSelected: "rgba(70, 100, 120, 0.25)",
+        itemSelectedBorder: "rgba(96, 165, 194, 0.9)",
+        text: "#e0e0e0",
+        textSecondary: "rgba(165, 165, 165, 0.85)",
+        accent: "#60a5c2",
+        accentDark: "#4a8da0",
+        money: "#60a5c2",
+        moneyBg: "rgba(38, 38, 38, 0.92)",
         moneyLoss: "#d94040",
-        gold: "#f0c830",
-        goldDimmed: "rgba(240, 200, 48, 0.5)",
+        gold: "#60a5c2",
+        goldDimmed: "rgba(96, 165, 194, 0.5)",
         shadow: "rgba(0, 0, 0, 0.45)",
     };
 
@@ -85,11 +85,10 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, layout);
 
         const moneyHeight = 34;
-        const moneyText = formatCurrency(state.totalMoney, true);
+        const moneyText = "$" + formatCurrency(state.totalMoney, true);
         ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
         const moneyTextWidth = ctx.measureText(moneyText).width;
-        const coinSize = 22;
-        const moneyWidth = 10 + coinSize + 8 + moneyTextWidth + 14;
+        const moneyWidth = 24 + moneyTextWidth;
         const moneyX = canvasWidth - moneyWidth - layout.padding;
         const moneyY = layout.padding;
         const moneyDisplay = { id: "money", type: "moneyDisplay", x: moneyX, y: moneyY, width: moneyWidth, height: moneyHeight };
@@ -151,7 +150,8 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             textWidth = Math.max(labelWidth, metaWidth);
         }
 
-        return Math.ceil(paddingLeft + previewWidth + textWidth + chevronWidth + paddingRight);
+        // Make dropdowns 30% wider for better usability
+        return Math.ceil((paddingLeft + previewWidth + textWidth + chevronWidth + paddingRight) * 1.3);
     }
 
     function getDropdownPreviewData(dropdown) {
@@ -244,7 +244,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.save();
 
         if (isActive || isHover || isPressed) {
-            ctx.shadowColor = isActive ? "rgba(134, 194, 96, 0.3)" : "rgba(0, 0, 0, 0.2)";
+            ctx.shadowColor = isActive ? "rgba(96, 165, 194, 0.3)" : "rgba(0, 0, 0, 0.2)";
             ctx.shadowBlur = isActive ? 12 : 8;
             ctx.shadowOffsetY = 2;
         }
@@ -255,7 +255,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         if (isActive) {
             bgColor = COLORS.buttonActive;
         } else if (isPressed) {
-            bgColor = "rgba(72, 58, 42, 0.95)";
+            bgColor = "rgba(60, 60, 60, 0.95)";
         } else if (isHover) {
             bgColor = COLORS.buttonHover;
         } else {
@@ -396,9 +396,9 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
         let bgColor;
         if (isOpen) {
-            bgColor = "rgba(72, 58, 44, 0.98)";
+            bgColor = "rgba(60, 60, 60, 0.98)";
         } else if (isHover) {
-            bgColor = "rgba(82, 68, 52, 0.95)";
+            bgColor = "rgba(70, 70, 70, 0.95)";
         } else {
             bgColor = COLORS.panelBg;
         }
@@ -542,7 +542,6 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
     function drawMoneyDisplay(elem) {
         const radius = 16;
-        const coinSize = 22;
 
         ctx.save();
         ctx.shadowColor = COLORS.shadow;
@@ -554,21 +553,17 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.fill();
 
         ctx.shadowColor = "transparent";
-        ctx.strokeStyle = "rgba(244, 208, 63, 0.4)";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#d4af37";
+        ctx.lineWidth = 1.5;
         ctx.stroke();
-
-        const coinX = elem.x + 10;
-        const coinY = elem.y + (elem.height - coinSize) / 2;
-        drawCoinIcon(coinX, coinY, coinSize);
 
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.font = `700 13px system-ui, -apple-system, sans-serif`;
-        ctx.fillStyle = COLORS.money;
+        ctx.fillStyle = "#d4af37";
 
-        const moneyText = formatCurrency(state.totalMoney, true);
-        const textX = coinX + coinSize + 6;
+        const moneyText = "$" + formatCurrency(state.totalMoney, true);
+        const textX = elem.x + 12;
         const textY = elem.y + elem.height / 2;
         ctx.fillText(moneyText, textX, textY);
 
@@ -583,23 +578,23 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.save();
 
         const gradient = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
-        gradient.addColorStop(0, "#ffe066");
-        gradient.addColorStop(0.7, "#f4d03f");
-        gradient.addColorStop(1, "#c9a227");
+        gradient.addColorStop(0, "#96c8e8");
+        gradient.addColorStop(0.7, "#60a5c2");
+        gradient.addColorStop(1, "#4a8da0");
 
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        ctx.strokeStyle = "rgba(169, 130, 30, 0.6)";
+        ctx.strokeStyle = "rgba(100, 150, 180, 0.6)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.font = `bold ${size * 0.55}px system-ui`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = "rgba(139, 100, 20, 0.8)";
+        ctx.fillStyle = "rgba(50, 90, 110, 0.8)";
         ctx.fillText("$", cx, cy + 1);
 
         ctx.restore();
@@ -619,7 +614,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.fillStyle = COLORS.moneyBg;
         ctx.fill();
 
-        ctx.strokeStyle = isGain ? "rgba(134, 194, 96, 0.5)" : "rgba(231, 76, 60, 0.5)";
+        ctx.strokeStyle = isGain ? "rgba(96, 165, 194, 0.5)" : "rgba(231, 76, 60, 0.5)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
@@ -779,7 +774,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const radius = 4;
         ctx.save();
         drawRoundedRect(x, y, size, size, radius);
-        ctx.fillStyle = "rgba(45, 40, 35, 0.9)";
+        ctx.fillStyle = "rgba(45, 45, 45, 0.9)";
         ctx.fill();
         ctx.restore();
 
@@ -790,22 +785,22 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         ctx.save();
 
         const gradient = ctx.createRadialGradient(cx - coinR * 0.25, cy - coinR * 0.25, 0, cx, cy, coinR);
-        gradient.addColorStop(0, "#ffe066");
-        gradient.addColorStop(0.6, "#f0c830");
-        gradient.addColorStop(1, "#c9a227");
+        gradient.addColorStop(0, "#96c8e8");
+        gradient.addColorStop(0.6, "#60a5c2");
+        gradient.addColorStop(1, "#4a8da0");
 
         ctx.beginPath();
         ctx.arc(cx, cy, coinR, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-        ctx.strokeStyle = "rgba(169, 130, 30, 0.7)";
+        ctx.strokeStyle = "rgba(100, 150, 180, 0.7)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.font = `bold ${coinR * 1.2}px system-ui`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = "rgba(139, 100, 20, 0.9)";
+        ctx.fillStyle = "rgba(50, 90, 110, 0.9)";
         ctx.fillText("$", cx, cy + 0.5);
 
         ctx.restore();
@@ -857,7 +852,20 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
         const menuHeight = menuContentHeight + 16;
         const menuWidth = measureMenuWidth(items, layout);
-        const menuX = dropdown.x;
+
+        // Ensure menu doesn't go off screen horizontally
+        const padding = layout.padding || 12;
+        let menuX = dropdown.x;
+        const canvasWidth = canvas.clientWidth;
+
+        // Clamp menu position to stay on screen
+        if (menuX + menuWidth > canvasWidth - padding) {
+            menuX = canvasWidth - menuWidth - padding;
+        }
+        if (menuX < padding) {
+            menuX = padding;
+        }
+
         const menuY = dropdown.y - menuHeight - 10;
         const radius = 14;
         const previewSize = 36;
@@ -957,12 +965,12 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
             const scrollThumbY = scrollTrackY + (scrollOffset / maxScroll) * (scrollTrackHeight - scrollThumbHeight);
 
             ctx.save();
-            ctx.fillStyle = "rgba(100, 85, 65, 0.5)";
+            ctx.fillStyle = "rgba(80, 80, 80, 0.5)";
             ctx.beginPath();
             ctx.roundRect(scrollTrackX, scrollTrackY, 5, scrollTrackHeight, 2.5);
             ctx.fill();
 
-            ctx.fillStyle = "rgba(180, 160, 130, 0.8)";
+            ctx.fillStyle = "rgba(96, 165, 194, 0.8)";
             ctx.beginPath();
             ctx.roundRect(scrollTrackX, scrollThumbY, 5, scrollThumbHeight, 2.5);
             ctx.fill();
@@ -999,20 +1007,26 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
 
     function getMenuItems(dropdown) {
         if (dropdown.id === "cropSelect") {
-            return Object.values(crops).map((crop) => {
+            const cropKeys = Object.keys(crops);
+            return Object.values(crops).map((crop, index) => {
                 const status = getCropStatus(crop);
                 let meta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
                 if (status) {
                     meta = `Planted: ${status.count} | ${status.harvestText}`;
                 }
+
+                const allPreviousUnlocked = index === 0 || cropKeys.slice(0, index).every(key => crops[key].unlocked);
+                const canUnlock = allPreviousUnlocked && state.totalMoney >= (crop.unlockCost || 0);
+
                 return {
                     id: crop.id,
                     label: crop.name,
                     meta,
                     locked: !crop.unlocked,
                     unlockCost: crop.unlockCost || 0,
-                    canAfford: state.totalMoney >= (crop.unlockCost || 0),
+                    canAfford: canUnlock,
                     imageUrl: `images/crops/${crop.id}/${crop.id}-phase-4.png`,
+                    requiresPrevious: !allPreviousUnlocked,
                 };
             });
         }
@@ -1182,7 +1196,20 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         const menuContentHeight = Math.min(totalContentHeight, maxVisibleHeight);
         const menuHeight = menuContentHeight + 16;
         const menuWidth = measureMenuWidth(items, layout);
-        const menuX = dropdown.x;
+
+        // Ensure menu doesn't go off screen horizontally (same as drawMenu)
+        const padding = layout.padding || 12;
+        let menuX = dropdown.x;
+        const canvasWidth = canvas.clientWidth;
+
+        // Clamp menu position to stay on screen
+        if (menuX + menuWidth > canvasWidth - padding) {
+            menuX = canvasWidth - menuWidth - padding;
+        }
+        if (menuX < padding) {
+            menuX = padding;
+        }
+
         const menuY = dropdown.y - menuHeight - 8;
         const scrollable = totalContentHeight > maxVisibleHeight;
         const maxScroll = scrollable ? totalContentHeight - maxVisibleHeight : 0;
@@ -1329,7 +1356,6 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
         if (mode === state.activeMode) return;
 
         state.activeMode = mode;
-        state.hoeSelected = mode === "harvest";
         hudState.openMenuKey = null;
         state.needsRender = true;
         saveState();

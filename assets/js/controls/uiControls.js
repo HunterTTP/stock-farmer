@@ -191,7 +191,6 @@
     if (nextMode === "build") ensureBuildDefaults();
     if (nextMode === "landscape") ensureLandscapeDefaults();
     state.activeMode = nextMode;
-    state.hoeSelected = nextMode === "harvest";
     closeAllMenus();
     updateModeButtonsUI();
     renderSizeMenu();
@@ -313,13 +312,6 @@
 
       const left = document.createElement("div");
       left.className = "flex items-center gap-2";
-      if (variant === "harvest") {
-        const icon = document.createElement("img");
-        icon.src = "images/hoe/hoe-phase-1.png";
-        icon.alt = "Hoe";
-        icon.className = "w-5 h-5 object-contain";
-        left.appendChild(icon);
-      }
       const label = document.createElement("span");
       label.textContent = size.name;
       left.appendChild(label);

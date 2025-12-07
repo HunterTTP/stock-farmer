@@ -35,9 +35,6 @@ export function createInitialState(config) {
     previousCropKey: "wheat",
     selectedStockKey: null,
     selectedSizeKey: "single",
-    hoeSelected: false,
-    hoeHoldTimeoutId: null,
-    hoeHoldTriggered: false,
     buildingHoldTimeoutId: null,
     buildingHoldTriggered: false,
     lastSavedAt: 0,
@@ -76,9 +73,6 @@ export function applyDefaultSelection(state) {
   state.selectedSizeKey = "single";
   state.selectedBuildKey = null;
   state.activeMode = "plant";
-  state.hoeSelected = false;
-  state.hoeHoldTimeoutId = null;
-  state.hoeHoldTriggered = false;
   state.buildingHoldTimeoutId = null;
   state.buildingHoldTriggered = false;
   state.showTickerInfo = false;
@@ -293,12 +287,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
     if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
       state.activeMode = savedMode;
-    } else if (typeof data.hoeSelected === "boolean" && data.hoeSelected) {
-      state.activeMode = "harvest";
-    } else {
-      state.activeMode = "plant";
     }
-    state.hoeSelected = state.activeMode === "harvest";
     if (Number.isFinite(data.scale)) state.savedScaleFromState = data.scale;
     if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
     if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
@@ -335,7 +324,6 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     previousCropKey: state.previousCropKey,
     selectedSizeKey: state.selectedSizeKey,
     activeMode: state.activeMode,
-    hoeSelected: state.activeMode === "harvest",
     showStats: showTimer,
     showTimerInfo: showTimer,
     statBaseSize: state.statBaseSize,
@@ -464,12 +452,9 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
   if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
     state.activeMode = savedMode;
-  } else if (typeof data.hoeSelected === "boolean" && data.hoeSelected) {
-    state.activeMode = "harvest";
   } else {
     state.activeMode = "plant";
   }
-  state.hoeSelected = state.activeMode === "harvest";
   if (Number.isFinite(data.scale)) state.savedScaleFromState = data.scale;
   if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
   if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
