@@ -43,7 +43,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       const crop = state.selectedCropKey ? crops[state.selectedCropKey] : null;
       return crop ? crop.name : "Select Crop";
     }
-    if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
+    if (dropdown.id === "sizeSelect") {
       const size = sizes[state.selectedSizeKey];
       return size ? size.name : "Size";
     }
@@ -104,7 +104,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       }
       return { imageUrl: null };
     }
-    if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
+    if (dropdown.id === "sizeSelect") {
       const size = sizes[state.selectedSizeKey];
       return { iconType: "faSquares", gridSize: size?.size || 1 };
     }
@@ -160,7 +160,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       });
     }
 
-    if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") {
+    if (dropdown.id === "sizeSelect") {
       const sizeKeys = Object.keys(sizes);
       return sizeKeys.map((key, index) => {
         const size = sizes[key];
@@ -263,7 +263,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
 
   const isItemSelected = (dropdown, item) => {
     if (dropdown.id === "cropSelect") return item.id === state.selectedCropKey;
-    if (dropdown.id === "sizeSelect" || dropdown.id === "harvestSizeSelect") return item.id === state.selectedSizeKey;
+    if (dropdown.id === "sizeSelect") return item.id === state.selectedSizeKey;
     if (dropdown.id === "landscapeSelect") return item.id === state.selectedLandscapeKey;
     if (dropdown.id === "buildSelect") return item.id === state.selectedBuildKey;
     return false;

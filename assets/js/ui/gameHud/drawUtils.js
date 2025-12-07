@@ -1,6 +1,5 @@
 const MODE_ICONS = {
   plant: "\uf4d8",
-  harvest: "\uf4c0",
   landscape: "\uf1bb",
   build: "\uf6e3",
   trade: "\uf201",

@@ -19,7 +19,7 @@ export function createUIControls({
   clearCache,
   resetSettings,
 }) {
-  const modeOrder = ["plant", "harvest", "build", "landscape"];
+  const modeOrder = ["plant", "landscape", "build"];
   const sellIconSrc =
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d1d5db'><path d='M9 3h6a1 1 0 0 1 .99.86L16 5h4a1 1 0 1 1 0 2h-1.1l-1.13 12.44A2 2 0 0 1 15.78 21H8.22a2 2 0 0 1-1.99-1.56L5.1 7H4a1 1 0 0 1 0-2h4l.01-1.14A1 1 0 0 1 9 3Zm5.9 4H9.1l1.03 11h4.74L14.9 7Z'/></svg>";
   const uiState = {
@@ -84,7 +84,6 @@ export function createUIControls({
     }
     const size = sizeMenus.currentSizeOption();
     if (dom.plantSizeLabel) dom.plantSizeLabel.textContent = size ? size.name : "Size";
-    if (dom.harvestSizeLabel) dom.harvestSizeLabel.textContent = size ? size.name : "Size";
     structureMenus.ensureBuildDefaults();
     structureMenus.updateBuildLabel();
     structureMenus.ensureLandscapeDefaults();
@@ -111,7 +110,6 @@ export function createUIControls({
   const renderDropdownGroups = () => {
     const active = state.activeMode || "plant";
     if (dom.plantDropdowns) dom.plantDropdowns.classList.toggle("hidden", active !== "plant");
-    if (dom.harvestDropdowns) dom.harvestDropdowns.classList.toggle("hidden", active !== "harvest");
     if (dom.buildDropdowns) dom.buildDropdowns.classList.toggle("hidden", active !== "build");
     if (dom.landscapeDropdowns) dom.landscapeDropdowns.classList.toggle("hidden", active !== "landscape");
   };
@@ -120,7 +118,6 @@ export function createUIControls({
     const active = state.activeMode || "plant";
     const entries = [
       { key: "plant", el: dom.modePlantBtn },
-      { key: "harvest", el: dom.modeHarvestBtn },
       { key: "build", el: dom.modeBuildBtn },
       { key: "landscape", el: dom.modeLandscapeBtn },
     ];
@@ -250,13 +247,11 @@ export function createUIControls({
     }
 
     if (dom.modePlantBtn) dom.modePlantBtn.addEventListener("click", () => setActiveMode("plant"));
-    if (dom.modeHarvestBtn) dom.modeHarvestBtn.addEventListener("click", () => setActiveMode("harvest"));
     if (dom.modeBuildBtn) dom.modeBuildBtn.addEventListener("click", () => setActiveMode("build"));
     if (dom.modeLandscapeBtn) dom.modeLandscapeBtn.addEventListener("click", () => setActiveMode("landscape"));
 
     bindMenuToggle(dom.plantCropButton, "plantCrop");
     bindMenuToggle(dom.plantSizeButton, "plantSize");
-    bindMenuToggle(dom.harvestSizeButton, "harvestSize");
     bindMenuToggle(dom.buildSelectButton, "buildSelect");
     bindMenuToggle(dom.landscapeSelectButton, "landscapeSelect");
 

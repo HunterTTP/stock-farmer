@@ -46,23 +46,13 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     if (active === "plant") {
       let cropW = measureDropdownWidth("cropSelect", layout);
       let sizeW = measureDropdownWidth("sizeSelect", layout);
-      let totalW = cropW + layout.gap + sizeW;
-
-      if (totalW > availableWidth) {
-        const scale = availableWidth / totalW;
-        cropW = Math.floor(cropW * scale);
-        sizeW = Math.floor(sizeW * scale);
-        totalW = cropW + layout.gap + sizeW;
-      }
-
-      const startX = minX + (availableWidth - totalW) / 2;
-      dropdowns.push({ id: "cropSelect", type: "dropdown", x: startX, y, width: cropW, height, menu: "cropMenu", maxMenuWidth });
-      dropdowns.push({ id: "sizeSelect", type: "dropdown", x: startX + cropW + layout.gap, y, width: sizeW, height, menu: "sizeMenu", maxMenuWidth });
-    } else if (active === "harvest") {
-      let sizeW = measureDropdownWidth("harvestSizeSelect", layout);
-      if (sizeW > availableWidth) sizeW = availableWidth;
-      const startX = minX + (availableWidth - sizeW) / 2;
-      dropdowns.push({ id: "harvestSizeSelect", type: "dropdown", x: startX, y, width: sizeW, height, menu: "harvestSizeMenu", maxMenuWidth });
+      let width = Math.max(cropW, sizeW);
+      if (width > availableWidth) width = availableWidth;
+      const startX = minX + (availableWidth - width) / 2;
+      const sizeY = y;
+      const cropY = y - height - layout.gap;
+      dropdowns.push({ id: "cropSelect", type: "dropdown", x: startX, y: cropY, width, height, menu: "cropMenu", maxMenuWidth });
+      dropdowns.push({ id: "sizeSelect", type: "dropdown", x: startX, y: sizeY, width, height, menu: "sizeMenu", maxMenuWidth });
     } else if (active === "landscape") {
       let w = measureDropdownWidth("landscapeSelect", layout);
       if (w > availableWidth) w = availableWidth;

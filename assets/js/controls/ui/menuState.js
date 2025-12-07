@@ -2,7 +2,6 @@ export function createMenuState({ dom, uiState, renderCropOptions, renderBuildOp
   const menuMap = {
     plantCrop: () => ({ button: dom.plantCropButton, menu: dom.plantCropMenu }),
     plantSize: () => ({ button: dom.plantSizeButton, menu: dom.plantSizeMenu }),
-    harvestSize: () => ({ button: dom.harvestSizeButton, menu: dom.harvestSizeMenu }),
     buildSelect: () => ({ button: dom.buildSelectButton, menu: dom.buildSelectMenu }),
     landscapeSelect: () => ({ button: dom.landscapeSelectButton, menu: dom.landscapeSelectMenu }),
   };

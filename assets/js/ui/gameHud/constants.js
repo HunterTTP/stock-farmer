@@ -1,4 +1,4 @@
-export const MODE_ORDER = ["plant", "harvest", "landscape", "build", "trade"];
+export const MODE_ORDER = ["plant", "landscape", "build", "trade"];
 
 export const LAYOUT = {
   mobile: { modeButtonSize: 46, minModeButtonSize: 44, maxModeButtonSize: 78, gap: 10, padding: 10, fontSize: 12, iconSize: 22, toolbarPadding: 8, toolbarMaxWidth: 680 },

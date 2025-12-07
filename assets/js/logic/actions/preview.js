@@ -1,5 +1,11 @@
 export function buildPreview(context, determineActionForTile) {
   const { state, world, config, crops } = context;
+  const getCropGrowTimeMs = (crop) => {
+    if (!crop) return 0;
+    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
+    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
+    return 0;
+  };
 
   function simulateTileActionForPreview(action, key, previewState, nowMs, getFilled, getPlot) {
     if (!action || action.type === "none") return false;
@@ -8,7 +14,9 @@ export function buildPreview(context, determineActionForTile) {
         const existingPlot = getPlot(key);
         const plotCrop = existingPlot ? crops[existingPlot.cropKey] : null;
         if (!existingPlot || !plotCrop) return false;
-        const ready = nowMs - existingPlot.plantedAt >= plotCrop.growTimeMs;
+        const plantedAt = Number(existingPlot.plantedAt);
+        const growMs = getCropGrowTimeMs(plotCrop);
+        const ready = Number.isFinite(plantedAt) && nowMs - plantedAt >= growMs;
         if (!ready) return false;
         const value = Math.max(0, plotCrop.baseValue);
         previewState.money += value;
@@ -38,6 +46,7 @@ export function buildPreview(context, determineActionForTile) {
         const crop = crops[action.cropKey];
         if (!crop || !crop.unlocked) return false;
         if (getPlot(key) || !getFilled(key)) return false;
+        if (world.structureTiles && world.structureTiles.has(key)) return false;
         if (typeof crop.limit === "number" && crop.limit >= 0 && previewState.placed[crop.id] >= crop.limit) return false;
         const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;
         if (previewState.money < plantCost) return false;
@@ -71,8 +80,17 @@ export function buildPreview(context, determineActionForTile) {
       return results;
     }
 
-    const isHarvestMode = mode === "harvest";
-    const baseAction = isHarvestMode ? null : determineActionForTile(baseRow, baseCol, nowMs);
+    const sizeClamped = Math.max(1, size || 1);
+    const baseAction = determineActionForTile(baseRow, baseCol, nowMs);
+    if (!baseAction || baseAction.type === "none") {
+      for (let dr = 0; dr < sizeClamped; dr++) {
+        for (let dc = 0; dc < sizeClamped; dc++) {
+          results.push({ row: baseRow + dr, col: baseCol + dc, allowed: false });
+        }
+      }
+      return results;
+    }
+
     const placed = {};
     Object.values(crops).forEach((c) => {
       placed[c.id] = typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
@@ -87,8 +105,8 @@ export function buildPreview(context, determineActionForTile) {
       if (previewState.plotsRemoved.has(key)) return null;
       return world.plots.get(key) || null;
     };
-    for (let dr = 0; dr < size; dr++) {
-      for (let dc = 0; dc < size; dc++) {
+    for (let dr = 0; dr < sizeClamped; dr++) {
+      for (let dc = 0; dc < sizeClamped; dc++) {
         const row = baseRow + dr;
         const col = baseCol + dc;
         const key = row + "," + col;
@@ -97,8 +115,7 @@ export function buildPreview(context, determineActionForTile) {
           results.push({ row, col, allowed });
           continue;
         }
-        const actionForCell = isHarvestMode ? determineActionForTile(row, col, nowMs) : baseAction;
-        allowed = simulateTileActionForPreview(actionForCell, key, previewState, nowMs, getFilled, getPlot);
+        allowed = simulateTileActionForPreview(baseAction, key, previewState, nowMs, getFilled, getPlot);
         results.push({ row, col, allowed });
       }
     }

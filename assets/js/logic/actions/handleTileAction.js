@@ -2,9 +2,15 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
   const { state, world, config, crops, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
   const { harvestPlot, destroyPlot, recomputeLastPlantedForCrop } = cropOps;
   const { removeStructure, getStructKind, getStructureAtKey, getPlacementSource, canPlaceStructure } = helpers;
+  const getCropGrowTimeMs = (crop) => {
+    if (!crop) return 0;
+    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
+    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
+    return 0;
+  };
 
   function handleTileAction(row, col, action) {
-    if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { success: false };
+    if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { success: false, reason: "Out of bounds" };
     const key = row + "," + col;
     const resolvedAction = action || determineActionForTile(row, col);
     if (!resolvedAction || resolvedAction.type === "none") return { success: false, reason: resolvedAction ? resolvedAction.reason : undefined };
@@ -15,8 +21,10 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         if (!existingPlot) return { success: false, reason: "Nothing to harvest" };
         const crop = crops[existingPlot.cropKey];
         if (!crop) return { success: false, reason: "Unknown crop" };
-        const elapsed = Date.now() - existingPlot.plantedAt;
-        if (elapsed >= crop.growTimeMs) {
+        const plantedAt = Number(existingPlot.plantedAt);
+        const growMs = getCropGrowTimeMs(crop);
+        const elapsed = Number.isFinite(plantedAt) ? Date.now() - plantedAt : 0;
+        if (elapsed >= growMs) {
           harvestPlot(key);
           return { success: true };
         }
@@ -68,7 +76,9 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const cropKey = resolvedAction && resolvedAction.cropKey ? resolvedAction.cropKey : state.selectedCropKey;
         const crop = crops[cropKey];
         if (!crop || !crop.unlocked) return { success: false, reason: "Crop locked" };
-        if (world.plots.has(key)) return { success: false, reason: "Tile already planted" };
+        const structHere = getStructureAtKey(key) || (world.structureTiles && world.structureTiles.has(key));
+        if (structHere) return { success: false, reason: "Structure here" };
+        if (world.plots.has(key)) return { success: false, reason: "Already planted" };
         if (!world.filled.has(key)) return { success: false, reason: "Need farmland first" };
         if (typeof crop.limit === "number" && crop.limit >= 0 && crop.placed >= crop.limit) return { success: false, reason: "Crop limit reached" };
         const plantCost = typeof crop.placeCost === "number" ? crop.placeCost : 0;

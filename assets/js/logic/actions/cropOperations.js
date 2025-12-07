@@ -1,5 +1,11 @@
 export function buildCropOperations(context) {
   const { state, world, crops, config, onMoneyChanged, renderCropOptions, saveState, currentSizeOption } = context;
+  const getCropGrowTimeMs = (crop) => {
+    if (!crop) return 0;
+    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
+    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
+    return 0;
+  };
 
   function recomputeLastPlantedForCrop(cropKey) {
     const crop = crops[cropKey];
@@ -42,7 +48,6 @@ export function buildCropOperations(context) {
   }
 
   function collectHoeDestroyTargets(baseRow, baseCol) {
-    if (state.activeMode !== "harvest") return [];
     const targets = [];
     const sizeOption = currentSizeOption();
     const size = Math.max(1, sizeOption.size || 1);
@@ -55,7 +60,9 @@ export function buildCropOperations(context) {
         const key = row + "," + col;
         const plot = world.plots.get(key);
         const crop = plot ? crops[plot.cropKey] : null;
-        if (plot && crop && now - plot.plantedAt < crop.growTimeMs) targets.push(key);
+        const plantedAt = Number(plot?.plantedAt);
+        const growMs = getCropGrowTimeMs(crop);
+        if (plot && crop && Number.isFinite(plantedAt) && now - plantedAt < growMs) targets.push(key);
       }
     }
     return targets;

@@ -102,14 +102,14 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     else if (typeof data.hudVisible === "boolean") state.hudOpacity = data.hudVisible ? 1.0 : 0.0;
 
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
-    if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
+    if (savedMode === "plant" || savedMode === "build" || savedMode === "landscape") {
       state.activeMode = savedMode;
     }
     if (Number.isFinite(data.scale)) state.savedScaleFromState = data.scale;
     if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
     if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
 
-    if (state.activeMode !== "harvest" && state.selectedCropKey && crops[state.selectedCropKey]) {
+    if (state.selectedCropKey && crops[state.selectedCropKey]) {
       state.previousCropKey = state.selectedCropKey;
     }
 

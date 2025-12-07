@@ -1,6 +1,12 @@
 export function buildDetermineAction(context, helpers) {
   const { state, world, config, crops, formatCurrency } = context;
   const { getStructureAtKey, getStructKind, getPlacementSource, canPlaceStructure } = helpers;
+  const getCropGrowTimeMs = (crop) => {
+    if (!crop) return 0;
+    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
+    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
+    return 0;
+  };
 
   function determineActionForTile(row, col, nowMs = Date.now()) {
     if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { type: "none", reason: "Out of bounds" };
@@ -8,7 +14,6 @@ export function buildDetermineAction(context, helpers) {
     const existingPlot = world.plots.get(key);
     const existingStructKey = getStructureAtKey(key);
     const mode = state.activeMode || "plant";
-    const isHarvestMode = mode === "harvest";
     const isBuildMode = mode === "build";
     const isLandscapeMode = mode === "landscape";
     const isPlacementMode = isBuildMode || isLandscapeMode;
@@ -77,17 +82,17 @@ export function buildDetermineAction(context, helpers) {
       if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
       return { type: "placeStructure", structureId: selection.id, kind, row, col };
     }
-    if (isHarvestMode) {
-      if (existingPlot) {
-        const crop = crops[existingPlot.cropKey];
-        if (crop && nowMs - existingPlot.plantedAt >= crop.growTimeMs) return { type: "harvest" };
-        return { type: "none", reason: "Not ready to harvest" };
-      }
-      return { type: "none", reason: "Nothing to harvest" };
-    }
 
     if (existingStructKey) return { type: "none", reason: "Structure here" };
-    if (existingPlot) return { type: "none", reason: "Already planted" };
+    if (existingPlot) {
+      const crop = crops[existingPlot.cropKey];
+      const plantedAt = Number(existingPlot.plantedAt);
+      const growMs = getCropGrowTimeMs(crop);
+      if (crop && Number.isFinite(plantedAt) && growMs >= 0 && nowMs - plantedAt >= growMs) {
+        return { type: "harvest" };
+      }
+      return { type: "none", reason: "Already planted" };
+    }
     const cropSelection = state.selectedCropKey ? crops[state.selectedCropKey] : null;
     if (!cropSelection) return { type: "none", reason: "Select a crop" };
 

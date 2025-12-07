@@ -148,7 +148,7 @@ export function createHudInteractions({
   const unlockItem = (dropdownId, itemId) => {
     if (dropdownId === "cropSelect") {
       if (crops[itemId]) crops[itemId].unlocked = true;
-    } else if (dropdownId === "sizeSelect" || dropdownId === "harvestSizeSelect") {
+    } else if (dropdownId === "sizeSelect") {
       if (sizes[itemId]) sizes[itemId].unlocked = true;
     }
   };
@@ -157,7 +157,7 @@ export function createHudInteractions({
     if (dropdownId === "cropSelect") {
       state.selectedCropKey = itemId;
       state.previousCropKey = itemId;
-    } else if (dropdownId === "sizeSelect" || dropdownId === "harvestSizeSelect") {
+    } else if (dropdownId === "sizeSelect") {
       state.selectedSizeKey = itemId;
     } else if (dropdownId === "landscapeSelect") {
       state.selectedLandscapeKey = itemId;

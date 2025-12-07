@@ -115,7 +115,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   state.showPctInfo = false;
   state.showSellInfo = false;
   const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
-  if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
+  if (savedMode === "plant" || savedMode === "build" || savedMode === "landscape") {
     state.activeMode = savedMode;
   } else {
     state.activeMode = "plant";
@@ -124,7 +124,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   if (Number.isFinite(data.offsetX)) state.savedOffsetX = data.offsetX;
   if (Number.isFinite(data.offsetY)) state.savedOffsetY = data.offsetY;
 
-  if (state.activeMode !== "harvest" && state.selectedCropKey && crops[state.selectedCropKey]) {
+  if (state.selectedCropKey && crops[state.selectedCropKey]) {
     state.previousCropKey = state.selectedCropKey;
   }
 

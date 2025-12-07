@@ -76,7 +76,6 @@ export function createSizeMenus({
 
   function renderSizeMenu(onSelectionChange = null) {
     renderSizeMenuFor(dom.plantSizeMenu, "text", onSelectionChange);
-    renderSizeMenuFor(dom.harvestSizeMenu, "harvest", onSelectionChange);
     if (onSelectionChange) onSelectionChange();
   }
 

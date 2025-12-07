@@ -10,21 +10,24 @@ export function buildTapHandler(context, determineActionForTile, handleTileActio
     const size = isPlacementMode ? 1 : sizeOption.size || 1;
     const baseRow = tile.row;
     const baseCol = tile.col;
-    const isHarvestMode = state.activeMode === "harvest";
-    const baseAction = isHarvestMode ? null : determineActionForTile(baseRow, baseCol);
+    const baseAction = determineActionForTile(baseRow, baseCol);
+    if (!baseAction || baseAction.type === "none") {
+      const reason = baseAction?.reason;
+      if (reason) showActionError(reason, clientX, clientY);
+      return;
+    }
     let failure = null;
     let hadSuccess = false;
     for (let dr = 0; dr < size; dr++) {
       for (let dc = 0; dc < size; dc++) {
         const row = baseRow + dr;
         const col = baseCol + dc;
-        const actionForCell = isHarvestMode ? determineActionForTile(row, col) : baseAction;
-        const result = handleTileAction(row, col, actionForCell);
+        const result = handleTileAction(row, col, baseAction);
         if (result.success) {
           hadSuccess = true;
           continue;
         }
-        const reason = (actionForCell && actionForCell.reason) || result.reason;
+        const reason = result.reason || baseAction.reason;
         if (!reason || failure) continue;
         failure = { reason, x: clientX, y: clientY };
       }
