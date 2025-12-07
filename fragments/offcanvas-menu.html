@@ -1,0 +1,83 @@
+<div id="navOverlay" class="fixed inset-0 bg-black/50 hidden z-30"></div>
+
+<div id="navOffcanvas"
+    class="fixed inset-y-0 right-0 w-72 max-w-full farm-bg text-white shadow-2xl transform translate-x-full transition-transform duration-200 z-40 flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b farm-border">
+        <h5 class="text-base font-semibold farm-text" id="navOffcanvasLabel">Settings</h5>
+        <button id="navClose" class="p-2 rounded-lg farm-btn focus:outline-none border farm-border">
+            <span class="sr-only">Close</span>
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+        </button>
+    </div>
+    <div class="flex-1 p-5 text-sm farm-text-secondary space-y-4 overflow-y-auto farm-bg offcanvas-scroll">
+        <div class="rounded-xl border farm-border farm-bg-card p-4 space-y-3 shadow-inner shadow-black/20">
+            <div class="flex items-center gap-3">
+                <div
+                    class="flex items-center justify-center h-10 w-10 rounded-full farm-bg-light border farm-border farm-text-secondary">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p id="offcanvasUsername" class="text-sm font-semibold farm-text truncate">Guest</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <button id="authTrigger"
+                    class="w-full text-sm font-semibold px-3 py-2 rounded-md btn-accent focus:outline-none">
+                    Log In
+                </button>
+                <button id="logoutBtn"
+                    class="w-full text-sm font-semibold px-3 py-2 rounded-md btn-accent focus:outline-none hidden">Log
+                    Out</button>
+            </div>
+        </div>
+
+        <div id="hudCardSlot"></div>
+
+        <div id="themeCardSlot"></div>
+
+        <div class="rounded-xl border farm-border farm-bg-card p-4 shadow-inner shadow-black/20 space-y-2">
+            <p class="text-xs uppercase tracking-wide farm-text-secondary mb-2">Admin</p>
+            <button
+                class="w-full border farm-border farm-btn farm-text text-sm font-semibold px-3 py-2 rounded-md flex items-center justify-center text-center"
+                id="recenterBtn">
+                Recenter View
+            </button>
+            <button
+                class="w-full border farm-border farm-btn farm-text text-sm font-semibold px-3 py-2 rounded-md flex items-center justify-center text-center"
+                id="installBtn" disabled>
+                Install App
+            </button>
+            <button
+                class="w-full border farm-border farm-btn farm-text text-sm font-semibold px-3 py-2 rounded-md flex items-center justify-center text-center"
+                id="resetSettingsBtn">
+                Reset Settings
+            </button>
+
+            <button
+                class="w-full border farm-border farm-btn farm-text text-sm font-semibold px-3 py-2 rounded-md flex items-center justify-center text-center"
+                id="clearCacheBtn">
+                Clear Cache
+            </button>
+            <button
+                class="w-full border border-red-700 text-sm font-semibold px-3 py-2 rounded-md hover:bg-red-800/80 bg-red-800/40 flex items-center justify-center text-center"
+                id="resetFarmBtn">
+                Reset Progress
+            </button>
+            <div id="moneyCheatCard" class="hidden pt-2">
+                <div class="flex items-center gap-2">
+                    <input id="moneyCheatInput" type="number" min="0" step="1000"
+                        class="w-full rounded-md farm-input px-3 py-2 text-sm" placeholder="$100000" />
+                    <button id="moneyCheatApply" type="button"
+                        class="px-3 py-2 rounded-md btn-accent text-sm font-semibold focus:outline-none">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
