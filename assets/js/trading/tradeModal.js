@@ -62,8 +62,8 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
 
   if (!modalEl || !openBtn || !tickerListEl || !buyBtn) {
     return {
-      refreshBalances: () => {},
-      refreshHoldings: () => {},
+      refreshBalances: () => { },
+      refreshHoldings: () => { },
     };
   }
 
@@ -418,6 +418,8 @@ export function createTradeModal({ state, onMoneyChanged, saveState }) {
   function closeModal() {
     modalEl.classList.add("hidden");
     document.body.classList.remove("overflow-hidden");
+    state.activeMode = "plant";
+    state.needsRender = true;
   }
 
   function bindEvents() {
