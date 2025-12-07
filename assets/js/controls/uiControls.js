@@ -112,25 +112,6 @@
   }
 
   function updateHideButtonsUI() {
-    if (dom.showTimerToggle) dom.showTimerToggle.checked = !!state.showTimerInfo;
-    if (dom.statBaseSize) {
-      const val = Math.round(state.statBaseSize ?? 14);
-      dom.statBaseSize.value = val;
-      const label = document.getElementById("statSizeValue");
-      if (label) label.textContent = `${val}`;
-    }
-    if (dom.statTextAlpha) {
-      const pct = Math.round((state.statTextAlpha ?? 1) * 100);
-      dom.statTextAlpha.value = pct;
-      const label = document.getElementById("statTextAlphaValue");
-      if (label) label.textContent = `${pct}%`;
-    }
-    if (dom.statBgAlpha) {
-      const pct = Math.round((state.statBgAlpha ?? 1) * 100);
-      dom.statBgAlpha.value = pct;
-      const label = document.getElementById("statBgAlphaValue");
-      if (label) label.textContent = `${pct}%`;
-    }
   }
 
   function ensurePlantDefaults() {
@@ -719,65 +700,13 @@
       });
     }
 
-    const bindShowToggle = (input, key) => {
-      if (!input) return;
-      input.addEventListener("change", () => {
-        state[key] = !!input.checked;
-        state.showStats = !!state.showTimerInfo;
-        updateHideButtonsUI();
-        state.needsRender = true;
-        saveState();
-      });
-    };
-    bindShowToggle(dom.showTimerToggle, "showTimerInfo");
 
-    const bindAlpha = (input, key, labelId) => {
-      if (!input) return;
-      const label = labelId ? document.getElementById(labelId) : null;
-      input.addEventListener("input", () => {
-        const val = Math.max(0, Math.min(100, Number(input.value) ?? 0));
-        state[key] = val / 100;
-        if (label) label.textContent = `${val}%`;
-        state.needsRender = true;
-        saveState();
-      });
-    };
-    bindAlpha(dom.statTextAlpha, "statTextAlpha", "statTextAlphaValue");
-    bindAlpha(dom.statBgAlpha, "statBgAlpha", "statBgAlphaValue");
 
-    if (dom.statBaseSize) {
-      const label = document.getElementById("statSizeValue");
-      dom.statBaseSize.addEventListener("input", () => {
-        const raw = Number(dom.statBaseSize.value);
-        const val = Math.max(8, Math.min(24, Number.isFinite(raw) ? raw : 14));
-        state.statBaseSize = val;
-        if (label) label.textContent = `${val}`;
-        state.needsRender = true;
-        saveState();
-        updateHideButtonsUI();
-      });
-    }
 
-    if (dom.resetSettingsBtn) {
-      dom.resetSettingsBtn.addEventListener("click", () => {
-        openConfirmModal(
-          "Reset settings to defaults?",
-          () => {
-            state.showTimerInfo = false;
-            state.statBaseSize = 14;
-            state.statTextAlpha = 1;
-            state.statBgAlpha = 1;
-            state.showStats = false;
-            updateHideButtonsUI();
-            state.needsRender = true;
-            saveState();
-          },
-          "Reset Settings",
-          null,
-          { confirmVariant: "primary" }
-        );
-      });
-    }
+
+
+
+
     if (dom.clearCacheBtn && clearCache) {
       dom.clearCacheBtn.addEventListener("click", () => {
         openConfirmModal("Clear all cached data? If you are not logged in your progress will be lost.", clearCache, "Clear Cache", null, {

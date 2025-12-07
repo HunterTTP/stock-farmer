@@ -22,14 +22,7 @@ export function createInitialState(config) {
     savedOffsetY: null,
     totalMoney: 0,
     stockHoldings: {},
-    showStats: false,
-    showTimerInfo: false,
-    showTickerInfo: false,
-    showPctInfo: false,
-    showSellInfo: false,
-    statBaseSize: 14,
-    statTextAlpha: 1,
-    statBgAlpha: 1,
+
     activeMode: "plant",
     selectedCropKey: "wheat",
     previousCropKey: "wheat",
@@ -77,12 +70,7 @@ export function applyDefaultSelection(state) {
   state.buildingHoldTriggered = false;
   state.showTickerInfo = false;
   state.showPctInfo = false;
-  state.showTimerInfo = false;
   state.showSellInfo = false;
-  state.showStats = false;
-  state.statBaseSize = 14;
-  state.statTextAlpha = 1;
-  state.statBgAlpha = 1;
   state.selectedLandscapeKey = null;
 }
 
@@ -274,16 +262,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
     if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
 
-    const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
-    const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
-    state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : !!legacyStats;
-    state.showTickerInfo = false;
-    state.showPctInfo = false;
-    state.showSellInfo = false;
-    state.showStats = !!state.showTimerInfo;
-    state.statBaseSize = typeof data.statBaseSize === "number" ? data.statBaseSize : 14;
-    state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
-    state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
+
     const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
     if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
       state.activeMode = savedMode;
@@ -307,7 +286,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
 export function buildSaveData({ state, world, crops, sizes, landscapes = {}, config }) {
   const previousUpdatedAt = Number.isFinite(state.lastSavedAt) ? state.lastSavedAt : 0;
   const updatedAt = Date.now();
-  const showTimer = !!state.showTimerInfo;
+
   const plots = Array.from(world.plots.entries())
     .filter(([key]) => isKeyInBounds(key, config))
     .map(([key, value]) => {
@@ -324,11 +303,6 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     previousCropKey: state.previousCropKey,
     selectedSizeKey: state.selectedSizeKey,
     activeMode: state.activeMode,
-    showStats: showTimer,
-    showTimerInfo: showTimer,
-    statBaseSize: state.statBaseSize,
-    statTextAlpha: state.statTextAlpha,
-    statBgAlpha: state.statBgAlpha,
     scale: state.scale,
     offsetX: state.offsetX,
     offsetY: state.offsetY,
@@ -439,16 +413,9 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
   if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
 
-  const legacyStock = typeof data.showStockInfo === "boolean" ? data.showStockInfo : undefined;
-  const legacyStats = typeof data.showStats === "boolean" ? data.showStats : legacyStock;
-  state.showTimerInfo = typeof data.showTimerInfo === "boolean" ? data.showTimerInfo : !!legacyStats;
   state.showTickerInfo = false;
   state.showPctInfo = false;
   state.showSellInfo = false;
-  state.showStats = !!state.showTimerInfo;
-  state.statBaseSize = typeof data.statBaseSize === "number" ? data.statBaseSize : 14;
-  state.statTextAlpha = typeof data.statTextAlpha === "number" ? Math.min(1, Math.max(0, data.statTextAlpha)) : 1;
-  state.statBgAlpha = typeof data.statBgAlpha === "number" ? Math.min(1, Math.max(0, data.statBgAlpha)) : 1;
   const savedMode = typeof data.activeMode === "string" ? data.activeMode : null;
   if (savedMode === "plant" || savedMode === "harvest" || savedMode === "build" || savedMode === "landscape") {
     state.activeMode = savedMode;

@@ -159,45 +159,7 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
 
         ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
 
-        const showTimer = state.showTimerInfo && !isReady;
-        if (showTimer) {
-          ctx.save();
-          const padTop = Math.max(3 * state.scale, tileScreenSize * 0.05);
-          const padBottom = Math.max(2, padTop * 0.5);
-          const baseFont = Math.min(Math.max(tileScreenSize * 0.14, 8), Math.min(16, tileScreenSize * 0.24));
-          const userScale = Math.max(0.5, Math.min(2, (state.statBaseSize || 14) / 14));
-          let fontSize = Math.min(28, Math.max(6, baseFont * userScale));
-          let spacing = Math.max(2, fontSize * 0.15);
-          ctx.textAlign = "left";
-          ctx.textBaseline = "top";
-          ctx.font = `${fontSize}px system-ui`;
 
-          const lines = [{ text: timerText, color: "white" }];
-          const availableHeight = Math.max(0, tileScreenSize - padTop - padBottom);
-          const maxFontToFit = (availableHeight - spacing * Math.max(0, lines.length - 1)) / Math.max(1, lines.length);
-          if (maxFontToFit < fontSize) {
-            fontSize = Math.max(6, maxFontToFit);
-            spacing = Math.max(2, fontSize * 0.15);
-            ctx.font = `${fontSize}px system-ui`;
-          }
-
-          const contentHeight = fontSize * lines.length + spacing * (lines.length - 1);
-          const bgHeight = Math.min(tileScreenSize, padTop + padBottom + contentHeight);
-          const bgAlpha = Math.min(1, Math.max(0, state.statBgAlpha ?? 1));
-          ctx.fillStyle = `rgba(0,0,0,${0.65 * bgAlpha})`;
-          ctx.fillRect(x, y, tileScreenSize, bgHeight);
-
-          const textAlpha = Math.min(1, Math.max(0, state.statTextAlpha ?? 1));
-          ctx.globalAlpha = textAlpha;
-          let lineY = y + padTop;
-          const baseX = x + padTop;
-          lines.forEach((line, idx) => {
-            ctx.fillStyle = line.color;
-            ctx.fillText(line.text, baseX, lineY);
-            if (idx < lines.length - 1) lineY += fontSize + spacing;
-          });
-          ctx.restore();
-        }
       }
     }
 

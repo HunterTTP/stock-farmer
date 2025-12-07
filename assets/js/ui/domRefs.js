@@ -34,11 +34,8 @@ export function getDomRefs() {
     landscapeSelectImage: document.getElementById("landscapeSelectImage"),
     landscapeSelectMenu: document.getElementById("landscapeSelectMenu"),
     resetFarmBtn: document.getElementById("resetFarmBtn"),
-    showTimerToggle: document.getElementById("showTimerToggle"),
-    statBaseSize: document.getElementById("statBaseSize"),
-    statTextAlpha: document.getElementById("statTextAlpha"),
-    statBgAlpha: document.getElementById("statBgAlpha"),
-    resetSettingsBtn: document.getElementById("resetSettingsBtn"),
+
+
     clearCacheBtn: document.getElementById("clearCacheBtn"),
     installBtn: document.getElementById("installBtn"),
     authTrigger: document.getElementById("authTrigger"),
