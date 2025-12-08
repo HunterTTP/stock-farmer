@@ -68,7 +68,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
         if (status) {
           return `Planted: ${status.count} | ${status.harvestText}`;
         }
-        return `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+        return `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       }
       return null;
     }
@@ -136,7 +136,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       return cropKeys.map((key, index) => {
         const crop = crops[key];
         const status = getCropStatus(crop);
-        const baseMeta = `${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+        const baseMeta = `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
         const metaLines = [{ text: baseMeta, type: "meta" }];
         if (status) {
           metaLines.push({ text: `Planted: ${status.count} | ${status.harvestText}`, type: "status" });

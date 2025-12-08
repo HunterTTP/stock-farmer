@@ -85,7 +85,7 @@ export function createCropMenus({ dom, state, crops, formatCurrency, onMoneyChan
       title.textContent = crop.name;
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = `Sell ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+      meta.textContent = `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       textWrap.appendChild(title);
       textWrap.appendChild(meta);
       const status = getCropStatus(crop, now);
