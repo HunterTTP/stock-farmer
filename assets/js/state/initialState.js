@@ -8,6 +8,7 @@ export function createInitialState(config) {
     dragStart: { x: 0, y: 0 },
     dragOffsetStart: { x: 0, y: 0 },
     isDragging: false,
+    isDragPending: false,
     activePointers: new Map(),
     isPinching: false,
     pinchStartDistance: 0,

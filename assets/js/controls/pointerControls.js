@@ -1,5 +1,8 @@
 import { clampScale } from "../utils/helpers.js";
 
+const TAP_MOVE_THRESHOLD_SQ = 25;
+const DRAG_START_THRESHOLD_SQ = 16;
+
 export function createPointerControls({ canvas, state, config, viewport, actions, openConfirmModal, saveState, saveViewState, gameHud }) {
   let hudHandlingPointer = false;
 
@@ -71,6 +74,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     updatePointer(e);
     if (state.activePointers.size === 2) {
       state.isDragging = false;
+      state.isDragPending = false;
       state.isPinching = true;
       const [p1, p2] = getTwoPointers();
       state.pinchStartDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
@@ -80,7 +84,8 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       cancelBuildingHold();
     } else if (state.activePointers.size === 1) {
       state.isPinching = false;
-      state.isDragging = true;
+      state.isDragging = false;
+      state.isDragPending = true;
       state.dragStart = { x: e.clientX, y: e.clientY };
       state.dragOffsetStart = { x: state.offsetX, y: state.offsetY };
       state.tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now() };
@@ -139,20 +144,33 @@ export function createPointerControls({ canvas, state, config, viewport, actions
         state.needsRender = true;
         queueViewSave();
       }
-    } else if (state.isDragging) {
-      e.preventDefault();
-      state.offsetX = state.dragOffsetStart.x + (e.clientX - state.dragStart.x);
-      state.offsetY = state.dragOffsetStart.y + (e.clientY - state.dragStart.y);
-      viewport.clampToBounds();
-      state.needsRender = true;
-      queueViewSave();
-      if (state.tapStart) {
-        const dx = e.clientX - state.tapStart.x;
-        const dy = e.clientY - state.tapStart.y;
-        if (dx * dx + dy * dy > 25) {
-          state.tapStart = null;
-          cancelBuildingHold();
-        }
+    } else {
+      let dx = 0;
+      let dy = 0;
+      let moveDistSq = 0;
+      if (state.isDragPending || state.isDragging || state.tapStart) {
+        dx = e.clientX - state.dragStart.x;
+        dy = e.clientY - state.dragStart.y;
+        moveDistSq = dx * dx + dy * dy;
+      }
+
+      if (state.isDragPending && moveDistSq >= DRAG_START_THRESHOLD_SQ) {
+        state.isDragging = true;
+        state.isDragPending = false;
+      }
+
+      if (state.isDragging) {
+        e.preventDefault();
+        state.offsetX = state.dragOffsetStart.x + dx;
+        state.offsetY = state.dragOffsetStart.y + dy;
+        viewport.clampToBounds();
+        state.needsRender = true;
+        queueViewSave();
+      }
+
+      if (state.tapStart && moveDistSq > TAP_MOVE_THRESHOLD_SQ) {
+        state.tapStart = null;
+        cancelBuildingHold();
       }
     }
     updateHoverFromEvent(e);
@@ -169,6 +187,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
     cancelBuildingHold();
     state.activePointers.delete(e.pointerId);
     canvas.releasePointerCapture(e.pointerId);
+    state.isDragPending = false;
     if (state.activePointers.size < 2) state.isPinching = false;
     if (state.activePointers.size === 0) state.isDragging = false;
 
@@ -179,7 +198,7 @@ export function createPointerControls({ canvas, state, config, viewport, actions
       const dt = performance.now() - state.tapStart.time;
       const dx = e.clientX - state.tapStart.x;
       const dy = e.clientY - state.tapStart.y;
-      if (dt < 300 && dx * dx + dy * dy <= 25) actions.handleTap(e.clientX, e.clientY);
+      if (dt < 300 && dx * dx + dy * dy <= TAP_MOVE_THRESHOLD_SQ) actions.handleTap(e.clientX, e.clientY);
     }
     state.tapStart = null;
 
