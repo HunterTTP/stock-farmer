@@ -101,7 +101,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
     const dockScaleBase = 0.81;
-    const dockScaleSetting = layout.breakpoint === "mobile" ? 1.5 : 1.0;
+    const dockScaleSetting = layout.breakpoint === "mobile" ? 1.4 : 1.0;
     const dockScale = dockScaleSetting * dockScaleBase;
     const dropdownScale = dockScale;
     const fontSizeBase = 1.1;
@@ -119,6 +119,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const scaledFontSize = Math.round(layout.fontSize * hudFontSize);
 
     const modeCount = MODE_ORDER.length;
+    const isDesktop = layout.breakpoint === "desktop";
     const availableWidth = canvasWidth - dockScaledPadding * 2;
     const targetToolbarWidth = Math.min((layout.toolbarMaxWidth || availableWidth) * dockScale, availableWidth);
     const buttonMinLimit = layout.minModeButtonSize * dockScale;
@@ -136,7 +137,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const toolbarContentHeight = buttonSize * 0.75;
     const toolbarHeight = toolbarContentHeight + dockScaledToolbarPadding * 2;
     const toolbarX = (canvasWidth - totalModeWidth) / 2;
-    const hudBottomOffset = 20;
+    const hudBottomOffset = isDesktop ? 12 : 20;
     const toolbarY = canvasHeight - toolbarHeight - dockScaledPadding - hudBottomOffset;
 
     const modeButtons = MODE_ORDER.map((mode, i) => ({
@@ -151,7 +152,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
 
     const toolbar = { x: toolbarX, y: toolbarY, width: totalModeWidth, height: toolbarHeight };
 
-    const dropdownScaledGap = Math.round(layout.gap * dropdownScale);
+    const dropdownScaledGap = isDesktop ? Math.max(6, Math.round(layout.gap * dropdownScale * 0.65)) : Math.round(layout.gap * dropdownScale);
     const dropdownScaledPadding = Math.round(layout.padding * dropdownScale);
     const dropdownHeight = Math.min(72 * dropdownScale, Math.max(52 * dropdownScale, Math.round(layout.modeButtonSize * 1.05 * dropdownScale)));
     const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;

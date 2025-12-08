@@ -2,7 +2,7 @@ export const config = {
   gridCols: 50,
   gridRows: 50,
   baseTileSize: 100,
-  visibleRowsAtStart: 3,
+  visibleRowsAtStart: 3.4,
   minScale: 0.05,
   maxScale: 3,
   destroyHoldWindowMs: 350,

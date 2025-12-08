@@ -305,3 +305,17 @@ button,
 .bg-accent {
   background-color: var(--accent);
 }
+
+[id$="Modal"],
+[id$="Modal"] * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[id$="Modal"] input,
+[id$="Modal"] textarea,
+[id$="Modal"] button,
+[id$="Modal"] select {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
