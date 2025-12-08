@@ -13,6 +13,11 @@ export function createHudInteractions({
 }) {
   let lastPointerX = 0;
   let lastPointerY = 0;
+  const stopMenuMomentum = () => {
+    hudState.menuMomentumActive = false;
+    hudState.menuScrollVelocity = 0;
+    hudState.menuMomentumLastTime = 0;
+  };
   const hitTest = (x, y) => {
     const computed = hudState.layout;
     if (!computed) return null;
@@ -71,12 +76,17 @@ export function createHudInteractions({
     const hit = hitTest(x, y);
     hudState.pointerDown = true;
     hudState.pointerDownElement = hit;
+    stopMenuMomentum();
 
     if (hit && (hit.type === "menu" || hit.type === "menuItem") && hudState.openMenuKey) {
       hudState.menuDragStart = y;
       hudState.menuDragScrollStart = hudState.menuScrollOffset;
+      hudState.menuLastDragY = y;
+      hudState.menuLastDragTime = performance.now();
     } else {
       hudState.menuDragStart = null;
+      hudState.menuLastDragY = null;
+      hudState.menuLastDragTime = 0;
     }
 
     if (hit) {
@@ -98,8 +108,24 @@ export function createHudInteractions({
         if (dropdown) {
           const bounds = menuRenderer.getMenuBounds(dropdown);
           if (bounds && bounds.scrollable) {
-            hudState.menuScrollOffset = Math.max(0, Math.min(bounds.maxScroll, hudState.menuDragScrollStart + deltaY));
-            state.needsRender = true;
+            const nextOffset = Math.max(0, Math.min(bounds.maxScroll, hudState.menuDragScrollStart + deltaY));
+            if (nextOffset !== hudState.menuScrollOffset) {
+              hudState.menuScrollOffset = nextOffset;
+              state.needsRender = true;
+            }
+            const now = performance.now();
+            if (hudState.menuLastDragY !== null && hudState.menuLastDragTime) {
+              const dy = hudState.menuLastDragY - y;
+              const dt = now - hudState.menuLastDragTime;
+              if (dt > 0) {
+                const velocity = dy / dt;
+                hudState.menuScrollVelocity = Math.max(-3.5, Math.min(3.5, velocity));
+              }
+            }
+            hudState.menuLastDragY = y;
+            hudState.menuLastDragTime = now;
+            hudState.menuMomentumActive = false;
+            hudState.menuMomentumLastTime = 0;
           }
         }
       }
@@ -132,17 +158,21 @@ export function createHudInteractions({
   };
 
   const handleDropdownClick = (dropdown) => {
+    stopMenuMomentum();
     if (hudState.openMenuKey === dropdown.menu) {
       hudState.openMenuKey = null;
     } else {
       hudState.openMenuKey = dropdown.menu;
       hudState.menuScrollOffset = 0;
+      hudState.menuLastDragY = null;
+      hudState.menuLastDragTime = 0;
     }
     state.needsRender = true;
   };
 
   const handleMenuScroll = (deltaY) => {
     if (!hudState.openMenuKey) return false;
+    stopMenuMomentum();
     const computed = hudState.layout;
     if (!computed) return false;
     const dropdown = computed.dropdowns.find((d) => d.menu === hudState.openMenuKey);
@@ -222,10 +252,21 @@ export function createHudInteractions({
     const hit = hitTest(x, y);
     const wasDown = hudState.pointerDownElement;
     const wasDragging = hudState.menuDragStart !== null && Math.abs(hudState.menuScrollOffset - hudState.menuDragScrollStart) > 5;
+    const shouldStartMomentum = wasDragging && Math.abs(hudState.menuScrollVelocity) > 0.02 && hudState.openMenuKey;
 
     hudState.pointerDown = false;
     hudState.pointerDownElement = null;
     hudState.menuDragStart = null;
+    hudState.menuLastDragY = null;
+    hudState.menuLastDragTime = 0;
+
+    if (shouldStartMomentum) {
+      hudState.menuMomentumActive = true;
+      hudState.menuMomentumLastTime = performance.now();
+      state.needsRender = true;
+    } else {
+      stopMenuMomentum();
+    }
 
     if (wasDragging) {
       return !!hit;
@@ -264,6 +305,7 @@ export function createHudInteractions({
       hudState.openMenuKey = null;
       state.needsRender = true;
     }
+    stopMenuMomentum();
   };
 
   return {

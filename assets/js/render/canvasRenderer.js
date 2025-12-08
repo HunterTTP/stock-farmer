@@ -236,8 +236,9 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
     }
 
     if (gameHud) {
-      const animating = gameHud.updateMoneyChangeAnimation();
-      if (animating) state.needsRender = true;
+      const moneyAnimating = gameHud.updateMoneyChangeAnimation();
+      const momentumAnimating = gameHud.updateMenuMomentum ? gameHud.updateMenuMomentum() : false;
+      if (moneyAnimating || momentumAnimating) state.needsRender = true;
       gameHud.render();
     }
   }

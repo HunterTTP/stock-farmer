@@ -1,4 +1,4 @@
-export function createHudAnimations({ state, hudState }) {
+export function createHudAnimations({ state, hudState, menuRenderer }) {
   const updateMoneyChangeAnimation = () => {
     if (hudState.moneyChangeOpacity <= 0) return false;
 
@@ -25,8 +25,53 @@ export function createHudAnimations({ state, hudState }) {
     state.needsRender = true;
   };
 
+  const stopMenuMomentum = () => {
+    hudState.menuMomentumActive = false;
+    hudState.menuScrollVelocity = 0;
+    hudState.menuMomentumLastTime = 0;
+  };
+
+  const updateMenuMomentum = () => {
+    if (!hudState.menuMomentumActive || !hudState.openMenuKey) return false;
+
+    const dropdown = hudState.layout?.dropdowns?.find((d) => d.menu === hudState.openMenuKey);
+    if (!dropdown) {
+      stopMenuMomentum();
+      return false;
+    }
+
+    const bounds = menuRenderer.getMenuBounds(dropdown);
+    if (!bounds || !bounds.scrollable) {
+      stopMenuMomentum();
+      return false;
+    }
+
+    const now = performance.now();
+    const elapsed = hudState.menuMomentumLastTime ? now - hudState.menuMomentumLastTime : 16;
+    hudState.menuMomentumLastTime = now;
+
+    const friction = 0.92;
+    hudState.menuScrollVelocity *= Math.pow(friction, elapsed / 16);
+
+    const nextOffset = hudState.menuScrollOffset + hudState.menuScrollVelocity * elapsed;
+    const clampedOffset = Math.max(0, Math.min(bounds.maxScroll, nextOffset));
+    const hitEdge = clampedOffset !== nextOffset;
+
+    if (clampedOffset !== hudState.menuScrollOffset) {
+      hudState.menuScrollOffset = clampedOffset;
+    }
+
+    const isSettled = Math.abs(hudState.menuScrollVelocity) < 0.02 || hitEdge;
+    if (isSettled) {
+      stopMenuMomentum();
+    }
+
+    return !isSettled;
+  };
+
   return {
     updateMoneyChangeAnimation,
+    updateMenuMomentum,
     showMoneyChange,
   };
 }

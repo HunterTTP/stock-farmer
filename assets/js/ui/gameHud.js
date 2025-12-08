@@ -23,6 +23,11 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     menuScrollOffset: 0,
     menuDragStart: null,
     menuDragScrollStart: 0,
+    menuScrollVelocity: 0,
+    menuMomentumActive: false,
+    menuMomentumLastTime: 0,
+    menuLastDragY: null,
+    menuLastDragTime: 0,
     sliderX: null,
     sliderTargetX: null,
   };
@@ -59,7 +64,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     hexToRgba,
   });
   const { render } = createHudRenderer({ ctx, state, hudState, layoutManager, toolbarRenderer, menuRenderer });
-  const animations = createHudAnimations({ state, hudState });
+  const animations = createHudAnimations({ state, hudState, menuRenderer });
   const interactions = createHudInteractions({
     canvas,
     state,
@@ -83,6 +88,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     isPointerOverHud: interactions.isPointerOverHud,
     showMoneyChange: animations.showMoneyChange,
     updateMoneyChangeAnimation: animations.updateMoneyChangeAnimation,
+    updateMenuMomentum: animations.updateMenuMomentum,
     closeAllMenus: interactions.closeAllMenus,
     computeLayout: layoutManager.computeLayout,
     handleMenuScroll: interactions.handleMenuScroll,
