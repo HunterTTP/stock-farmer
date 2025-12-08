@@ -92,7 +92,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     const innerPadX = Math.round(12 * dropdownScale);
     const previewX = dropdown.x + innerPadX;
     const previewY = dropdown.y + (dropdown.height - previewSize) / 2;
-    const textX = previewX + previewSize + innerPadX;
+    const textX = hasPreview ? previewX + previewSize + innerPadX : dropdown.x + innerPadX;
     const scaledFontSize = layout.fontSize * dropdownScale;
 
     ctx.textAlign = "left";

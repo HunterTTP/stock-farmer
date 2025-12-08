@@ -19,8 +19,9 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const paddingLeft = hasPreview ? 10 : 12;
     const chevronWidth = 28;
     const paddingRight = 8;
-    const widthMultiplier = Math.min(1.85, Math.max(1.4, layout.modeButtonSize / 38));
-    const listPadding = 16;
+    const isCompact = dropdownId === "sizeSelect" && layout.breakpoint !== "mobile";
+    const widthMultiplier = isCompact ? 1.0 : Math.min(1.85, Math.max(1.4, layout.modeButtonSize / 38));
+    const listPadding = isCompact ? 0 : 16;
 
     ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
     const labelWidth = ctx.measureText(label).width;
@@ -39,20 +40,30 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const active = state.activeMode || "plant";
     const dropdowns = [];
     const maxMenuWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
+    const availableWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
     const minX = toolbar ? toolbar.x : layout.padding;
-    const maxX = toolbar ? toolbar.x + toolbar.width : canvasWidth - layout.padding;
-    const availableWidth = maxX - minX;
 
     if (active === "plant") {
       let cropW = measureDropdownWidth("cropSelect", layout);
       let sizeW = measureDropdownWidth("sizeSelect", layout);
-      let width = Math.max(cropW, sizeW);
-      if (width > availableWidth) width = availableWidth;
-      const startX = minX + (availableWidth - width) / 2;
-      const sizeY = y;
-      const cropY = y - height - layout.gap;
-      dropdowns.push({ id: "cropSelect", type: "dropdown", x: startX, y: cropY, width, height, menu: "cropMenu", maxMenuWidth });
-      dropdowns.push({ id: "sizeSelect", type: "dropdown", x: startX, y: sizeY, width, height, menu: "sizeMenu", maxMenuWidth });
+      const maxCropWidth = Math.min(cropW, availableWidth * 0.65);
+      cropW = maxCropWidth;
+      const totalSideBySideWidth = cropW + sizeW + layout.gap;
+      const canFitSideBySide = totalSideBySideWidth <= availableWidth;
+
+      if (canFitSideBySide) {
+        const startX = minX + (availableWidth - totalSideBySideWidth) / 2;
+        const cropX = startX;
+        const sizeX = startX + cropW + layout.gap;
+        dropdowns.push({ id: "cropSelect", type: "dropdown", x: cropX, y, width: cropW, height, menu: "cropMenu", maxMenuWidth });
+        dropdowns.push({ id: "sizeSelect", type: "dropdown", x: sizeX, y, width: sizeW, height, menu: "sizeMenu", maxMenuWidth });
+      } else {
+        const width = availableWidth;
+        const sizeY = y;
+        const cropY = y - height - layout.gap;
+        dropdowns.push({ id: "cropSelect", type: "dropdown", x: minX, y: cropY, width, height, menu: "cropMenu", maxMenuWidth });
+        dropdowns.push({ id: "sizeSelect", type: "dropdown", x: minX, y: sizeY, width, height, menu: "sizeMenu", maxMenuWidth });
+      }
     } else if (active === "landscape") {
       let w = measureDropdownWidth("landscapeSelect", layout);
       if (w > availableWidth) w = availableWidth;
@@ -74,7 +85,7 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const canvasHeight = canvas.clientHeight;
     const dockScaleBase = 0.81;
     const dockScale = (state.hudDockScale || 1.0) * dockScaleBase;
-    const dropdownScale = (state.hudDropdownScale || 1.0) * 0.9;
+    const dropdownScale = dockScale;
     const fontSizeBase = 1.1;
     const fontSizeOffset = 0.1; // Rebase so 1.0x renders like the previous 1.1x selection
     const fontSliderMin = 0.5;

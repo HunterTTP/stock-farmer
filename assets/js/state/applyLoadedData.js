@@ -55,6 +55,11 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
       if (crops[id]) crops[id].unlocked = !!unlocked;
     });
   }
+  // Ensure first crop is always unlocked (starter crop)
+  const firstCropKey = Object.keys(crops)[0];
+  if (firstCropKey && crops[firstCropKey]) {
+    crops[firstCropKey].unlocked = true;
+  }
 
   const sizeUnlockData = data.sizesUnlocked || data.toolsUnlocked;
   if (sizeUnlockData) {

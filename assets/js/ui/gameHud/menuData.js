@@ -105,8 +105,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       return { imageUrl: null };
     }
     if (dropdown.id === "sizeSelect") {
-      const size = sizes[state.selectedSizeKey];
-      return { iconType: "faSquares", gridSize: size?.size || 1 };
+      return null;
     }
     if (dropdown.id === "landscapeSelect") {
       if (state.selectedLandscapeKey === "sell") {

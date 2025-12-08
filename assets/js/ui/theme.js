@@ -105,11 +105,8 @@ function wireHudSliders(container) {
 
     const dockScaleSlider = container.querySelector("#hudDockScaleSlider");
     const dockScaleValue = container.querySelector("#hudDockScaleValue");
-    const dropdownScaleSlider = container.querySelector("#hudDropdownScaleSlider");
-    const dropdownScaleValue = container.querySelector("#hudDropdownScaleValue");
     const fontSlider = container.querySelector("#hudFontSizeSlider");
     const fontValue = container.querySelector("#hudFontSizeValue");
-    const showTextToggle = null;
 
     if (dockScaleSlider && dockScaleValue) {
         dockScaleSlider.value = state.hudDockScale || 1.0;
@@ -122,21 +119,6 @@ function wireHudSliders(container) {
             state.needsRender = true;
         });
         dockScaleSlider.addEventListener("change", () => {
-            if (saveState) saveState();
-        });
-    }
-
-    if (dropdownScaleSlider && dropdownScaleValue) {
-        dropdownScaleSlider.value = state.hudDropdownScale || 1.0;
-        dropdownScaleValue.textContent = `${(state.hudDropdownScale || 1.0).toFixed(1)}x`;
-        dropdownScaleSlider.addEventListener("input", (e) => {
-            const val = parseFloat(e.target.value);
-            state.hudDropdownScale = val;
-            dropdownScaleValue.textContent = `${val.toFixed(1)}x`;
-            if (gameHud) gameHud.computeLayout();
-            state.needsRender = true;
-        });
-        dropdownScaleSlider.addEventListener("change", () => {
             if (saveState) saveState();
         });
     }

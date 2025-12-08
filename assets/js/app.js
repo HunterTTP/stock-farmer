@@ -196,6 +196,7 @@ gameHud = createGameHud({
   onMoneyChanged,
   saveState: persistence.save,
   openConfirmModal: ui.openConfirmModal,
+  showActionError: ui.showActionError,
 });
 
 setHudContext({ state, saveState: persistence.save, gameHud });

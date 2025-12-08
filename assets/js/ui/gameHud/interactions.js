@@ -9,7 +9,10 @@ export function createHudInteractions({
   saveState,
   crops,
   sizes,
+  showActionError,
 }) {
+  let lastPointerX = 0;
+  let lastPointerY = 0;
   const hitTest = (x, y) => {
     const computed = hudState.layout;
     if (!computed) return null;
@@ -63,6 +66,8 @@ export function createHudInteractions({
   };
 
   const handlePointerDown = (x, y) => {
+    lastPointerX = x;
+    lastPointerY = y;
     const hit = hitTest(x, y);
     hudState.pointerDown = true;
     hudState.pointerDownElement = hit;
@@ -175,8 +180,17 @@ export function createHudInteractions({
   const handleMenuItemClick = (dropdown, item) => {
     if (item.locked && item.unlockCost > 0) {
       const cost = item.unlockCost || 0;
-      if (!item.canAfford || state.totalMoney < cost) {
-        hudState.openMenuKey = null;
+      if (item.requiresPrevious) {
+        if (showActionError) {
+          showActionError("Unlock previous items first", lastPointerX, lastPointerY);
+        }
+        state.needsRender = true;
+        return;
+      }
+      if (state.totalMoney < cost) {
+        if (showActionError) {
+          showActionError(`Need ${formatCurrency(cost)} to unlock`, lastPointerX, lastPointerY);
+        }
         state.needsRender = true;
         return;
       }
