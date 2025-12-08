@@ -161,8 +161,6 @@ function wireHudSliders(container) {
         });
     }
 
-    if (showTextToggle) { }
-
     const transparencySlider = container.querySelector("#hudTransparencySlider");
     const transparencyValue = container.querySelector("#hudTransparencyValue");
     if (transparencySlider && transparencyValue) {

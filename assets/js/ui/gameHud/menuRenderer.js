@@ -236,6 +236,11 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
 
       const previewX = itemX + previewMargin;
       const previewY = itemY + (itemH - previewSize) / 2;
+      const dimPreview = item.locked && !item.canAfford;
+      ctx.save();
+      if (dimPreview) {
+        ctx.globalAlpha *= 0.45;
+      }
       if (item.iconType === "trash") {
         drawTrashIcon(previewX, previewY, previewSize);
       } else if (item.iconType === "dollar") {
@@ -250,6 +255,16 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
         drawPreviewImage(previewX, previewY, previewSize, null, null, null, item.gridSize || 1);
       } else {
         drawPreviewImage(previewX, previewY, previewSize, item.imageUrl, item.colorData);
+      }
+      ctx.restore();
+      if (dimPreview) {
+        const dimRadius = Math.round(6 * scale);
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        ctx.roundRect(previewX, previewY, previewSize, previewSize, dimRadius);
+        ctx.fill();
+        ctx.restore();
       }
 
       const metaLines = (metaLinesList && metaLinesList[i]) || normalizeMetaLines(item);
