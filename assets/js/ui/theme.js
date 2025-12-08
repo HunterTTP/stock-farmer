@@ -103,25 +103,8 @@ function wireHudSliders(container) {
     if (!container || !hudContext) return;
     const { state, saveState, gameHud } = hudContext;
 
-    const dockScaleSlider = container.querySelector("#hudDockScaleSlider");
-    const dockScaleValue = container.querySelector("#hudDockScaleValue");
     const fontSlider = container.querySelector("#hudFontSizeSlider");
     const fontValue = container.querySelector("#hudFontSizeValue");
-
-    if (dockScaleSlider && dockScaleValue) {
-        dockScaleSlider.value = state.hudDockScale || 1.0;
-        dockScaleValue.textContent = `${(state.hudDockScale || 1.0).toFixed(1)}x`;
-        dockScaleSlider.addEventListener("input", (e) => {
-            const val = parseFloat(e.target.value);
-            state.hudDockScale = val;
-            dockScaleValue.textContent = `${val.toFixed(1)}x`;
-            if (gameHud) gameHud.computeLayout();
-            state.needsRender = true;
-        });
-        dockScaleSlider.addEventListener("change", () => {
-            if (saveState) saveState();
-        });
-    }
 
     if (fontSlider && fontValue) {
         const fontMin = Number.isFinite(parseFloat(fontSlider.min)) ? parseFloat(fontSlider.min) : 0.4;

@@ -84,7 +84,8 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
     const dockScaleBase = 0.81;
-    const dockScale = (state.hudDockScale || 1.0) * dockScaleBase;
+    const dockScaleSetting = layout.breakpoint === "mobile" ? 1.5 : 1.0;
+    const dockScale = dockScaleSetting * dockScaleBase;
     const dropdownScale = dockScale;
     const fontSizeBase = 1.1;
     const fontSizeOffset = 0.1; // Rebase so 1.0x renders like the previous 1.1x selection
