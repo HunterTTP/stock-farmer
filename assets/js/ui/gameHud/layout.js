@@ -46,16 +46,33 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     if (active === "plant") {
       let cropW = measureDropdownWidth("cropSelect", layout);
       let sizeW = measureDropdownWidth("sizeSelect", layout);
-      const maxCropWidth = Math.min(cropW, availableWidth * 0.65);
-      cropW = maxCropWidth;
-      const totalSideBySideWidth = cropW + sizeW + layout.gap;
-      const canFitSideBySide = totalSideBySideWidth <= availableWidth;
+      const isMobile = layout.breakpoint === "mobile";
+      const sideBySideGap = Math.max(4, layout.gap - (isMobile ? 4 : 2));
+      const compactSizeW = Math.min(
+        Math.max(Math.round(sizeW * (isMobile ? 0.6 : 0.75)), sizeW - (isMobile ? 28 : 20)),
+        Math.round(availableWidth * (isMobile ? 0.26 : 0.3))
+      );
+      sizeW = compactSizeW;
+      const maxCropWidth = Math.min(cropW, availableWidth * (isMobile ? 0.74 : 0.7));
+      const cropSpace = availableWidth - sizeW - sideBySideGap;
+      const resolvedCropWidth = Math.max(120, Math.min(maxCropWidth, cropSpace));
+      const totalSideBySideWidth = resolvedCropWidth + sizeW + sideBySideGap;
+      const canFitSideBySide = resolvedCropWidth > 0 && cropSpace > 0 && totalSideBySideWidth <= availableWidth;
 
       if (canFitSideBySide) {
         const startX = minX + (availableWidth - totalSideBySideWidth) / 2;
         const cropX = startX;
-        const sizeX = startX + cropW + layout.gap;
-        dropdowns.push({ id: "cropSelect", type: "dropdown", x: cropX, y, width: cropW, height, menu: "cropMenu", maxMenuWidth });
+        const sizeX = startX + resolvedCropWidth + sideBySideGap;
+        dropdowns.push({
+          id: "cropSelect",
+          type: "dropdown",
+          x: cropX,
+          y,
+          width: resolvedCropWidth,
+          height,
+          menu: "cropMenu",
+          maxMenuWidth,
+        });
         dropdowns.push({ id: "sizeSelect", type: "dropdown", x: sizeX, y, width: sizeW, height, menu: "sizeMenu", maxMenuWidth });
       } else {
         const width = availableWidth;
