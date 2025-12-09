@@ -9,7 +9,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
   const hydrationTimers = world.hydrationTimers || new Map();
   world.hydrationTimers = hydrationTimers;
 
-  const WATER_RANGE = 5;
+  const WATER_RANGE = 3;
 
   const parseKey = (key) => {
     if (!key || typeof key !== "string") return { row: null, col: null };
@@ -110,6 +110,21 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
       if (targetState === FARMLAND_SATURATED) {
         applySaturationToFarmland(targetKey);
       } else {
+        const plot = world.plots.get(targetKey);
+        if (plot) {
+          const crop = crops[plot.cropKey];
+          const growMs = getPlotGrowTimeMs(plot, crop);
+          const totalGrow = Number.isFinite(growMs) ? Math.max(0, growMs) : 0;
+          if (totalGrow > 0) {
+            const now = Date.now();
+            const elapsed = Math.max(0, now - plot.plantedAt);
+            const remaining = Math.max(0, totalGrow - elapsed);
+            const penalty = totalGrow * 0.25;
+            const newRemaining = Math.min(totalGrow, remaining + penalty);
+            const newElapsed = totalGrow - newRemaining;
+            plot.plantedAt = now - newElapsed;
+          }
+        }
         setFarmlandType(world, targetKey, FARMLAND);
         state.needsRender = true;
         saveState();
