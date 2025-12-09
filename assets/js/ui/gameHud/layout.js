@@ -49,10 +49,10 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
       let cropW = measureDropdownWidth("cropSelect", layout);
       let sizeW = measureDropdownWidth("sizeSelect", layout);
       const isMobile = layout.breakpoint === "mobile";
-      const sideBySideGap = Math.max(4, layout.gap - (isMobile ? 4 : 2));
+      const sideBySideGap = Math.max(4, layout.gap - 4);
       const compactSizeW = Math.min(
-        Math.max(Math.round(sizeW * (isMobile ? 0.6 : 0.75)), sizeW - (isMobile ? 28 : 20)),
-        Math.round(availableWidth * (isMobile ? 0.26 : 0.3))
+        Math.max(Math.round(sizeW * (isMobile ? 0.55 : 0.75)), sizeW - (isMobile ? 32 : 20)),
+        Math.round(availableWidth * (isMobile ? 0.2 : 0.3))
       );
       sizeW = compactSizeW;
       const totalSideBySideWidth = availableWidth;
