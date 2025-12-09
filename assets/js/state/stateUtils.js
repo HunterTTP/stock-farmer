@@ -75,11 +75,13 @@ function cleanStockHoldings(raw) {
 function cleanPlotValue(value) {
   const plantedAt = typeof value?.plantedAt === "number" ? value.plantedAt : Date.now();
   const growTimeMs = Number.isFinite(value?.growTimeMs) ? value.growTimeMs : null;
+  const growMultiplier = Number.isFinite(value?.growMultiplier) ? value.growMultiplier : null;
   const cleaned = {
     cropKey: value?.cropKey || null,
     plantedAt,
   };
   if (Number.isFinite(growTimeMs)) cleaned.growTimeMs = growTimeMs;
+  if (Number.isFinite(growMultiplier)) cleaned.growMultiplier = growMultiplier;
   return cleaned;
 }
 

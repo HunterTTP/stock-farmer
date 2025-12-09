@@ -1,4 +1,4 @@
-import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getFarmlandType, getPlotGrowTimeMs, setFarmlandType } from "../../utils/helpers.js";
+import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getCropGrowTimeMs, getFarmlandType, getPlotGrowTimeMs, setFarmlandType } from "../../utils/helpers.js";
 
 export function buildActionHandler(context, helpers, determineActionForTile, cropOps) {
   const { state, world, config, crops, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
@@ -54,6 +54,23 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     hydrationTimers.delete(targetKey);
   };
 
+  const applyPlotMultiplier = (targetKey, multiplier) => {
+    const plot = world.plots.get(targetKey);
+    if (!plot || multiplier <= 0) return;
+    const crop = crops[plot.cropKey];
+    const baseGrowMs = getCropGrowTimeMs(crop);
+    const prevTotal = getPlotGrowTimeMs(plot, crop) || baseGrowMs;
+    if (!baseGrowMs || baseGrowMs <= 0 || !prevTotal || prevTotal <= 0) return;
+    const now = Date.now();
+    const elapsed = Math.max(0, now - plot.plantedAt);
+    const progress = Math.min(1, elapsed / prevTotal);
+    const newTotal = baseGrowMs / multiplier;
+    const newElapsed = progress * newTotal;
+    plot.growTimeMs = newTotal;
+    plot.growMultiplier = multiplier;
+    plot.plantedAt = now - newElapsed;
+  };
+
   const applySaturationToFarmland = (targetKey) => {
     if (!targetKey || !world.filled.has(targetKey)) {
       clearFarmlandType(world, targetKey);
@@ -62,25 +79,11 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     }
     cancelHydrationTimer(targetKey);
     if (getFarmlandType(world, targetKey) === FARMLAND_SATURATED) return;
+    applyPlotMultiplier(targetKey, 1.25);
     setFarmlandType(world, targetKey, FARMLAND_SATURATED);
     const plot = world.plots.get(targetKey);
-    if (plot) {
-      const crop = crops[plot.cropKey];
-      const growMs = getPlotGrowTimeMs(plot, crop);
-      const totalGrow = Number.isFinite(growMs) ? Math.max(0, growMs) : 0;
-      if (totalGrow > 0) {
-        const now = Date.now();
-        const elapsed = Math.max(0, now - plot.plantedAt);
-        const remaining = Math.max(0, totalGrow - elapsed);
-        const boost = totalGrow * 0.25;
-        const newRemaining = Math.max(0, remaining - boost);
-        const newElapsed = totalGrow - newRemaining;
-        plot.plantedAt = now - newElapsed;
-      }
-      plot.growTimeMs = Number.isFinite(growMs) ? growMs : undefined;
-      recomputeLastPlantedForCrop(plot.cropKey);
-      renderCropOptions();
-    }
+    if (plot) recomputeLastPlantedForCrop(plot.cropKey);
+    renderCropOptions();
     state.needsRender = true;
     saveState();
   };
@@ -110,21 +113,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
       if (targetState === FARMLAND_SATURATED) {
         applySaturationToFarmland(targetKey);
       } else {
-        const plot = world.plots.get(targetKey);
-        if (plot) {
-          const crop = crops[plot.cropKey];
-          const growMs = getPlotGrowTimeMs(plot, crop);
-          const totalGrow = Number.isFinite(growMs) ? Math.max(0, growMs) : 0;
-          if (totalGrow > 0) {
-            const now = Date.now();
-            const elapsed = Math.max(0, now - plot.plantedAt);
-            const remaining = Math.max(0, totalGrow - elapsed);
-            const penalty = totalGrow * 0.25;
-            const newRemaining = Math.min(totalGrow, remaining + penalty);
-            const newElapsed = totalGrow - newRemaining;
-            plot.plantedAt = now - newElapsed;
-          }
-        }
+        applyPlotMultiplier(targetKey, 1.0);
         setFarmlandType(world, targetKey, FARMLAND);
         state.needsRender = true;
         saveState();
@@ -281,12 +270,13 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const plantedAt = Date.now();
         const farmlandType = getFarmlandType(world, key);
         const baseGrowMs = getPlotGrowTimeMs(null, crop);
-        const growTimeMs =
-          farmlandType === FARMLAND_SATURATED && baseGrowMs > 0 ? Math.round(baseGrowMs * 0.75) : baseGrowMs;
+        const multiplier = farmlandType === FARMLAND_SATURATED ? 1.25 : 1.0;
+        const growTimeMs = baseGrowMs && baseGrowMs > 0 ? baseGrowMs / multiplier : baseGrowMs;
         world.plots.set(key, {
           cropKey,
           plantedAt,
           growTimeMs,
+          growMultiplier: multiplier,
         });
         crop.placed += 1;
         crop.lastPlantedAt = plantedAt;
