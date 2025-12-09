@@ -111,6 +111,9 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   if (Number.isFinite(data.hudFontSize)) {
     state.hudFontSize = data.hudFontSize;
   }
+  if (typeof data.hudFontOverrideEnabled === "boolean") {
+    state.hudFontOverrideEnabled = data.hudFontOverrideEnabled;
+  }
   if (Number.isFinite(data.hudOpacity)) {
     state.hudOpacity = data.hudOpacity;
   } else if (typeof data.hudVisible === "boolean") {

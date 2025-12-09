@@ -113,6 +113,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     if (Number.isFinite(data.hudDropdownScale)) state.hudDropdownScale = data.hudDropdownScale;
     else if (Number.isFinite(data.hudScale)) state.hudDropdownScale = data.hudScale;
     if (Number.isFinite(data.hudFontSize)) state.hudFontSize = data.hudFontSize;
+    if (typeof data.hudFontOverrideEnabled === "boolean") state.hudFontOverrideEnabled = data.hudFontOverrideEnabled;
     if (Number.isFinite(data.hudOpacity)) state.hudOpacity = data.hudOpacity;
     else if (typeof data.hudVisible === "boolean") state.hudOpacity = data.hudVisible ? 1.0 : 0.0;
 

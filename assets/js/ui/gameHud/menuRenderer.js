@@ -103,9 +103,9 @@ export function createMenuRenderer({ ctx, COLORS, formatCurrency, menuData, draw
 
     const measuredWidth = measureMenuWidth(items, layout, dropdown);
     const maxMenuWidth = dropdown.maxMenuWidth || (toolbar ? toolbar.width : canvasWidth - padding * 2);
-    let menuWidth = Math.min(measuredWidth, maxMenuWidth);
+    let menuWidth = dropdown.menuWidthOverride || Math.min(measuredWidth, maxMenuWidth);
     const toolbarCenterX = toolbar ? toolbar.x + toolbar.width / 2 : canvasWidth / 2;
-    let menuX = toolbarCenterX - menuWidth / 2;
+    let menuX = dropdown.menuXOverride ?? toolbarCenterX - menuWidth / 2;
 
     if (menuX + menuWidth > canvasWidth - padding) {
       menuX = canvasWidth - menuWidth - padding;

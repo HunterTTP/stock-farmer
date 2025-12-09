@@ -130,14 +130,25 @@ function wireHudSliders(container) {
         }
         fontSlider.value = initialFont;
         const initialLayout = gameHud ? gameHud.computeLayout() : null;
-        fontValue.textContent = formatFontSizeLabel(initialFont, initialLayout);
-        fontSlider.addEventListener("input", (e) => {
-            const val = clampFont(e.target.value);
+        const setFontLabel = (val, layout, useOverride) => {
+            const label = useOverride ? formatFontSizeLabel(val, layout) : "Auto";
+            fontValue.textContent = label;
+        };
+        const AUTO_TOLERANCE = 0.05;
+        const isAuto = (val) => Math.abs(val - 1) <= AUTO_TOLERANCE;
+        const applyValue = (rawVal) => {
+            const val = clampFont(rawVal);
             fontSlider.value = val;
             state.hudFontSize = val;
-            const computedLayout = gameHud ? gameHud.computeLayout() : null;
-            fontValue.textContent = formatFontSizeLabel(val, computedLayout);
+            const useOverride = !isAuto(val);
+            state.hudFontOverrideEnabled = useOverride;
+            const layout = gameHud ? gameHud.computeLayout() : null;
+            setFontLabel(val, layout, useOverride);
             state.needsRender = true;
+        };
+        applyValue(initialFont);
+        fontSlider.addEventListener("input", (e) => {
+            applyValue(e.target.value);
         });
         fontSlider.addEventListener("change", () => {
             if (saveState) saveState();

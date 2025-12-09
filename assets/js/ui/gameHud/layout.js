@@ -42,6 +42,8 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const maxMenuWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
     const availableWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
     const minX = toolbar ? toolbar.x : layout.padding;
+    const menuWidthOverride = toolbar ? toolbar.width : availableWidth;
+    const menuXOverride = toolbar ? toolbar.x : minX;
 
     if (active === "plant") {
       let cropW = measureDropdownWidth("cropSelect", layout);
@@ -53,16 +55,13 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
         Math.round(availableWidth * (isMobile ? 0.26 : 0.3))
       );
       sizeW = compactSizeW;
-      const maxCropWidth = Math.min(cropW, availableWidth * (isMobile ? 0.74 : 0.7));
-      const cropSpace = availableWidth - sizeW - sideBySideGap;
-      const resolvedCropWidth = Math.max(120, Math.min(maxCropWidth, cropSpace));
-      const totalSideBySideWidth = resolvedCropWidth + sizeW + sideBySideGap;
-      const canFitSideBySide = resolvedCropWidth > 0 && cropSpace > 0 && totalSideBySideWidth <= availableWidth;
+      const totalSideBySideWidth = availableWidth;
+      const resolvedCropWidth = Math.max(120, totalSideBySideWidth - sizeW - sideBySideGap);
+      const canFitSideBySide = resolvedCropWidth > 0;
 
       if (canFitSideBySide) {
-        const startX = minX + (availableWidth - totalSideBySideWidth) / 2;
-        const cropX = startX;
-        const sizeX = startX + resolvedCropWidth + sideBySideGap;
+        const cropX = minX;
+        const sizeX = cropX + resolvedCropWidth + sideBySideGap;
         dropdowns.push({
           id: "cropSelect",
           type: "dropdown",
@@ -72,45 +71,115 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
           height,
           menu: "cropMenu",
           maxMenuWidth,
+          menuWidthOverride,
+          menuXOverride,
         });
-        dropdowns.push({ id: "sizeSelect", type: "dropdown", x: sizeX, y, width: sizeW, height, menu: "sizeMenu", maxMenuWidth });
+        dropdowns.push({
+          id: "sizeSelect",
+          type: "dropdown",
+          x: sizeX,
+          y,
+          width: sizeW,
+          height,
+          menu: "sizeMenu",
+          maxMenuWidth,
+          menuWidthOverride,
+          menuXOverride,
+        });
       } else {
         const width = availableWidth;
         const sizeY = y;
         const cropY = y - height - layout.gap;
-        dropdowns.push({ id: "cropSelect", type: "dropdown", x: minX, y: cropY, width, height, menu: "cropMenu", maxMenuWidth });
-        dropdowns.push({ id: "sizeSelect", type: "dropdown", x: minX, y: sizeY, width, height, menu: "sizeMenu", maxMenuWidth });
+        dropdowns.push({
+          id: "cropSelect",
+          type: "dropdown",
+          x: minX,
+          y: cropY,
+          width,
+          height,
+          menu: "cropMenu",
+          maxMenuWidth,
+          menuWidthOverride,
+          menuXOverride,
+        });
+        dropdowns.push({
+          id: "sizeSelect",
+          type: "dropdown",
+          x: minX,
+          y: sizeY,
+          width,
+          height,
+          menu: "sizeMenu",
+          maxMenuWidth,
+          menuWidthOverride,
+          menuXOverride,
+        });
       }
     } else if (active === "landscape") {
-      let w = measureDropdownWidth("landscapeSelect", layout);
-      if (w > availableWidth) w = availableWidth;
-      const startX = minX + (availableWidth - w) / 2;
-      dropdowns.push({ id: "landscapeSelect", type: "dropdown", x: startX, y, width: w, height, menu: "landscapeMenu", maxMenuWidth });
+      const w = availableWidth;
+      dropdowns.push({
+        id: "landscapeSelect",
+        type: "dropdown",
+        x: minX,
+        y,
+        width: w,
+        height,
+        menu: "landscapeMenu",
+        maxMenuWidth,
+        menuWidthOverride,
+        menuXOverride,
+      });
     } else if (active === "build") {
-      let w = measureDropdownWidth("buildSelect", layout);
-      if (w > availableWidth) w = availableWidth;
-      const startX = minX + (availableWidth - w) / 2;
-      dropdowns.push({ id: "buildSelect", type: "dropdown", x: startX, y, width: w, height, menu: "buildMenu", maxMenuWidth });
+      const w = availableWidth;
+      dropdowns.push({
+        id: "buildSelect",
+        type: "dropdown",
+        x: minX,
+        y,
+        width: w,
+        height,
+        menu: "buildMenu",
+        maxMenuWidth,
+        menuWidthOverride,
+        menuXOverride,
+      });
     }
 
     return dropdowns;
+  };
+
+  const computeDropdownHeight = (layout, scale) => {
+    const labelFontSize = Math.max(8, Math.round(layout.fontSize));
+    const metaFontSize = Math.max(8, Math.round((layout.fontSize - 2)));
+    const previewSize = Math.round(36 * scale);
+    const paddingY = Math.round(12 * scale);
+    const labelToMetaGap = Math.round(6 * scale);
+    const textHeight = labelFontSize + labelToMetaGap + metaFontSize;
+    const minHeight = Math.round(48 * scale);
+    return Math.max(minHeight, previewSize + paddingY * 2, textHeight + paddingY * 2);
   };
 
   const computeLayout = () => {
     const layout = getLayout();
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
-    const dockScaleBase = 0.81;
-    const dockScaleSetting = layout.breakpoint === "mobile" ? 1.4 : 1.0;
+    const dockScaleBase = 0.86;
+    const dockScaleSetting =
+      layout.breakpoint === "mobile"
+        ? 1.45
+        : layout.breakpoint === "desktop"
+          ? 0.95
+          : 1.05;
     const dockScale = dockScaleSetting * dockScaleBase;
     const dropdownScale = dockScale;
     const fontSizeBase = 1.1;
     const fontSizeOffset = 0.1; // Rebase so 1.0x renders like the previous 1.1x selection
     const fontSliderMin = 0.5;
     const fontSliderMax = 1.5;
-    const hudFontSetting = Number.isFinite(state.hudFontSize) ? state.hudFontSize : 1.0;
+    const useOverride = !!state.hudFontOverrideEnabled;
+    const hudFontSetting = useOverride && Number.isFinite(state.hudFontSize) ? state.hudFontSize : 1.0;
     const clampedHudFont = Math.max(fontSliderMin, Math.min(fontSliderMax, hudFontSetting));
-    const hudFontSize = (clampedHudFont + fontSizeOffset) * fontSizeBase;
+    const hudFontSize = useOverride ? (clampedHudFont + fontSizeOffset) * fontSizeBase : 1.0;
     const showDockText = false;
 
     const dockScaledPadding = Math.round(layout.padding * dockScale);
@@ -154,9 +223,9 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
 
     const dropdownScaledGap = isDesktop ? Math.max(6, Math.round(layout.gap * dropdownScale * 0.65)) : Math.round(layout.gap * dropdownScale);
     const dropdownScaledPadding = Math.round(layout.padding * dropdownScale);
-    const dropdownHeight = Math.min(72 * dropdownScale, Math.max(52 * dropdownScale, Math.round(layout.modeButtonSize * 1.05 * dropdownScale)));
-    const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;
     const dropdownLayout = { ...layout, padding: dropdownScaledPadding, gap: dropdownScaledGap, fontSize: Math.round(scaledFontSize * dropdownScale) };
+    const dropdownHeight = computeDropdownHeight(dropdownLayout, dropdownScale);
+    const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;
     const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, dropdownLayout, toolbar);
 
     const moneyHeight = 34;
