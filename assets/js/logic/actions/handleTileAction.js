@@ -9,7 +9,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
   const hydrationTimers = world.hydrationTimers || new Map();
   world.hydrationTimers = hydrationTimers;
 
-  const WATER_RANGE = 3;
+  const WATER_RANGE = 2;
 
   const parseKey = (key) => {
     if (!key || typeof key !== "string") return { row: null, col: null };
@@ -30,17 +30,24 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     return Math.max(rowDist, colDist);
   };
 
-  const closestWaterDistance = (key) => {
+  const collectWaterStructs = () => {
+    const water = [];
+    if (world.structures && typeof world.structures.forEach === "function") {
+      world.structures.forEach((struct) => {
+        if (isWaterStruct(struct)) water.push(struct);
+      });
+    }
+    return water;
+  };
+
+  const closestWaterDistance = (key, waterList) => {
     const { row, col } = parseKey(key);
     if (!Number.isFinite(row) || !Number.isFinite(col)) return Number.POSITIVE_INFINITY;
     let minDist = Number.POSITIVE_INFINITY;
-    if (world.structures && typeof world.structures.forEach === "function") {
-      world.structures.forEach((struct) => {
-        if (!isWaterStruct(struct)) return;
-        const dist = distanceToStruct(row, col, struct);
-        if (dist < minDist) minDist = dist;
-      });
-    }
+    (waterList || []).forEach((struct) => {
+      const dist = distanceToStruct(row, col, struct);
+      if (dist < minDist) minDist = dist;
+    });
     return minDist;
   };
 
@@ -130,13 +137,13 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     scheduleStateChange(targetKey, FARMLAND, WATER_RANGE);
   };
 
-  const reevaluateFarmlandHydration = (key) => {
+  const reevaluateFarmlandHydration = (key, waterList) => {
     if (!world.filled.has(key)) {
       clearFarmlandType(world, key);
       cancelHydrationTimer(key);
       return;
     }
-    const dist = closestWaterDistance(key);
+    const dist = closestWaterDistance(key, waterList);
     if (dist <= WATER_RANGE) {
       scheduleHydration(key, dist);
     } else {
@@ -146,11 +153,31 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
 
   const tickHydration = () => {
     ensureFarmlandStates(world);
-    if (world.filled && typeof world.filled.forEach === "function") {
-      world.filled.forEach((key) => {
-        reevaluateFarmlandHydration(key);
-      });
+    const total = world.filled?.size || 0;
+    if (!total) return;
+    const now = performance.now();
+    const HYDRATION_TICK_MS = 180;
+    const HYDRATION_BATCH = 300;
+    if (!tickHydration.lastTick) tickHydration.lastTick = 0;
+    if (!tickHydration.offset) tickHydration.offset = 0;
+    if (now - tickHydration.lastTick < HYDRATION_TICK_MS) return;
+    tickHydration.lastTick = now;
+
+    const waterList = collectWaterStructs();
+    let skip = tickHydration.offset % total;
+    let processed = 0;
+    let idx = 0;
+    for (const key of world.filled) {
+      if (idx < skip) {
+        idx += 1;
+        continue;
+      }
+      reevaluateFarmlandHydration(key, waterList);
+      processed += 1;
+      idx += 1;
+      if (processed >= HYDRATION_BATCH) break;
     }
+    tickHydration.offset = (skip + processed) % total;
   };
 
   const clearFarmlandTracking = (farmlandKey) => {
