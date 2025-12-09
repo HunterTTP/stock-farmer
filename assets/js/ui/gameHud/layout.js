@@ -1,6 +1,13 @@
 import { LAYOUT, MODE_ORDER } from "./constants.js";
 
-export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, formatCurrency }) {
+export function createHudLayout({
+  canvas,
+  ctx,
+  state,
+  hudState,
+  dropdownData,
+  formatCurrency,
+}) {
   const getLayout = () => {
     const width = canvas.clientWidth;
     if (width >= 1024) return { ...LAYOUT.desktop, breakpoint: "desktop" };
@@ -13,14 +20,19 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const label = dropdownData.getDropdownLabel(dropdown);
     const meta = dropdownData.getDropdownMeta(dropdown);
     const previewData = dropdownData.getDropdownPreviewData(dropdown);
-    const hasPreview = previewData && (previewData.imageUrl || previewData.colorData || previewData.iconType);
+    const hasPreview =
+      previewData &&
+      (previewData.imageUrl || previewData.colorData || previewData.iconType);
 
     const previewWidth = hasPreview ? 28 + 8 : 0;
     const paddingLeft = hasPreview ? 10 : 12;
     const chevronWidth = 28;
     const paddingRight = 8;
-    const isCompact = dropdownId === "sizeSelect" && layout.breakpoint !== "mobile";
-    const widthMultiplier = isCompact ? 1.0 : Math.min(1.85, Math.max(1.4, layout.modeButtonSize / 38));
+    const isCompact =
+      dropdownId === "sizeSelect" && layout.breakpoint !== "mobile";
+    const widthMultiplier = isCompact
+      ? 1.0
+      : Math.min(1.85, Math.max(1.4, layout.modeButtonSize / 38));
     const listPadding = isCompact ? 0 : 16;
 
     ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
@@ -28,19 +40,33 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
 
     let textWidth = labelWidth;
     if (meta) {
-      ctx.font = `400 ${layout.fontSize - 2}px system-ui, -apple-system, sans-serif`;
+      ctx.font = `400 ${
+        layout.fontSize - 2
+      }px system-ui, -apple-system, sans-serif`;
       const metaWidth = ctx.measureText(meta).width;
       textWidth = Math.max(labelWidth, metaWidth);
     }
 
-    return Math.ceil((paddingLeft + previewWidth + textWidth + chevronWidth + paddingRight + listPadding) * widthMultiplier);
+    return Math.ceil(
+      (paddingLeft +
+        previewWidth +
+        textWidth +
+        chevronWidth +
+        paddingRight +
+        listPadding) *
+        widthMultiplier
+    );
   };
 
   const computeDropdownLayout = (canvasWidth, y, height, layout, toolbar) => {
     const active = state.activeMode || "plant";
     const dropdowns = [];
-    const maxMenuWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
-    const availableWidth = toolbar ? toolbar.width : canvasWidth - layout.padding * 2;
+    const maxMenuWidth = toolbar
+      ? toolbar.width
+      : canvasWidth - layout.padding * 2;
+    const availableWidth = toolbar
+      ? toolbar.width
+      : canvasWidth - layout.padding * 2;
     const minX = toolbar ? toolbar.x : layout.padding;
     const menuWidthOverride = toolbar ? toolbar.width : availableWidth;
     const menuXOverride = toolbar ? toolbar.x : minX;
@@ -51,12 +77,18 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
       const isMobile = layout.breakpoint === "mobile";
       const sideBySideGap = Math.max(4, layout.gap - 4);
       const compactSizeW = Math.min(
-        Math.max(Math.round(sizeW * (isMobile ? 0.55 : 0.75)), sizeW - (isMobile ? 32 : 20)),
+        Math.max(
+          Math.round(sizeW * (isMobile ? 0.55 : 0.75)),
+          sizeW - (isMobile ? 32 : 20)
+        ),
         Math.round(availableWidth * (isMobile ? 0.2 : 0.3))
       );
       sizeW = compactSizeW;
       const totalSideBySideWidth = availableWidth;
-      const resolvedCropWidth = Math.max(120, totalSideBySideWidth - sizeW - sideBySideGap);
+      const resolvedCropWidth = Math.max(
+        120,
+        totalSideBySideWidth - sizeW - sideBySideGap
+      );
       const canFitSideBySide = resolvedCropWidth > 0;
 
       if (canFitSideBySide) {
@@ -150,13 +182,17 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
 
   const computeDropdownHeight = (layout, scale) => {
     const labelFontSize = Math.max(8, Math.round(layout.fontSize));
-    const metaFontSize = Math.max(8, Math.round((layout.fontSize - 2)));
+    const metaFontSize = Math.max(8, Math.round(layout.fontSize - 2));
     const previewSize = Math.round(36 * scale);
     const paddingY = Math.round(12 * scale);
     const labelToMetaGap = Math.round(6 * scale);
     const textHeight = labelFontSize + labelToMetaGap + metaFontSize;
     const minHeight = Math.round(48 * scale);
-    return Math.max(minHeight, previewSize + paddingY * 2, textHeight + paddingY * 2);
+    return Math.max(
+      minHeight,
+      previewSize + paddingY * 2,
+      textHeight + paddingY * 2
+    );
   };
 
   const computeLayout = () => {
@@ -168,8 +204,8 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
       layout.breakpoint === "mobile"
         ? 1.45
         : layout.breakpoint === "desktop"
-          ? 0.95
-          : 1.05;
+        ? 0.95
+        : 1.05;
     const dockScale = dockScaleSetting * dockScaleBase;
     const dropdownScale = dockScale;
     const fontSizeBase = 1.1;
@@ -177,20 +213,33 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const fontSliderMin = 0.5;
     const fontSliderMax = 1.5;
     const useOverride = !!state.hudFontOverrideEnabled;
-    const hudFontSetting = useOverride && Number.isFinite(state.hudFontSize) ? state.hudFontSize : 1.0;
-    const clampedHudFont = Math.max(fontSliderMin, Math.min(fontSliderMax, hudFontSetting));
-    const hudFontSize = useOverride ? (clampedHudFont + fontSizeOffset) * fontSizeBase : 1.0;
+    const hudFontSetting =
+      useOverride && Number.isFinite(state.hudFontSize)
+        ? state.hudFontSize
+        : 1.0;
+    const clampedHudFont = Math.max(
+      fontSliderMin,
+      Math.min(fontSliderMax, hudFontSetting)
+    );
+    const hudFontSize = useOverride
+      ? (clampedHudFont + fontSizeOffset) * fontSizeBase
+      : 1.0;
     const showDockText = false;
 
     const dockScaledPadding = Math.round(layout.padding * dockScale);
     const dockScaledGap = Math.round(layout.gap * dockScale);
-    const dockScaledToolbarPadding = Math.round(layout.toolbarPadding * dockScale);
+    const dockScaledToolbarPadding = Math.round(
+      layout.toolbarPadding * dockScale
+    );
     const scaledFontSize = Math.round(layout.fontSize * hudFontSize);
 
     const modeCount = MODE_ORDER.length;
     const isDesktop = layout.breakpoint === "desktop";
     const availableWidth = canvasWidth - dockScaledPadding * 2;
-    const targetToolbarWidth = Math.min((layout.toolbarMaxWidth || availableWidth) * dockScale, availableWidth);
+    const targetToolbarWidth = Math.min(
+      (layout.toolbarMaxWidth || availableWidth) * dockScale,
+      availableWidth
+    );
     const buttonMinLimit = layout.minModeButtonSize * dockScale;
     const buttonMaxLimit = layout.maxModeButtonSize * dockScale;
     const minButtonWidth = buttonMinLimit;
@@ -199,15 +248,22 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
       minButtonWidth,
       Math.min(
         maxButtonWidth,
-        (targetToolbarWidth - dockScaledToolbarPadding * 2 - (modeCount - 1) * dockScaledGap) / modeCount
+        (targetToolbarWidth -
+          dockScaledToolbarPadding * 2 -
+          (modeCount - 1) * dockScaledGap) /
+          modeCount
       )
     );
-    const totalModeWidth = modeCount * buttonSize + (modeCount - 1) * dockScaledGap + dockScaledToolbarPadding * 2;
+    const totalModeWidth =
+      modeCount * buttonSize +
+      (modeCount - 1) * dockScaledGap +
+      dockScaledToolbarPadding * 2;
     const toolbarContentHeight = buttonSize * 0.75;
     const toolbarHeight = toolbarContentHeight + dockScaledToolbarPadding * 2;
     const toolbarX = (canvasWidth - totalModeWidth) / 2;
-    const hudBottomOffset = isDesktop ? 12 : 20;
-    const toolbarY = canvasHeight - toolbarHeight - dockScaledPadding - hudBottomOffset;
+    const hudBottomOffset = 12;
+    const toolbarY =
+      canvasHeight - toolbarHeight - dockScaledPadding - hudBottomOffset;
 
     const modeButtons = MODE_ORDER.map((mode, i) => ({
       id: mode,
@@ -219,14 +275,32 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
       mode,
     }));
 
-    const toolbar = { x: toolbarX, y: toolbarY, width: totalModeWidth, height: toolbarHeight };
+    const toolbar = {
+      x: toolbarX,
+      y: toolbarY,
+      width: totalModeWidth,
+      height: toolbarHeight,
+    };
 
-    const dropdownScaledGap = isDesktop ? Math.max(6, Math.round(layout.gap * dropdownScale * 0.65)) : Math.round(layout.gap * dropdownScale);
+    const dropdownScaledGap = isDesktop
+      ? Math.max(6, Math.round(layout.gap * dropdownScale * 0.65))
+      : Math.round(layout.gap * dropdownScale);
     const dropdownScaledPadding = Math.round(layout.padding * dropdownScale);
-    const dropdownLayout = { ...layout, padding: dropdownScaledPadding, gap: dropdownScaledGap, fontSize: Math.round(scaledFontSize * dropdownScale) };
+    const dropdownLayout = {
+      ...layout,
+      padding: dropdownScaledPadding,
+      gap: dropdownScaledGap,
+      fontSize: Math.round(scaledFontSize * dropdownScale),
+    };
     const dropdownHeight = computeDropdownHeight(dropdownLayout, dropdownScale);
     const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;
-    const dropdowns = computeDropdownLayout(canvasWidth, dropdownY, dropdownHeight, dropdownLayout, toolbar);
+    const dropdowns = computeDropdownLayout(
+      canvasWidth,
+      dropdownY,
+      dropdownHeight,
+      dropdownLayout,
+      toolbar
+    );
 
     const moneyHeight = 34;
     const moneyText = formatCurrency(state.totalMoney, true);
@@ -235,13 +309,31 @@ export function createHudLayout({ canvas, ctx, state, hudState, dropdownData, fo
     const moneyWidth = 24 + moneyTextWidth;
     const moneyX = canvasWidth - moneyWidth - layout.padding;
     const moneyY = layout.padding;
-    const moneyDisplay = { id: "money", type: "moneyDisplay", x: moneyX, y: moneyY, width: moneyWidth, height: moneyHeight };
+    const moneyDisplay = {
+      id: "money",
+      type: "moneyDisplay",
+      x: moneyX,
+      y: moneyY,
+      width: moneyWidth,
+      height: moneyHeight,
+    };
 
     const moneyChangeX = moneyX - 80 - 8;
-    const moneyChange = { id: "moneyChange", type: "moneyChange", x: moneyChangeX, y: moneyY, width: 80, height: moneyHeight };
+    const moneyChange = {
+      id: "moneyChange",
+      type: "moneyChange",
+      x: moneyChangeX,
+      y: moneyY,
+      width: 80,
+      height: moneyHeight,
+    };
 
     hudState.layout = {
-      layout: { ...layout, fontSize: scaledFontSize, iconSize: Math.round(layout.iconSize * dockScale) },
+      layout: {
+        ...layout,
+        fontSize: scaledFontSize,
+        iconSize: Math.round(layout.iconSize * dockScale),
+      },
       modeButtons,
       dropdowns,
       moneyDisplay,
