@@ -9,10 +9,48 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
   const hydrationTimers = world.hydrationTimers || new Map();
   world.hydrationTimers = hydrationTimers;
 
+  const WATER_RANGE = 5;
+
+  const parseKey = (key) => {
+    if (!key || typeof key !== "string") return { row: null, col: null };
+    const [rowStr, colStr] = key.split(",");
+    return { row: parseInt(rowStr, 10), col: parseInt(colStr, 10) };
+  };
+
+  const isWaterStruct = (struct) => struct && struct.kind === "landscape" && typeof struct.id === "string" && struct.id.startsWith("water");
+
+  const distanceToStruct = (row, col, struct) => {
+    if (!struct || !Number.isFinite(row) || !Number.isFinite(col)) return Number.POSITIVE_INFINITY;
+    const rowMin = struct.row;
+    const rowMax = struct.row + Math.max(1, struct.height || 1) - 1;
+    const colMin = struct.col;
+    const colMax = struct.col + Math.max(1, struct.width || 1) - 1;
+    const rowDist = row < rowMin ? rowMin - row : row > rowMax ? row - rowMax : 0;
+    const colDist = col < colMin ? colMin - col : col > colMax ? col - colMax : 0;
+    return Math.max(rowDist, colDist);
+  };
+
+  const closestWaterDistance = (key) => {
+    const { row, col } = parseKey(key);
+    if (!Number.isFinite(row) || !Number.isFinite(col)) return Number.POSITIVE_INFINITY;
+    let minDist = Number.POSITIVE_INFINITY;
+    if (world.structures && typeof world.structures.forEach === "function") {
+      world.structures.forEach((struct) => {
+        if (!isWaterStruct(struct)) return;
+        const dist = distanceToStruct(row, col, struct);
+        if (dist < minDist) minDist = dist;
+      });
+    }
+    return minDist;
+  };
+
   const cancelHydrationTimer = (targetKey) => {
     if (!targetKey) return;
     const existing = hydrationTimers.get(targetKey);
-    if (existing) clearTimeout(existing);
+    if (existing) {
+      const timeoutId = typeof existing === "object" ? existing.id : existing;
+      if (timeoutId) clearTimeout(timeoutId);
+    }
     hydrationTimers.delete(targetKey);
   };
 
@@ -47,40 +85,91 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     saveState();
   };
 
-  const scheduleHydration = (targetKey) => {
+  const scheduleStateChange = (targetKey, targetState, distance) => {
     if (!targetKey || !world.filled.has(targetKey)) {
       cancelHydrationTimer(targetKey);
       return;
     }
-    if (getFarmlandType(world, targetKey) === FARMLAND_SATURATED) {
+    const current = getFarmlandType(world, targetKey);
+    if (current === targetState) {
       cancelHydrationTimer(targetKey);
       return;
     }
-    if (hydrationTimers.has(targetKey)) return;
-    const delayMs = Math.random() * 4000;
+    const existing = hydrationTimers.get(targetKey);
+    if (existing && existing.targetState === targetState) return;
+    cancelHydrationTimer(targetKey);
+    const dist = Number.isFinite(distance) ? Math.max(0, distance) : WATER_RANGE;
+    const maxDelay = 4000 * Math.min(1, dist / WATER_RANGE);
+    const delayMs = Math.random() * maxDelay;
     const timeoutId = setTimeout(() => {
       hydrationTimers.delete(targetKey);
-      applySaturationToFarmland(targetKey);
+      if (!world.filled.has(targetKey)) {
+        clearFarmlandType(world, targetKey);
+        return;
+      }
+      if (targetState === FARMLAND_SATURATED) {
+        applySaturationToFarmland(targetKey);
+      } else {
+        setFarmlandType(world, targetKey, FARMLAND);
+        state.needsRender = true;
+        saveState();
+      }
     }, delayMs);
-    hydrationTimers.set(targetKey, timeoutId);
+    hydrationTimers.set(targetKey, { id: timeoutId, targetState });
+  };
+
+  const scheduleHydration = (targetKey, distance) => {
+    scheduleStateChange(targetKey, FARMLAND_SATURATED, distance);
+  };
+
+  const scheduleDrying = (targetKey) => {
+    scheduleStateChange(targetKey, FARMLAND, WATER_RANGE);
   };
 
   const triggerHydrationAroundStructure = (struct) => {
-    if (!struct || struct.kind !== "landscape" || typeof struct.id !== "string") return;
-    if (!struct.id.startsWith("water")) return;
-    const range = 5;
+    if (!isWaterStruct(struct)) return;
     const height = Math.max(1, struct.height || 1);
     const width = Math.max(1, struct.width || 1);
-    const startRow = Math.max(0, struct.row - range);
-    const endRow = Math.min(config.gridRows - 1, struct.row + height - 1 + range);
-    const startCol = Math.max(0, struct.col - range);
-    const endCol = Math.min(config.gridCols - 1, struct.col + width - 1 + range);
+    const startRow = Math.max(0, struct.row - WATER_RANGE);
+    const endRow = Math.min(config.gridRows - 1, struct.row + height - 1 + WATER_RANGE);
+    const startCol = Math.max(0, struct.col - WATER_RANGE);
+    const endCol = Math.min(config.gridCols - 1, struct.col + width - 1 + WATER_RANGE);
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const farmlandKey = `${r},${c}`;
         if (!world.filled.has(farmlandKey)) continue;
-        if (getFarmlandType(world, farmlandKey) === FARMLAND_SATURATED) continue;
-        scheduleHydration(farmlandKey);
+        const dist = distanceToStruct(r, c, struct);
+        if (dist <= WATER_RANGE) scheduleHydration(farmlandKey, dist);
+      }
+    }
+  };
+
+  const reevaluateFarmlandHydration = (key) => {
+    if (!world.filled.has(key)) {
+      clearFarmlandType(world, key);
+      cancelHydrationTimer(key);
+      return;
+    }
+    const dist = closestWaterDistance(key);
+    if (dist <= WATER_RANGE) {
+      scheduleHydration(key, dist);
+    } else {
+      scheduleDrying(key);
+    }
+  };
+
+  const triggerDryingAroundFootprint = (struct) => {
+    const height = Math.max(1, struct?.height || 1);
+    const width = Math.max(1, struct?.width || 1);
+    const startRow = Math.max(0, struct?.row - WATER_RANGE);
+    const endRow = Math.min(config.gridRows - 1, (struct?.row || 0) + height - 1 + WATER_RANGE);
+    const startCol = Math.max(0, struct?.col - WATER_RANGE);
+    const endCol = Math.min(config.gridCols - 1, (struct?.col || 0) + width - 1 + WATER_RANGE);
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const farmlandKey = `${r},${c}`;
+        if (!world.filled.has(farmlandKey)) continue;
+        reevaluateFarmlandHydration(farmlandKey);
       }
     }
   };
@@ -151,6 +240,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         setFarmlandType(world, key, FARMLAND);
         cancelHydrationTimer(key);
         state.farmlandPlaced = farmlandPlaced + 1;
+        reevaluateFarmlandHydration(key);
         state.needsRender = true;
         renderCropOptions();
         renderLandscapeOptions();
@@ -251,6 +341,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
         const structKey = resolvedAction?.structKey || getStructureAtKey(key);
         if (!structKey) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
+        const existingStruct = structKey ? world.structures.get(structKey) : null;
         const { success, refund } = removeStructure(structKey, kind);
         if (!success) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
         if (refund > 0) {
@@ -259,6 +350,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         }
         state.needsRender = true;
         saveState();
+        if (isWaterStruct(existingStruct)) triggerDryingAroundFootprint(existingStruct);
         return { success: true };
       }
       case "replaceLandscape": {
@@ -300,6 +392,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
             world.structureTiles.set(`${row + r},${col + c}`, structKey);
           }
         }
+        triggerDryingAroundFootprint(oldStruct);
         triggerHydrationAroundStructure(stored);
         state.totalMoney -= cost;
         if (farmlandRefund > 0) {
@@ -331,10 +424,12 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         setFarmlandType(world, key, FARMLAND);
         cancelHydrationTimer(key);
         state.farmlandPlaced = farmlandPlaced + 1;
+        reevaluateFarmlandHydration(key);
         state.needsRender = true;
         renderCropOptions();
         renderLandscapeOptions();
         saveState();
+        triggerDryingAroundFootprint(oldStruct);
         return { success: true };
       }
       case "replaceLandscapeWithGrass": {
@@ -360,6 +455,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         state.needsRender = true;
         renderLandscapeOptions();
         saveState();
+        triggerDryingAroundFootprint(oldStruct);
         return { success: true };
       }
       default:
