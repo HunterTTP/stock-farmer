@@ -255,6 +255,7 @@ const renderer = createRenderer({
   currentSizeOption: ui.currentSizeOption,
   computeHoverPreview: actions.computeHoverPreview,
   gameHud,
+  tickHydration: actions.tickHydration,
 });
 
 const pointerControls = createPointerControls({

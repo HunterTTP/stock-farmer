@@ -15,7 +15,7 @@ export function createActions(args) {
   const cropOps = buildCropOperations(context);
   const structureSelling = buildStructureSelling(context, helpers);
   const { computeHoverPreview } = buildPreview(context, determineActionForTile);
-  const { handleTileAction } = buildActionHandler(context, helpers, determineActionForTile, cropOps);
+  const { handleTileAction, tickHydration } = buildActionHandler(context, helpers, determineActionForTile, cropOps);
   const { handleTap } = buildTapHandler(context, determineActionForTile, handleTileAction);
 
   return {
@@ -28,5 +28,6 @@ export function createActions(args) {
     handleTileAction,
     handleTap,
     destroyPlot: cropOps.destroyPlot,
+    tickHydration,
   };
 }

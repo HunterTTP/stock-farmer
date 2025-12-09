@@ -130,24 +130,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     scheduleStateChange(targetKey, FARMLAND, WATER_RANGE);
   };
 
-  const triggerHydrationAroundStructure = (struct) => {
-    if (!isWaterStruct(struct)) return;
-    const height = Math.max(1, struct.height || 1);
-    const width = Math.max(1, struct.width || 1);
-    const startRow = Math.max(0, struct.row - WATER_RANGE);
-    const endRow = Math.min(config.gridRows - 1, struct.row + height - 1 + WATER_RANGE);
-    const startCol = Math.max(0, struct.col - WATER_RANGE);
-    const endCol = Math.min(config.gridCols - 1, struct.col + width - 1 + WATER_RANGE);
-    for (let r = startRow; r <= endRow; r++) {
-      for (let c = startCol; c <= endCol; c++) {
-        const farmlandKey = `${r},${c}`;
-        if (!world.filled.has(farmlandKey)) continue;
-        const dist = distanceToStruct(r, c, struct);
-        if (dist <= WATER_RANGE) scheduleHydration(farmlandKey, dist);
-      }
-    }
-  };
-
   const reevaluateFarmlandHydration = (key) => {
     if (!world.filled.has(key)) {
       clearFarmlandType(world, key);
@@ -162,19 +144,12 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     }
   };
 
-  const triggerDryingAroundFootprint = (struct) => {
-    const height = Math.max(1, struct?.height || 1);
-    const width = Math.max(1, struct?.width || 1);
-    const startRow = Math.max(0, struct?.row - WATER_RANGE);
-    const endRow = Math.min(config.gridRows - 1, (struct?.row || 0) + height - 1 + WATER_RANGE);
-    const startCol = Math.max(0, struct?.col - WATER_RANGE);
-    const endCol = Math.min(config.gridCols - 1, (struct?.col || 0) + width - 1 + WATER_RANGE);
-    for (let r = startRow; r <= endRow; r++) {
-      for (let c = startCol; c <= endCol; c++) {
-        const farmlandKey = `${r},${c}`;
-        if (!world.filled.has(farmlandKey)) continue;
-        reevaluateFarmlandHydration(farmlandKey);
-      }
+  const tickHydration = () => {
+    ensureFarmlandStates(world);
+    if (world.filled && typeof world.filled.forEach === "function") {
+      world.filled.forEach((key) => {
+        reevaluateFarmlandHydration(key);
+      });
     }
   };
 
@@ -335,7 +310,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
             world.structureTiles.set(`${row + r},${col + c}`, structKey);
           }
         }
-        triggerHydrationAroundStructure(stored);
         state.totalMoney -= cost;
         onMoneyChanged();
         state.needsRender = true;
@@ -346,7 +320,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
         const structKey = resolvedAction?.structKey || getStructureAtKey(key);
         if (!structKey) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
-        const existingStruct = structKey ? world.structures.get(structKey) : null;
         const { success, refund } = removeStructure(structKey, kind);
         if (!success) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
         if (refund > 0) {
@@ -355,7 +328,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         }
         state.needsRender = true;
         saveState();
-        if (isWaterStruct(existingStruct)) triggerDryingAroundFootprint(existingStruct);
         return { success: true };
       }
       case "replaceLandscape": {
@@ -397,8 +369,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
             world.structureTiles.set(`${row + r},${col + c}`, structKey);
           }
         }
-        triggerDryingAroundFootprint(oldStruct);
-        triggerHydrationAroundStructure(stored);
         state.totalMoney -= cost;
         if (farmlandRefund > 0) {
           state.totalMoney += farmlandRefund;
@@ -434,7 +404,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         renderCropOptions();
         renderLandscapeOptions();
         saveState();
-        triggerDryingAroundFootprint(oldStruct);
         return { success: true };
       }
       case "replaceLandscapeWithGrass": {
@@ -460,7 +429,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         state.needsRender = true;
         renderLandscapeOptions();
         saveState();
-        triggerDryingAroundFootprint(oldStruct);
         return { success: true };
       }
       default:
@@ -468,5 +436,5 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     }
   }
 
-  return { handleTileAction };
+  return { handleTileAction, tickHydration };
 }

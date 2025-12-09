@@ -1,6 +1,6 @@
 import { FARMLAND_SATURATED, getFarmlandType, getPlotGrowTimeMs, getStageBreakpoints } from "../utils/helpers.js";
 
-export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud }) {
+export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud, tickHydration }) {
   const buildingImageCache = new Map();
   const getLandscapeAsset = (id) => (id && landscapeAssets ? landscapeAssets[id] : null);
 
@@ -69,6 +69,7 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
   }
 
   function render() {
+    if (typeof tickHydration === "function") tickHydration();
     const landscapeInWorld =
       world.structures && typeof world.structures.values === "function"
         ? Array.from(world.structures.values()).some(
