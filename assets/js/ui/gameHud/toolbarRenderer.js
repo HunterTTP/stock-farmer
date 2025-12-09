@@ -53,7 +53,7 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     ctx.restore();
 
     const scale = hudState.layout?.dockScale || 1;
-    const iconSize = (hudState.layout?.layout?.iconSize || 22) * scale * 1.12;
+    const iconSize = (hudState.layout?.layout?.iconSize || 22) * 1.12;
     const cx = btn.x + btn.width / 2;
     const cy = btn.y + btn.height / 2;
 

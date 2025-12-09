@@ -1,5 +1,7 @@
 import { LAYOUT, MODE_ORDER } from "./constants.js";
 
+const MOBILE_HEIGHT_SCALE = 0.86;
+
 export function createHudLayout({
   canvas,
   ctx,
@@ -181,13 +183,16 @@ export function createHudLayout({
   };
 
   const computeDropdownHeight = (layout, scale) => {
+    const heightScale =
+      layout.breakpoint === "mobile" ? MOBILE_HEIGHT_SCALE : 1;
+    const adjustedScale = scale * heightScale;
     const labelFontSize = Math.max(8, Math.round(layout.fontSize));
     const metaFontSize = Math.max(8, Math.round(layout.fontSize - 2));
-    const previewSize = Math.round(36 * scale);
-    const paddingY = Math.round(12 * scale);
-    const labelToMetaGap = Math.round(6 * scale);
+    const previewSize = Math.round(36 * adjustedScale);
+    const paddingY = Math.round(12 * adjustedScale);
+    const labelToMetaGap = Math.round(6 * adjustedScale);
     const textHeight = labelFontSize + labelToMetaGap + metaFontSize;
-    const minHeight = Math.round(48 * scale);
+    const minHeight = Math.round(48 * adjustedScale);
     return Math.max(
       minHeight,
       previewSize + paddingY * 2,
@@ -235,6 +240,7 @@ export function createHudLayout({
 
     const modeCount = MODE_ORDER.length;
     const isDesktop = layout.breakpoint === "desktop";
+    const isMobile = layout.breakpoint === "mobile";
     const availableWidth = canvasWidth - dockScaledPadding * 2;
     const targetToolbarWidth = Math.min(
       (layout.toolbarMaxWidth || availableWidth) * dockScale,
@@ -258,8 +264,12 @@ export function createHudLayout({
       modeCount * buttonSize +
       (modeCount - 1) * dockScaledGap +
       dockScaledToolbarPadding * 2;
-    const toolbarContentHeight = buttonSize * 0.75;
-    const toolbarHeight = toolbarContentHeight + dockScaledToolbarPadding * 2;
+    const toolbarHeightScale = isMobile ? MOBILE_HEIGHT_SCALE : 1;
+    const toolbarVerticalPadding = Math.round(
+      dockScaledToolbarPadding * toolbarHeightScale
+    );
+    const toolbarContentHeight = buttonSize * 0.75 * toolbarHeightScale;
+    const toolbarHeight = toolbarContentHeight + toolbarVerticalPadding * 2;
     const toolbarX = (canvasWidth - totalModeWidth) / 2;
     const hudBottomOffset = 12;
     const toolbarY =
@@ -269,7 +279,7 @@ export function createHudLayout({
       id: mode,
       type: "modeButton",
       x: toolbarX + dockScaledToolbarPadding + i * (buttonSize + dockScaledGap),
-      y: toolbarY + dockScaledToolbarPadding,
+      y: toolbarY + toolbarVerticalPadding,
       width: buttonSize,
       height: toolbarContentHeight,
       mode,
@@ -332,7 +342,7 @@ export function createHudLayout({
       layout: {
         ...layout,
         fontSize: scaledFontSize,
-        iconSize: Math.round(layout.iconSize * dockScale),
+        iconSize: Math.round(layout.iconSize * dockScale * toolbarHeightScale),
       },
       modeButtons,
       dropdowns,
