@@ -18,6 +18,23 @@ import { createTradeModal } from "./trading/tradeModal.js";
 import { createGameHud } from "./ui/gameHud.js";
 import { initTheme, initThemePicker, initHudPicker, setAccentColor, getAccentPalette, onAccentChange, setHudContext, DEFAULT_ACCENT } from "./ui/theme.js";
 
+function disablePwaFeatures() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => reg.unregister());
+    });
+  }
+  if (typeof caches !== "undefined" && caches?.keys) {
+    caches.keys().then((keys) => {
+      keys
+        .filter((key) => key && key.toLowerCase().includes("stock-farmer"))
+        .forEach((key) => caches.delete(key));
+    });
+  }
+}
+
+disablePwaFeatures();
+
 const initialSnapshots = {
   crops: JSON.parse(JSON.stringify(crops)),
   sizes: JSON.parse(JSON.stringify(sizes)),
@@ -173,6 +190,7 @@ function resetSettingsOnly() {
 ui = createUIControls({
   dom,
   state,
+  world,
   crops,
   sizes,
   buildings,
@@ -196,6 +214,7 @@ gameHud = createGameHud({
   canvas,
   ctx,
   state,
+  world,
   crops,
   sizes,
   landscapes,

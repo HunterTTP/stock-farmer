@@ -10,7 +10,7 @@ import { createHudRenderer } from "./gameHud/renderHud.js";
 import { createHudInteractions } from "./gameHud/interactions.js";
 import { createHudAnimations } from "./gameHud/animations.js";
 
-export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, buildings, formatCurrency, onMoneyChanged, saveState, openConfirmModal, showActionError }) {
+export function createGameHud({ canvas, ctx, state, world, crops, sizes, landscapes, buildings, formatCurrency, onMoneyChanged, saveState, openConfirmModal, showActionError }) {
   const hudState = {
     openMenuKey: null,
     hoverElement: null,
@@ -38,7 +38,7 @@ export function createGameHud({ canvas, ctx, state, crops, sizes, landscapes, bu
     state.needsRender = true;
   });
 
-  const menuData = createMenuData({ state, crops, sizes, landscapes, buildings, formatCurrency });
+  const menuData = createMenuData({ state, world, crops, sizes, landscapes, buildings, formatCurrency });
   const layoutManager = createHudLayout({ canvas, ctx, state, hudState, dropdownData: menuData, formatCurrency });
   const drawUtils = createDrawUtils({ ctx, COLORS: colors, hexToRgba, state });
   const menuRenderer = createMenuRenderer({

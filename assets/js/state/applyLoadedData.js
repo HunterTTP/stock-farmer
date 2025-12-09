@@ -149,8 +149,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   }
 
   state.needsRender = true;
-  if (Number.isFinite(data.farmlandPlaced)) state.farmlandPlaced = data.farmlandPlaced;
-  else state.farmlandPlaced = world.filled.size;
+  state.farmlandPlaced = world.filled.size;
   console.log("[load] applyLoadedData done", {
     filled: world.filled.size,
     plots: world.plots.size,

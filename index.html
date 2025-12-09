@@ -6,9 +6,7 @@
   <title>Stock Farmer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000000" />
-  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="images/logo/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="512x512" href="images/logo/pwa-512.png" />
   <link rel="stylesheet" href="assets/vendor/tailwind/tailwind.min.css" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
   <link rel="stylesheet" href="assets/css/main.css" />
@@ -30,7 +28,6 @@
       document.getElementById('app-loading')?.remove();
 
       await import('./assets/js/firebase-auth.js');
-      await import('./assets/js/pwa.js');
       await import('./assets/js/app.js');
     }
 

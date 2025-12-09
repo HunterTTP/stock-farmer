@@ -129,8 +129,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     }
 
     state.needsRender = true;
-    if (Number.isFinite(data.farmlandPlaced)) state.farmlandPlaced = data.farmlandPlaced;
-    else state.farmlandPlaced = world.filled.size;
+    state.farmlandPlaced = world.filled.size;
   } catch (err) {
     console.error("State load failed", err);
   }

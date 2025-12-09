@@ -1,4 +1,5 @@
 import { getPlotGrowTimeMs } from "../../utils/helpers.js";
+import { computeFarmlandLimit, getFarmlandPlaced } from "../farmlandLimits.js";
 
 export function buildPreview(context, determineActionForTile) {
   const { state, world, config, crops } = context;
@@ -31,9 +32,7 @@ export function buildPreview(context, determineActionForTile) {
       case "placeFarmland": {
         if (getFilled(key) || getPlot(key)) return false;
         const farmlandPlaced = typeof previewState.farmlandPlaced === "number" ? previewState.farmlandPlaced : 0;
-        const farmlandCost = farmlandPlaced < 4 ? 0 : 25;
-        if (previewState.money < farmlandCost) return false;
-        previewState.money -= farmlandCost;
+        if (farmlandPlaced >= previewState.farmlandLimit) return false;
         previewState.filledAdds.add(key);
         previewState.farmlandPlaced = farmlandPlaced + 1;
         return true;
@@ -91,7 +90,17 @@ export function buildPreview(context, determineActionForTile) {
     Object.values(crops).forEach((c) => {
       placed[c.id] = typeof c.placed === "number" ? Math.max(0, c.placed) : 0;
     });
-    const previewState = { money: state.totalMoney, placed, farmlandPlaced: state.farmlandPlaced || 0, filledAdds: new Set(), filledRemovals: new Set(), plotsRemoved: new Set() };
+    const initialFarmlandPlaced = getFarmlandPlaced(state, world);
+    const farmlandLimit = computeFarmlandLimit(world.structures, crops);
+    const previewState = {
+      money: state.totalMoney,
+      placed,
+      farmlandPlaced: initialFarmlandPlaced,
+      farmlandLimit,
+      filledAdds: new Set(),
+      filledRemovals: new Set(),
+      plotsRemoved: new Set(),
+    };
     const getFilled = (key) => {
       if (previewState.filledAdds.has(key)) return true;
       if (previewState.filledRemovals.has(key)) return false;

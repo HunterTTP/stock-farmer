@@ -1,6 +1,7 @@
 import { getCropGrowTimeMs } from "../../utils/helpers.js";
+import { CROP_UNLOCK_FARMLAND_BONUS, getBuildingFarmlandBoost, getFarmlandUsage } from "../../logic/farmlandLimits.js";
 
-export function createMenuData({ state, crops, sizes, landscapes, buildings, formatCurrency }) {
+export function createMenuData({ state, world, crops, sizes, landscapes, buildings, formatCurrency }) {
   const formatDurationMs = (ms) => {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
     const hrs = Math.floor(totalSeconds / 3600);
@@ -26,6 +27,8 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
     if (hrs > 0) return `${hrs}hr ${mins}m`;
     return `${minutes}m`;
   };
+
+  const getFarmlandStatus = () => getFarmlandUsage(state, world, null, crops);
 
   const getCropStatus = (crop) => {
     if (!crop) return null;
@@ -83,7 +86,11 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       }
       const landscape = state.selectedLandscapeKey ? landscapes[state.selectedLandscapeKey] : null;
       if (landscape) {
-        const cost = landscape.isFarmland && state.farmlandPlaced < 4 ? 0 : landscape.cost || 0;
+        if (landscape.isFarmland) {
+          const farmlandStatus = getFarmlandStatus();
+          return `Free · ${farmlandStatus.placed}/${farmlandStatus.limit} tiles`;
+        }
+        const cost = landscape.cost || 0;
         return cost === 0 ? "Free" : `${formatCurrency(cost)}`;
       }
       return null;
@@ -94,7 +101,9 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       }
       const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
       if (building) {
-        return `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
+        const baseMeta = `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
+        const boost = getBuildingFarmlandBoost(building);
+        return boost > 0 ? `${baseMeta} · +${boost} Farmland` : baseMeta;
       }
       return null;
     }
@@ -147,6 +156,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
           metaLines.push({ text: `Planted: ${status.count} | ${status.harvestText}`, type: "status" });
         }
         if (!crop.unlocked && crop.unlockCost > 0) {
+          metaLines.push({ text: `+${CROP_UNLOCK_FARMLAND_BONUS} Farmland`, type: "meta" });
           metaLines.push({ text: `Unlock for ${formatCurrency(crop.unlockCost)}`, type: "unlock" });
         }
 
@@ -192,7 +202,8 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
     }
 
     if (dropdown.id === "landscapeSelect") {
-      const farmlandPlaced = state.farmlandPlaced || 0;
+      const farmlandStatus = getFarmlandStatus();
+      const farmlandMeta = `Free | ${farmlandStatus.placed}/${farmlandStatus.limit} tiles`;
       const base = [
         {
           id: "sell",
@@ -208,10 +219,11 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
         {
           id: "farmland",
           label: "Farmland",
-          meta: farmlandPlaced < 4 ? "Free" : `${formatCurrency(25)}`,
+          meta: farmlandMeta,
+          metaLines: [{ text: farmlandMeta, type: "meta" }],
           locked: false,
-          unlockCost: farmlandPlaced < 4 ? 0 : 25,
-          canAfford: state.totalMoney >= (farmlandPlaced < 4 ? 0 : 25),
+          unlockCost: 0,
+          canAfford: farmlandStatus.placed < farmlandStatus.limit,
           imageUrl: "images/farmland.jpg",
           isFarmland: true,
           unlocked: true,
@@ -253,16 +265,28 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
         },
       ];
 
-      const buildList = Object.values(buildings || {}).map((building) => ({
-        id: building.id,
-        label: building.name,
-        meta: `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`,
-        locked: !building.unlocked,
-        unlockCost: building.cost || 0,
-        canAfford: state.totalMoney >= (building.cost || 0),
-        imageUrl: building.image || null,
-        unlocked: !!building.unlocked,
-      }));
+      const buildList = Object.values(buildings || {}).map((building) => {
+        const baseMeta = `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
+        const farmlandBoost = getBuildingFarmlandBoost(building);
+        const metaLines =
+          farmlandBoost > 0
+            ? [
+                { text: baseMeta, type: "meta" },
+                { text: `+${farmlandBoost} Farmland each`, type: "meta" },
+              ]
+            : [{ text: baseMeta, type: "meta" }];
+        return {
+          id: building.id,
+          label: building.name,
+          meta: baseMeta,
+          metaLines,
+          locked: !building.unlocked,
+          unlockCost: building.cost || 0,
+          canAfford: state.totalMoney >= (building.cost || 0),
+          imageUrl: building.image || null,
+          unlocked: !!building.unlocked,
+        };
+      });
 
       return base.concat(buildList);
     }

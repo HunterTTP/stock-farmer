@@ -7,6 +7,7 @@ import { createMenuState } from "./ui/menuState.js";
 export function createUIControls({
   dom,
   state,
+  world,
   crops,
   sizes,
   buildings,
@@ -43,6 +44,8 @@ export function createUIControls({
   const structureMenus = createStructureMenus({
     dom,
     state,
+    world,
+    crops,
     buildings,
     landscapes,
     formatCurrency,

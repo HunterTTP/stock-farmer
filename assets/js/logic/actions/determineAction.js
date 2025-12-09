@@ -1,4 +1,5 @@
 import { getPlotGrowTimeMs } from "../../utils/helpers.js";
+import { checkRemovalWouldBreakLimit, formatFarmlandLimitError, getFarmlandUsage } from "../farmlandLimits.js";
 
 export function buildDetermineAction(context, helpers) {
   const { state, world, config, crops, formatCurrency } = context;
@@ -23,6 +24,12 @@ export function buildDetermineAction(context, helpers) {
           return { type: "removeFarmland" };
         }
         if (!struct || getStructKind(struct) !== kind) return { type: "none", reason: `No ${kind} here` };
+        if (kind === "building") {
+          const { wouldBreakLimit, overBy, nextLimit } = checkRemovalWouldBreakLimit(world.structures, [structKey], state, world, crops);
+          if (wouldBreakLimit) {
+            return { type: "none", reason: formatFarmlandLimitError(overBy, nextLimit) || "Reduce farmland first" };
+          }
+        }
         return { type: "destroyStructure", structKey, kind };
       }
       const selection = selectionKey ? getPlacementSource(kind, selectionKey) : null;
@@ -45,14 +52,20 @@ export function buildDetermineAction(context, helpers) {
         if (world.plots.has(key)) return { type: "none", reason: "Crop growing here" };
         const existingStructKeyForFarmland = getStructureAtKey(key);
         const existingStructForFarmland = existingStructKeyForFarmland ? world.structures.get(existingStructKeyForFarmland) : null;
-        if (existingStructForFarmland && getStructKind(existingStructForFarmland) === "landscape") {
+        const structKind = existingStructForFarmland ? getStructKind(existingStructForFarmland) : null;
+        if (structKind === "building") return { type: "none", reason: "Structure here" };
+        if (world.filled.has(key)) return { type: "none", reason: "Already farmland" };
+        const farmlandStatus = getFarmlandUsage(state, world, null, crops);
+        if (farmlandStatus.placed >= farmlandStatus.limit) {
+          return {
+            type: "none",
+            reason: `Farmland limit reached (${farmlandStatus.placed}/${farmlandStatus.limit}).`,
+          };
+        }
+        if (existingStructForFarmland && structKind === "landscape") {
           return { type: "replaceLandscapeWithFarmland", oldStructKey: existingStructKeyForFarmland };
         }
-        if (world.filled.has(key)) return { type: "none", reason: "Already farmland" };
         if (world.structureTiles.has(key)) return { type: "none", reason: "Structure here" };
-        const farmlandPlaced = state.farmlandPlaced || 0;
-        const cost = farmlandPlaced < 4 ? 0 : 25;
-        if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
         return { type: "placeFarmland" };
       }
 
@@ -67,9 +80,6 @@ export function buildDetermineAction(context, helpers) {
       const allowFilled = isLandscapeMode && (selection.lowColor || selection.highColor);
       if (!canPlaceStructure(row, col, selection, { allowFilled })) {
         if (allowFilled && world.filled.has(key) && !world.structureTiles.has(key) && !world.plots.has(key)) {
-          const farmlandPlaced = state.farmlandPlaced || 0;
-          const cost = farmlandPlaced < 4 ? 0 : 25;
-          if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
           return { type: "placeStructureOverFarmland", structureId: selection.id, kind, row, col };
         }
         return { type: "none", reason: "Not enough space" };

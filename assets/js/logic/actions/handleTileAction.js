@@ -1,4 +1,5 @@
 import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getCropGrowTimeMs, getFarmlandType, getPlotGrowTimeMs, setFarmlandType } from "../../utils/helpers.js";
+import { checkRemovalWouldBreakLimit, formatFarmlandLimitError, getFarmlandUsage } from "../farmlandLimits.js";
 
 export function buildActionHandler(context, helpers, determineActionForTile, cropOps) {
   const { state, world, config, crops, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
@@ -185,9 +186,31 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     clearFarmlandType(world, farmlandKey);
   };
 
+  const syncFarmlandPlaced = () => {
+    state.farmlandPlaced = world.filled ? world.filled.size : state.farmlandPlaced || 0;
+  };
+
+  const removeFarmlandArea = (startRow, startCol, width = 1, height = 1) => {
+    const h = Number.isFinite(height) && height > 0 ? height : 1;
+    const w = Number.isFinite(width) && width > 0 ? width : 1;
+    let removed = 0;
+    for (let r = 0; r < h; r++) {
+      for (let c = 0; c < w; c++) {
+        const farmlandKey = `${startRow + r},${startCol + c}`;
+        if (world.filled.delete(farmlandKey)) {
+          clearFarmlandTracking(farmlandKey);
+          removed += 1;
+        }
+      }
+    }
+    if (removed > 0) syncFarmlandPlaced();
+    return removed;
+  };
+
   function handleTileAction(row, col, action) {
     if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { success: false, reason: "Out of bounds" };
     ensureFarmlandStates(world);
+    syncFarmlandPlaced();
     const key = row + "," + col;
     const resolvedAction = action || determineActionForTile(row, col);
     if (!resolvedAction || resolvedAction.type === "none") return { success: false, reason: resolvedAction ? resolvedAction.reason : undefined };
@@ -217,13 +240,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const hadFarmland = world.filled.delete(key);
         if (hadFarmland) {
           clearFarmlandTracking(key);
-          const previousPlaced = state.farmlandPlaced || 0;
-          if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
-          if (previousPlaced > 4) {
-            state.totalMoney += 25;
-            onMoneyChanged();
-            world.costAnimations.push({ key, value: 25, start: performance.now() });
-          }
+          syncFarmlandPlaced();
         }
         state.needsRender = true;
         renderCropOptions();
@@ -234,18 +251,17 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
       case "placeFarmland": {
         if (world.plots.has(key) || world.filled.has(key)) return { success: false, reason: "Tile occupied" };
         if (world.structureTiles.has(key)) return { success: false, reason: "Structure here" };
-        const farmlandPlaced = state.farmlandPlaced || 0;
-        const cost = farmlandPlaced < 4 ? 0 : 25;
-        if (cost > 0) {
-          if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)} to place` };
-          state.totalMoney -= cost;
-          onMoneyChanged();
-          world.costAnimations.push({ key, value: -cost, start: performance.now() });
+        const farmlandStatus = getFarmlandUsage(state, world, null, crops);
+        if (farmlandStatus.placed >= farmlandStatus.limit) {
+          return {
+            success: false,
+            reason: `Farmland limit reached (${farmlandStatus.placed}/${farmlandStatus.limit}).`,
+          };
         }
         world.filled.add(key);
         setFarmlandType(world, key, FARMLAND);
         cancelHydrationTimer(key);
-        state.farmlandPlaced = farmlandPlaced + 1;
+        syncFarmlandPlaced();
         reevaluateFarmlandHydration(key);
         state.needsRender = true;
         renderCropOptions();
@@ -306,18 +322,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
         if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)}` };
 
-        if (isOverFarmland && world.filled.has(key)) {
-          world.filled.delete(key);
-          clearFarmlandTracking(key);
-          const previousPlaced = state.farmlandPlaced || 0;
-          if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
-          if (previousPlaced > 4) {
-            state.totalMoney += 25;
-            onMoneyChanged();
-            world.costAnimations.push({ key, value: 25, start: performance.now() });
-          }
-          renderLandscapeOptions();
-        }
+        removeFarmlandArea(row, col, selection.width, selection.height);
 
         const structKey = `${row},${col}`;
         const stored = {
@@ -339,6 +344,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         }
         state.totalMoney -= cost;
         onMoneyChanged();
+        renderLandscapeOptions();
         state.needsRender = true;
         saveState();
         return { success: true };
@@ -347,12 +353,19 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
         const structKey = resolvedAction?.structKey || getStructureAtKey(key);
         if (!structKey) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
+        if (kind === "building") {
+          const { wouldBreakLimit, overBy, nextLimit } = checkRemovalWouldBreakLimit(world.structures, [structKey], state, world, crops);
+          if (wouldBreakLimit) {
+            return { success: false, reason: formatFarmlandLimitError(overBy, nextLimit) || "Reduce farmland first" };
+          }
+        }
         const { success, refund } = removeStructure(structKey, kind);
         if (!success) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
         if (refund > 0) {
           state.totalMoney += refund;
           onMoneyChanged();
         }
+        renderLandscapeOptions();
         state.needsRender = true;
         saveState();
         return { success: true };
@@ -368,13 +381,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
         if (state.totalMoney < cost) return { success: false, reason: `Need ${formatCurrency(cost)}` };
 
-        let farmlandRefund = 0;
         if (oldStruct) {
-          const wasFarmlandId = oldStruct.id === "farmland";
-          if (wasFarmlandId) {
-            const previousPlaced = state.farmlandPlaced || 0;
-            if (previousPlaced > 4) farmlandRefund = 25;
-          }
           removeStructure(oldStructKey, kind);
         }
 
@@ -397,13 +404,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
           }
         }
         state.totalMoney -= cost;
-        if (farmlandRefund > 0) {
-          state.totalMoney += farmlandRefund;
-          onMoneyChanged();
-          world.costAnimations.push({ key, value: farmlandRefund, start: performance.now() });
-        } else {
-          onMoneyChanged();
-        }
+        onMoneyChanged();
         state.needsRender = true;
         renderLandscapeOptions();
         saveState();
@@ -413,19 +414,18 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const oldStructKey = resolvedAction?.oldStructKey;
         const oldStruct = oldStructKey ? world.structures.get(oldStructKey) : null;
         if (!oldStruct) return { success: false, reason: "No landscape here" };
-        const farmlandPlaced = state.farmlandPlaced || 0;
-        const cost = farmlandPlaced < 4 ? 0 : 25;
-        if (cost > state.totalMoney) return { success: false, reason: `Need ${formatCurrency(cost)}` };
-        if (cost > 0) {
-          state.totalMoney -= cost;
-          onMoneyChanged();
-          world.costAnimations.push({ key, value: -cost, start: performance.now() });
+        const farmlandStatus = getFarmlandUsage(state, world, null, crops);
+        if (farmlandStatus.placed >= farmlandStatus.limit) {
+          return {
+            success: false,
+            reason: `Farmland limit reached (${farmlandStatus.placed}/${farmlandStatus.limit}).`,
+          };
         }
         removeStructure(oldStructKey, "landscape");
         world.filled.add(key);
         setFarmlandType(world, key, FARMLAND);
         cancelHydrationTimer(key);
-        state.farmlandPlaced = farmlandPlaced + 1;
+        syncFarmlandPlaced();
         reevaluateFarmlandHydration(key);
         state.needsRender = true;
         renderCropOptions();
@@ -438,21 +438,12 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const oldStruct = oldStructKey ? world.structures.get(oldStructKey) : null;
         if (!oldStruct) return { success: false, reason: "No landscape here" };
 
-        let farmlandRefund = 0;
         const wasFarmlandId = oldStruct.id === "farmland";
         if (wasFarmlandId) {
-          clearFarmlandTracking(key);
-          const previousPlaced = state.farmlandPlaced || 0;
-          if (previousPlaced > 4) farmlandRefund = 25;
-          if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
+          removeFarmlandArea(oldStruct.row, oldStruct.col, oldStruct.width, oldStruct.height);
         }
         removeStructure(oldStructKey, "landscape");
 
-        if (farmlandRefund > 0) {
-          state.totalMoney += farmlandRefund;
-          onMoneyChanged();
-          world.costAnimations.push({ key, value: farmlandRefund, start: performance.now() });
-        }
         state.needsRender = true;
         renderLandscapeOptions();
         saveState();

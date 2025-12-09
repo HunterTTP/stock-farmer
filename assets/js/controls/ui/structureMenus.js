@@ -1,6 +1,10 @@
+import { getBuildingFarmlandBoost, getFarmlandUsage } from "../../logic/farmlandLimits.js";
+
 export function createStructureMenus({
   dom,
   state,
+  world,
+  crops,
   buildings,
   landscapes,
   formatCurrency,
@@ -16,6 +20,8 @@ export function createStructureMenus({
     const first = Object.values(buildings || {}).find((b) => b && b.unlocked);
     state.selectedBuildKey = first ? first.id : "sell";
   }
+
+  const getFarmlandStatus = () => getFarmlandUsage(state, world, null, crops);
 
   function ensureLandscapeDefaults() {
     if (state.selectedLandscapeKey === "sell") return;
@@ -41,6 +47,7 @@ export function createStructureMenus({
     };
 
     const renderRow = (item) => {
+      const farmlandBoost = item.id === "sell" ? 0 : getBuildingFarmlandBoost(item);
       const row = document.createElement("button");
       row.type = "button";
       row.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
@@ -66,11 +73,20 @@ export function createStructureMenus({
       const title = document.createElement("div");
       title.className = "text-sm font-semibold text-white truncate";
       title.textContent = item.name;
+      const metaWrap = document.createElement("div");
+      metaWrap.className = "flex flex-col gap-0.5";
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
       meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      metaWrap.appendChild(meta);
+      if (farmlandBoost > 0) {
+        const farmlandMeta = document.createElement("div");
+        farmlandMeta.className = "text-[11px] text-neutral-400 truncate";
+        farmlandMeta.textContent = `+${farmlandBoost} Farmland each`;
+        metaWrap.appendChild(farmlandMeta);
+      }
       text.appendChild(title);
-      text.appendChild(meta);
+      text.appendChild(metaWrap);
       row.appendChild(text);
 
       row.addEventListener("click", () => setSelected(item.id));
@@ -131,6 +147,9 @@ export function createStructureMenus({
     }
     dom.landscapeSelectMenu.innerHTML = "";
 
+    const farmlandStatus = getFarmlandStatus();
+    const farmlandLimitText = `${farmlandStatus.placed}/${farmlandStatus.limit} tiles`;
+
     const setSelected = (id) => {
       state.selectedLandscapeKey = id;
       updateLandscapeLabel();
@@ -165,19 +184,23 @@ export function createStructureMenus({
       const title = document.createElement("div");
       title.className = "text-sm font-semibold text-white truncate";
       title.textContent = item.name;
+      const metaWrap = document.createElement("div");
+      metaWrap.className = "flex flex-col gap-0.5";
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
       if (item.id === "sell") {
         meta.textContent = "Remove and refund";
+        metaWrap.appendChild(meta);
       } else if (item.isFarmland) {
-        const farmlandPlaced = state.farmlandPlaced || 0;
-        meta.textContent = farmlandPlaced < 4 ? "Free" : formatCurrency(25);
+        meta.textContent = `Free | ${farmlandLimitText}`;
+        metaWrap.appendChild(meta);
       } else {
         const costValue = item.cost || 0;
         meta.textContent = costValue === 0 ? "Free" : `${formatCurrency(costValue)}`;
+        metaWrap.appendChild(meta);
       }
       text.appendChild(title);
-      text.appendChild(meta);
+      text.appendChild(metaWrap);
       row.appendChild(text);
 
       row.addEventListener("click", () => setSelected(item.id));
