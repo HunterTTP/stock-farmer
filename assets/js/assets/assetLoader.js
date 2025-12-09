@@ -1,12 +1,19 @@
 export function createBaseAssets(state) {
   const assets = {
     farmland: { img: new Image(), loaded: false },
+    farmland_saturated: { img: new Image(), loaded: false },
     grass: { img: new Image(), loaded: false },
   };
 
   assets.farmland.img.src = "images/farmland.jpg";
   assets.farmland.img.onload = () => {
     assets.farmland.loaded = true;
+    state.needsRender = true;
+  };
+
+  assets.farmland_saturated.img.src = "images/farmland_saturated.jpg";
+  assets.farmland_saturated.img.onload = () => {
+    assets.farmland_saturated.loaded = true;
     state.needsRender = true;
   };
 

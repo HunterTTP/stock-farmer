@@ -1,16 +1,98 @@
+import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getFarmlandType, getPlotGrowTimeMs, setFarmlandType } from "../../utils/helpers.js";
+
 export function buildActionHandler(context, helpers, determineActionForTile, cropOps) {
   const { state, world, config, crops, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
   const { harvestPlot, destroyPlot, recomputeLastPlantedForCrop } = cropOps;
-  const { removeStructure, getStructKind, getStructureAtKey, getPlacementSource, canPlaceStructure } = helpers;
-  const getCropGrowTimeMs = (crop) => {
-    if (!crop) return 0;
-    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
-    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
-    return 0;
+  const { removeStructure, getStructureAtKey, getPlacementSource, canPlaceStructure } = helpers;
+
+  ensureFarmlandStates(world);
+  const hydrationTimers = world.hydrationTimers || new Map();
+  world.hydrationTimers = hydrationTimers;
+
+  const cancelHydrationTimer = (targetKey) => {
+    if (!targetKey) return;
+    const existing = hydrationTimers.get(targetKey);
+    if (existing) clearTimeout(existing);
+    hydrationTimers.delete(targetKey);
+  };
+
+  const applySaturationToFarmland = (targetKey) => {
+    if (!targetKey || !world.filled.has(targetKey)) {
+      clearFarmlandType(world, targetKey);
+      cancelHydrationTimer(targetKey);
+      return;
+    }
+    cancelHydrationTimer(targetKey);
+    if (getFarmlandType(world, targetKey) === FARMLAND_SATURATED) return;
+    setFarmlandType(world, targetKey, FARMLAND_SATURATED);
+    const plot = world.plots.get(targetKey);
+    if (plot) {
+      const crop = crops[plot.cropKey];
+      const growMs = getPlotGrowTimeMs(plot, crop);
+      const totalGrow = Number.isFinite(growMs) ? Math.max(0, growMs) : 0;
+      if (totalGrow > 0) {
+        const now = Date.now();
+        const elapsed = Math.max(0, now - plot.plantedAt);
+        const remaining = Math.max(0, totalGrow - elapsed);
+        const boost = totalGrow * 0.25;
+        const newRemaining = Math.max(0, remaining - boost);
+        const newElapsed = totalGrow - newRemaining;
+        plot.plantedAt = now - newElapsed;
+      }
+      plot.growTimeMs = Number.isFinite(growMs) ? growMs : undefined;
+      recomputeLastPlantedForCrop(plot.cropKey);
+      renderCropOptions();
+    }
+    state.needsRender = true;
+    saveState();
+  };
+
+  const scheduleHydration = (targetKey) => {
+    if (!targetKey || !world.filled.has(targetKey)) {
+      cancelHydrationTimer(targetKey);
+      return;
+    }
+    if (getFarmlandType(world, targetKey) === FARMLAND_SATURATED) {
+      cancelHydrationTimer(targetKey);
+      return;
+    }
+    if (hydrationTimers.has(targetKey)) return;
+    const delayMs = Math.random() * 4000;
+    const timeoutId = setTimeout(() => {
+      hydrationTimers.delete(targetKey);
+      applySaturationToFarmland(targetKey);
+    }, delayMs);
+    hydrationTimers.set(targetKey, timeoutId);
+  };
+
+  const triggerHydrationAroundStructure = (struct) => {
+    if (!struct || struct.kind !== "landscape" || typeof struct.id !== "string") return;
+    if (!struct.id.startsWith("water")) return;
+    const range = 5;
+    const height = Math.max(1, struct.height || 1);
+    const width = Math.max(1, struct.width || 1);
+    const startRow = Math.max(0, struct.row - range);
+    const endRow = Math.min(config.gridRows - 1, struct.row + height - 1 + range);
+    const startCol = Math.max(0, struct.col - range);
+    const endCol = Math.min(config.gridCols - 1, struct.col + width - 1 + range);
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const farmlandKey = `${r},${c}`;
+        if (!world.filled.has(farmlandKey)) continue;
+        if (getFarmlandType(world, farmlandKey) === FARMLAND_SATURATED) continue;
+        scheduleHydration(farmlandKey);
+      }
+    }
+  };
+
+  const clearFarmlandTracking = (farmlandKey) => {
+    cancelHydrationTimer(farmlandKey);
+    clearFarmlandType(world, farmlandKey);
   };
 
   function handleTileAction(row, col, action) {
     if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { success: false, reason: "Out of bounds" };
+    ensureFarmlandStates(world);
     const key = row + "," + col;
     const resolvedAction = action || determineActionForTile(row, col);
     if (!resolvedAction || resolvedAction.type === "none") return { success: false, reason: resolvedAction ? resolvedAction.reason : undefined };
@@ -22,9 +104,9 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const crop = crops[existingPlot.cropKey];
         if (!crop) return { success: false, reason: "Unknown crop" };
         const plantedAt = Number(existingPlot.plantedAt);
-        const growMs = getCropGrowTimeMs(crop);
+        const growMs = getPlotGrowTimeMs(existingPlot, crop);
         const elapsed = Number.isFinite(plantedAt) ? Date.now() - plantedAt : 0;
-        if (elapsed >= growMs) {
+        if (growMs <= 0 || elapsed >= growMs) {
           harvestPlot(key);
           return { success: true };
         }
@@ -39,6 +121,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
       case "removeFarmland": {
         const hadFarmland = world.filled.delete(key);
         if (hadFarmland) {
+          clearFarmlandTracking(key);
           const previousPlaced = state.farmlandPlaced || 0;
           if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
           if (previousPlaced > 4) {
@@ -65,6 +148,8 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
           world.costAnimations.push({ key, value: -cost, start: performance.now() });
         }
         world.filled.add(key);
+        setFarmlandType(world, key, FARMLAND);
+        cancelHydrationTimer(key);
         state.farmlandPlaced = farmlandPlaced + 1;
         state.needsRender = true;
         renderCropOptions();
@@ -89,12 +174,18 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
           world.costAnimations.push({ key, value: -plantCost, start: performance.now() });
         }
         const plantedAt = Date.now();
+        const farmlandType = getFarmlandType(world, key);
+        const baseGrowMs = getPlotGrowTimeMs(null, crop);
+        const growTimeMs =
+          farmlandType === FARMLAND_SATURATED && baseGrowMs > 0 ? Math.round(baseGrowMs * 0.75) : baseGrowMs;
         world.plots.set(key, {
           cropKey,
           plantedAt,
+          growTimeMs,
         });
         crop.placed += 1;
         crop.lastPlantedAt = plantedAt;
+        crop.lastPlantedGrowMs = growTimeMs;
         renderCropOptions();
         state.needsRender = true;
         saveState();
@@ -120,6 +211,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
 
         if (isOverFarmland && world.filled.has(key)) {
           world.filled.delete(key);
+          clearFarmlandTracking(key);
           const previousPlaced = state.farmlandPlaced || 0;
           if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;
           if (previousPlaced > 4) {
@@ -148,6 +240,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
             world.structureTiles.set(`${row + r},${col + c}`, structKey);
           }
         }
+        triggerHydrationAroundStructure(stored);
         state.totalMoney -= cost;
         onMoneyChanged();
         state.needsRender = true;
@@ -207,6 +300,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
             world.structureTiles.set(`${row + r},${col + c}`, structKey);
           }
         }
+        triggerHydrationAroundStructure(stored);
         state.totalMoney -= cost;
         if (farmlandRefund > 0) {
           state.totalMoney += farmlandRefund;
@@ -234,6 +328,8 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         }
         removeStructure(oldStructKey, "landscape");
         world.filled.add(key);
+        setFarmlandType(world, key, FARMLAND);
+        cancelHydrationTimer(key);
         state.farmlandPlaced = farmlandPlaced + 1;
         state.needsRender = true;
         renderCropOptions();
@@ -249,6 +345,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         let farmlandRefund = 0;
         const wasFarmlandId = oldStruct.id === "farmland";
         if (wasFarmlandId) {
+          clearFarmlandTracking(key);
           const previousPlaced = state.farmlandPlaced || 0;
           if (previousPlaced > 4) farmlandRefund = 25;
           if (previousPlaced > 0) state.farmlandPlaced = previousPlaced - 1;

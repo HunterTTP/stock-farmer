@@ -6,6 +6,7 @@ import {
   normalizeBuildKey,
   normalizeLandscapeKey,
 } from "./stateUtils.js";
+import { ensureFarmlandStates, FARMLAND_SATURATED, setFarmlandType } from "../utils/helpers.js";
 
 export function loadState({ state, world, crops, sizes, landscapes = {}, config }) {
   let raw;
@@ -20,6 +21,14 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     const data = JSON.parse(raw);
     if (world.structures && typeof world.structures.clear === "function") world.structures.clear();
     if (world.structureTiles && typeof world.structureTiles.clear === "function") world.structureTiles.clear();
+    if (world.farmlandStates && typeof world.farmlandStates.clear === "function") world.farmlandStates.clear();
+    if (!world.farmlandStates) world.farmlandStates = new Map();
+    if (world.hydrationTimers?.forEach) {
+      world.hydrationTimers.forEach((id) => clearTimeout(id));
+      world.hydrationTimers.clear();
+    } else {
+      world.hydrationTimers = new Map();
+    }
     if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
     if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
     if (data.stockHoldings) state.stockHoldings = cleanStockHoldings(data.stockHoldings);
@@ -28,6 +37,12 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
       world.filled.clear();
       data.filled.forEach((k) => {
         if (isKeyInBounds(k, config)) world.filled.add(k);
+      });
+    }
+    ensureFarmlandStates(world);
+    if (Array.isArray(data.saturatedFarmland)) {
+      data.saturatedFarmland.forEach((k) => {
+        if (isKeyInBounds(k, config) && world.filled.has(k)) setFarmlandType(world, k, FARMLAND_SATURATED);
       });
     }
 
@@ -91,7 +106,7 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     const savedBuildKey = normalizeBuildKey(data.selectedBuildKey);
     if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
     const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
-    if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
+    if (savedLandscapeKey && (!landscapes[savedLandscapeKey] || !landscapes[savedLandscapeKey].hidden)) state.selectedLandscapeKey = savedLandscapeKey;
     if (typeof data.accentColor === "string") state.accentColor = data.accentColor;
     if (Number.isFinite(data.hudDockScale)) state.hudDockScale = data.hudDockScale;
     else if (Number.isFinite(data.hudScale)) state.hudDockScale = data.hudScale;

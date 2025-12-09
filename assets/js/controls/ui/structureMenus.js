@@ -19,8 +19,8 @@ export function createStructureMenus({
 
   function ensureLandscapeDefaults() {
     if (state.selectedLandscapeKey === "sell") return;
-    if (state.selectedLandscapeKey && landscapes?.[state.selectedLandscapeKey]) return;
-    const first = Object.values(landscapes || {}).find((l) => l && l.unlocked);
+    if (state.selectedLandscapeKey && landscapes?.[state.selectedLandscapeKey] && !landscapes[state.selectedLandscapeKey].hidden) return;
+    const first = Object.values(landscapes || {}).find((l) => l && l.unlocked && !l.hidden);
     state.selectedLandscapeKey = first ? first.id : "sell";
   }
 
@@ -195,7 +195,7 @@ export function createStructureMenus({
     dom.landscapeSelectMenu.appendChild(sellOption);
 
     Object.values(landscapes || {}).forEach((landscape) => {
-      if (!landscape) return;
+      if (!landscape || landscape.hidden) return;
       dom.landscapeSelectMenu.appendChild(renderRow(landscape));
     });
 

@@ -1,12 +1,8 @@
+import { getPlotGrowTimeMs } from "../../utils/helpers.js";
+
 export function buildDetermineAction(context, helpers) {
   const { state, world, config, crops, formatCurrency } = context;
   const { getStructureAtKey, getStructKind, getPlacementSource, canPlaceStructure } = helpers;
-  const getCropGrowTimeMs = (crop) => {
-    if (!crop) return 0;
-    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
-    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
-    return 0;
-  };
 
   function determineActionForTile(row, col, nowMs = Date.now()) {
     if (row < 0 || col < 0 || row >= config.gridRows || col >= config.gridCols) return { type: "none", reason: "Out of bounds" };
@@ -87,8 +83,8 @@ export function buildDetermineAction(context, helpers) {
     if (existingPlot) {
       const crop = crops[existingPlot.cropKey];
       const plantedAt = Number(existingPlot.plantedAt);
-      const growMs = getCropGrowTimeMs(crop);
-      if (crop && Number.isFinite(plantedAt) && growMs >= 0 && nowMs - plantedAt >= growMs) {
+      const growMs = getPlotGrowTimeMs(existingPlot, crop);
+      if (crop && Number.isFinite(plantedAt) && (growMs <= 0 || nowMs - plantedAt >= growMs)) {
         return { type: "harvest" };
       }
       return { type: "none", reason: "Already planted" };

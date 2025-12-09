@@ -1,3 +1,5 @@
+import { FARMLAND } from "../utils/helpers.js";
+
 export function createInitialState(config) {
   return {
     tileSize: config.baseTileSize,
@@ -44,13 +46,18 @@ export function createInitialState(config) {
 }
 
 export function createInitialWorld(config) {
+  const filled = new Set(config.defaultFilled);
+  const farmlandStates = new Map();
+  (config.defaultFilled || []).forEach((k) => farmlandStates.set(k, FARMLAND));
   return {
     plots: new Map(),
-    filled: new Set(config.defaultFilled),
+    filled,
+    farmlandStates,
     harvestAnimations: [],
     costAnimations: [],
     structures: new Map(),
     structureTiles: new Map(),
+    hydrationTimers: new Map(),
   };
 }
 

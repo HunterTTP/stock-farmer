@@ -1,4 +1,4 @@
-import { getStageBreakpoints } from "../utils/helpers.js";
+import { FARMLAND_SATURATED, getFarmlandType, getPlotGrowTimeMs, getStageBreakpoints } from "../utils/helpers.js";
 
 export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud }) {
   const buildingImageCache = new Map();
@@ -113,8 +113,14 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         const x = state.offsetX + col * state.tileSize * state.scale;
         const y = state.offsetY + row * state.tileSize * state.scale;
 
-        if (world.filled.has(key)) ctx.drawImage(assets.farmland.img, x, y, tileScreenSize, tileScreenSize);
-        else ctx.drawImage(assets.grass.img, x, y, tileScreenSize, tileScreenSize);
+        if (world.filled.has(key)) {
+          const farmlandType = getFarmlandType(world, key);
+          const tileImg =
+            farmlandType === FARMLAND_SATURATED && assets.farmland_saturated.loaded
+              ? assets.farmland_saturated.img
+              : assets.farmland.img;
+          ctx.drawImage(tileImg, x, y, tileScreenSize, tileScreenSize);
+        } else ctx.drawImage(assets.grass.img, x, y, tileScreenSize, tileScreenSize);
 
         const structKey = world.structureTiles.get(key);
         if (structKey && !landscapeDrawn.has(structKey)) {
@@ -140,18 +146,19 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         const crop = crops[plot.cropKey];
         if (!crop || !crop.images.length) continue;
 
+        const growTimeMs = getPlotGrowTimeMs(plot, crop);
         const elapsed = now - plot.plantedAt;
-        const progress = Math.min(1, elapsed / crop.growTimeMs);
+        const progress = growTimeMs > 0 ? Math.min(1, elapsed / growTimeMs) : 1;
         const isReady = progress >= 1;
 
-        const breakpoints = getStageBreakpoints(key, plot.cropKey, plot.plantedAt, crop.growTimeMs);
+        const breakpoints = getStageBreakpoints(key, plot.cropKey, plot.plantedAt, growTimeMs);
         let phaseIndex = 0;
         if (isReady) phaseIndex = 3;
         else if (progress >= breakpoints[1]) phaseIndex = 2;
         else if (progress >= breakpoints[0]) phaseIndex = 1;
 
         const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
-        const remainingMs = Math.max(0, crop.growTimeMs - elapsed);
+        const remainingMs = Math.max(0, growTimeMs - elapsed);
         const secs = Math.ceil(remainingMs / 1000);
         const mins = Math.floor(secs / 60);
         const secPart = secs % 60;

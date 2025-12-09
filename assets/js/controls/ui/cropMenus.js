@@ -1,3 +1,5 @@
+import { getCropGrowTimeMs } from "../../utils/helpers.js";
+
 function formatDurationMs(ms) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const hrs = Math.floor(totalSeconds / 3600);
@@ -26,7 +28,10 @@ function formatGrowTime(minutes) {
 
 function formatHarvestText(crop, plantedAt, nowMs) {
   if (!crop || !Number.isFinite(plantedAt)) return null;
-  const growMs = Number.isFinite(crop.growTimeMs) ? crop.growTimeMs : Number.isFinite(crop.growMinutes) ? crop.growMinutes * 60 * 1000 : null;
+  const growMs =
+    Number.isFinite(crop.lastPlantedGrowMs) && crop.lastPlantedGrowMs > 0
+      ? crop.lastPlantedGrowMs
+      : getCropGrowTimeMs(crop);
   if (!growMs || growMs <= 0) return "Ready";
   const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
   if (remainingMs <= 0) return "Ready";

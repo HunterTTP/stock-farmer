@@ -74,10 +74,13 @@ function cleanStockHoldings(raw) {
 
 function cleanPlotValue(value) {
   const plantedAt = typeof value?.plantedAt === "number" ? value.plantedAt : Date.now();
-  return {
+  const growTimeMs = Number.isFinite(value?.growTimeMs) ? value.growTimeMs : null;
+  const cleaned = {
     cropKey: value?.cropKey || null,
     plantedAt,
   };
+  if (Number.isFinite(growTimeMs)) cleaned.growTimeMs = growTimeMs;
+  return cleaned;
 }
 
 export {

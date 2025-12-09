@@ -1,8 +1,10 @@
 import { cleanPlotValue, cleanStockHoldings, cleanStructureValue, isKeyInBounds } from "./stateUtils.js";
+import { FARMLAND_SATURATED, ensureFarmlandStates } from "../utils/helpers.js";
 
 export function buildSaveData({ state, world, crops, sizes, landscapes = {}, config }) {
   const previousUpdatedAt = Number.isFinite(state.lastSavedAt) ? state.lastSavedAt : 0;
   const updatedAt = Date.now();
+  ensureFarmlandStates(world);
 
   const plots = Array.from(world.plots.entries())
     .filter(([key]) => isKeyInBounds(key, config))
@@ -15,6 +17,11 @@ export function buildSaveData({ state, world, crops, sizes, landscapes = {}, con
     totalMoney: state.totalMoney,
     stockHoldings: cleanStockHoldings(state.stockHoldings),
     filled: Array.from(world.filled).filter((k) => isKeyInBounds(k, config)),
+    saturatedFarmland: world.farmlandStates
+      ? Array.from(world.farmlandStates.entries())
+          .filter(([key, type]) => type === FARMLAND_SATURATED && isKeyInBounds(key, config))
+          .map(([key]) => key)
+      : [],
     plots,
     selectedCropKey: state.selectedCropKey,
     previousCropKey: state.previousCropKey,

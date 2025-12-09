@@ -56,11 +56,19 @@ const resetDatasetsToInitial = () => {
 const resetWorldToInitial = () => {
   if (world.plots?.clear) world.plots.clear();
   if (world.filled?.clear) world.filled.clear();
+  if (world.farmlandStates?.clear) world.farmlandStates.clear();
   if (world.structures?.clear) world.structures.clear();
   if (world.structureTiles?.clear) world.structureTiles.clear();
+  if (world.hydrationTimers?.forEach) {
+    world.hydrationTimers.forEach((id) => clearTimeout(id));
+    world.hydrationTimers.clear();
+  }
   if (Array.isArray(world.harvestAnimations)) world.harvestAnimations.length = 0;
   if (Array.isArray(world.costAnimations)) world.costAnimations.length = 0;
-  (config.defaultFilled || []).forEach((k) => world.filled.add(k));
+  (config.defaultFilled || []).forEach((k) => {
+    world.filled.add(k);
+    if (world.farmlandStates) world.farmlandStates.set(k, "farmland");
+  });
 };
 
 const persistence = {

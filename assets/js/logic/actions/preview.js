@@ -1,11 +1,7 @@
+import { getPlotGrowTimeMs } from "../../utils/helpers.js";
+
 export function buildPreview(context, determineActionForTile) {
   const { state, world, config, crops } = context;
-  const getCropGrowTimeMs = (crop) => {
-    if (!crop) return 0;
-    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
-    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
-    return 0;
-  };
 
   function simulateTileActionForPreview(action, key, previewState, nowMs, getFilled, getPlot) {
     if (!action || action.type === "none") return false;
@@ -15,8 +11,8 @@ export function buildPreview(context, determineActionForTile) {
         const plotCrop = existingPlot ? crops[existingPlot.cropKey] : null;
         if (!existingPlot || !plotCrop) return false;
         const plantedAt = Number(existingPlot.plantedAt);
-        const growMs = getCropGrowTimeMs(plotCrop);
-        const ready = Number.isFinite(plantedAt) && nowMs - plantedAt >= growMs;
+        const growMs = getPlotGrowTimeMs(existingPlot, plotCrop);
+        const ready = Number.isFinite(plantedAt) && (growMs <= 0 || nowMs - plantedAt >= growMs);
         if (!ready) return false;
         const value = Math.max(0, plotCrop.baseValue);
         previewState.money += value;

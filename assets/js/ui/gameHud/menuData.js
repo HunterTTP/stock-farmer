@@ -1,3 +1,5 @@
+import { getCropGrowTimeMs } from "../../utils/helpers.js";
+
 export function createMenuData({ state, crops, sizes, landscapes, buildings, formatCurrency }) {
   const formatDurationMs = (ms) => {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -30,7 +32,10 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
     if (!crop.placed || crop.placed <= 0) return null;
     const plantedAt = Number.isFinite(crop.lastPlantedAt) ? crop.lastPlantedAt : null;
     if (!plantedAt || plantedAt <= 0) return { count: crop.placed, harvestText: "Ready" };
-    const growMs = Number.isFinite(crop.growTimeMs) ? crop.growTimeMs : Number.isFinite(crop.growMinutes) ? crop.growMinutes * 60 * 1000 : null;
+    const growMs =
+      Number.isFinite(crop.lastPlantedGrowMs) && crop.lastPlantedGrowMs > 0
+        ? crop.lastPlantedGrowMs
+        : getCropGrowTimeMs(crop);
     if (!growMs || growMs <= 0) return { count: crop.placed, harvestText: "Ready" };
     const nowMs = Date.now();
     const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
@@ -214,7 +219,7 @@ export function createMenuData({ state, crops, sizes, landscapes, buildings, for
       ];
 
       const landscapeList = Object.values(landscapes || {})
-        .filter((landscape) => landscape && landscape.id !== "farmland")
+        .filter((landscape) => landscape && landscape.id !== "farmland" && !landscape.hidden)
         .map((landscape) => ({
           id: landscape.id,
           label: landscape.name,

@@ -1,22 +1,24 @@
+import { getPlotGrowTimeMs } from "../../utils/helpers.js";
+
 export function buildCropOperations(context) {
   const { state, world, crops, config, onMoneyChanged, renderCropOptions, saveState, currentSizeOption, openConfirmModal } = context;
-  const getCropGrowTimeMs = (crop) => {
-    if (!crop) return 0;
-    if (Number.isFinite(crop.growTimeMs)) return crop.growTimeMs;
-    if (Number.isFinite(crop.growMinutes)) return crop.growMinutes * 60 * 1000;
-    return 0;
-  };
 
   function recomputeLastPlantedForCrop(cropKey) {
     const crop = crops[cropKey];
     if (!crop) return;
     let latest = null;
+    let latestGrowMs = null;
     world.plots.forEach((plot) => {
       if (plot?.cropKey !== cropKey) return;
       const plantedAt = Number(plot?.plantedAt);
-      if (Number.isFinite(plantedAt) && (latest === null || plantedAt > latest)) latest = plantedAt;
+      if (!Number.isFinite(plantedAt)) return;
+      if (latest === null || plantedAt > latest) {
+        latest = plantedAt;
+        latestGrowMs = getPlotGrowTimeMs(plot, crop);
+      }
     });
     crop.lastPlantedAt = latest;
+    crop.lastPlantedGrowMs = Number.isFinite(latestGrowMs) ? latestGrowMs : null;
   }
 
   function harvestPlot(key) {

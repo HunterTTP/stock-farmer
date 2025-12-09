@@ -9,6 +9,17 @@ export const landscapes = {
     unlocked: true,
     isFarmland: true,
   },
+  farmland_saturated: {
+    id: "farmland_saturated",
+    name: "Saturated Farmland",
+    width: 1,
+    height: 1,
+    cost: 25,
+    image: "images/farmland_saturated.jpg",
+    unlocked: true,
+    isFarmland: true,
+    hidden: true,
+  },
   grass: {
     id: "grass",
     name: "Grass",

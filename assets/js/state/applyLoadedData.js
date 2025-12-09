@@ -6,11 +6,20 @@ import {
   normalizeBuildKey,
   normalizeLandscapeKey,
 } from "./stateUtils.js";
+import { ensureFarmlandStates, FARMLAND_SATURATED, setFarmlandType } from "../utils/helpers.js";
 
 export function applyLoadedData(data, { state, world, crops, sizes, landscapes = {}, config }) {
   if (!data || typeof data !== "object") return;
   if (world.structures && typeof world.structures.clear === "function") world.structures.clear();
   if (world.structureTiles && typeof world.structureTiles.clear === "function") world.structureTiles.clear();
+  if (world.farmlandStates && typeof world.farmlandStates.clear === "function") world.farmlandStates.clear();
+  if (!world.farmlandStates) world.farmlandStates = new Map();
+  if (world.hydrationTimers?.forEach) {
+    world.hydrationTimers.forEach((id) => clearTimeout(id));
+    world.hydrationTimers.clear();
+  } else {
+    world.hydrationTimers = new Map();
+  }
   console.log("[load] applyLoadedData start", {
     filled: Array.isArray(data.filled) ? data.filled.length : 0,
     plots: Array.isArray(data.plots) ? data.plots.length : 0,
@@ -24,6 +33,12 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
     world.filled.clear();
     data.filled.forEach((k) => {
       if (isKeyInBounds(k, config)) world.filled.add(k);
+    });
+  }
+  ensureFarmlandStates(world);
+  if (Array.isArray(data.saturatedFarmland)) {
+    data.saturatedFarmland.forEach((k) => {
+      if (isKeyInBounds(k, config) && world.filled.has(k)) setFarmlandType(world, k, FARMLAND_SATURATED);
     });
   }
 
@@ -114,7 +129,7 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
   const savedBuildKey = normalizeBuildKey(data.selectedBuildKey);
   if (savedBuildKey) state.selectedBuildKey = savedBuildKey;
   const savedLandscapeKey = normalizeLandscapeKey(data.selectedLandscapeKey);
-  if (savedLandscapeKey) state.selectedLandscapeKey = savedLandscapeKey;
+  if (savedLandscapeKey && (!landscapes[savedLandscapeKey] || !landscapes[savedLandscapeKey].hidden)) state.selectedLandscapeKey = savedLandscapeKey;
 
   state.showTickerInfo = false;
   state.showPctInfo = false;
