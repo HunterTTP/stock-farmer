@@ -37,14 +37,22 @@ export function createHudLayout({
       : Math.min(1.85, Math.max(1.4, layout.modeButtonSize / 38));
     const listPadding = isCompact ? 0 : 16;
 
-    ctx.font = `600 ${layout.fontSize}px system-ui, -apple-system, sans-serif`;
+    const dropdownScale = layout.dropdownScale || 1;
+    const labelFontSize = Math.max(
+      8,
+      Math.round(layout.fontSize * dropdownScale)
+    );
+    const metaFontSize = Math.max(
+      8,
+      Math.round((layout.fontSize - 2) * dropdownScale)
+    );
+
+    ctx.font = `600 ${labelFontSize}px system-ui, -apple-system, sans-serif`;
     const labelWidth = ctx.measureText(label).width;
 
     let textWidth = labelWidth;
     if (meta) {
-      ctx.font = `400 ${
-        layout.fontSize - 2
-      }px system-ui, -apple-system, sans-serif`;
+      ctx.font = `400 ${metaFontSize}px system-ui, -apple-system, sans-serif`;
       const metaWidth = ctx.measureText(meta).width;
       textWidth = Math.max(labelWidth, metaWidth);
     }
@@ -183,16 +191,31 @@ export function createHudLayout({
   };
 
   const computeDropdownHeight = (layout, scale) => {
+    const dropdownScale = layout.dropdownScale || 1;
     const heightScale =
       layout.breakpoint === "mobile" ? MOBILE_HEIGHT_SCALE : 1;
-    const adjustedScale = scale * heightScale;
-    const labelFontSize = Math.max(8, Math.round(layout.fontSize));
-    const metaFontSize = Math.max(8, Math.round(layout.fontSize - 2));
-    const previewSize = Math.round(36 * adjustedScale);
-    const paddingY = Math.round(12 * adjustedScale);
-    const labelToMetaGap = Math.round(6 * adjustedScale);
+    const baseFontSize = Math.max(
+      1,
+      LAYOUT[layout.breakpoint]?.fontSize || layout.fontSize || 1
+    );
+    const fontScale = Math.max(
+      0.5,
+      Math.min(1.6, layout.fontSize / baseFontSize)
+    );
+    const sizeScale = scale * heightScale * fontScale;
+    const labelFontSize = Math.max(
+      8,
+      Math.round(layout.fontSize * dropdownScale)
+    );
+    const metaFontSize = Math.max(
+      8,
+      Math.round((layout.fontSize - 2) * dropdownScale)
+    );
+    const previewSize = Math.round(36 * sizeScale);
+    const paddingY = Math.round(12 * sizeScale);
+    const labelToMetaGap = Math.round(6 * sizeScale);
     const textHeight = labelFontSize + labelToMetaGap + metaFontSize;
-    const minHeight = Math.round(48 * adjustedScale);
+    const minHeight = Math.round(48 * sizeScale);
     return Math.max(
       minHeight,
       previewSize + paddingY * 2,
@@ -300,7 +323,8 @@ export function createHudLayout({
       ...layout,
       padding: dropdownScaledPadding,
       gap: dropdownScaledGap,
-      fontSize: Math.round(scaledFontSize * dropdownScale),
+      fontSize: scaledFontSize,
+      dropdownScale,
     };
     const dropdownHeight = computeDropdownHeight(dropdownLayout, dropdownScale);
     const dropdownY = toolbarY - dropdownScaledGap - dropdownHeight;
