@@ -22,9 +22,12 @@ const hideInstallIfStandalone = () => {
   }
 };
 
+// Start disabled until we have a user-initiated path to prompt.
+setInstallButton(false);
 hideInstallIfStandalone();
 
 window.addEventListener("beforeinstallprompt", (event) => {
+  // Gate the browser prompt until the user taps the install button.
   event.preventDefault();
   deferredPrompt = event;
   setInstallButton(true);
@@ -41,6 +44,7 @@ if (installBtn) {
   installBtn.addEventListener("click", async () => {
     if (isStandalone()) return;
     if (isIOS()) {
+      // iOS does not support the install prompt; show guidance on demand.
       alert("To install on iOS, tap the Share button and choose \"Add to Home Screen.\"");
       return;
     }
@@ -62,6 +66,7 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     hideInstallIfStandalone();
     if (installBtn && isIOS() && !isStandalone()) {
+      // iOS requires manual instructions; enable button so users can request them.
       setInstallButton(true);
       installBtn.classList.remove("hidden");
     }
