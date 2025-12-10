@@ -290,18 +290,36 @@ const pointerControls = createPointerControls({
   gameHud,
 });
 
+const handleViewportResize = () => {
+  viewport.resizeCanvas();
+  if (gameHud) gameHud.computeLayout();
+  state.needsRender = true;
+};
+
+const queueViewportResize = (() => {
+  let frameId = null;
+  const schedule = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(fn, 0);
+  return () => {
+    if (frameId) return;
+    frameId = schedule(() => {
+      frameId = null;
+      handleViewportResize();
+    });
+  };
+})();
+
+if (typeof ResizeObserver === "function") {
+  const resizeObserver = new ResizeObserver(() => queueViewportResize());
+  resizeObserver.observe(canvas);
+}
+
 ui.bindUIEvents();
 pointerControls.bind();
 ui.refreshAllUI();
-viewport.resizeCanvas();
+handleViewportResize();
 renderer.loop();
 setInterval(() => {
   state.needsRender = true;
 }, 1000);
 
-window.addEventListener("resize", () => {
-  viewport.resizeCanvas();
-  if (gameHud) gameHud.computeLayout();
-  state.needsRender = true;
-});
-
+window.addEventListener("resize", queueViewportResize);
