@@ -165,7 +165,16 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         const secPart = secs % 60;
         const timerText = mins + ":" + secPart.toString().padStart(2, "0");
 
-        ctx.drawImage(img, x, y, tileScreenSize, tileScreenSize);
+        const quadSize = tileScreenSize / 2;
+        const positions = [
+          [x, y],
+          [x + quadSize, y],
+          [x, y + quadSize],
+          [x + quadSize, y + quadSize],
+        ];
+        positions.forEach(([qx, qy]) => {
+          ctx.drawImage(img, qx, qy, quadSize, quadSize);
+        });
 
 
       }
