@@ -105,6 +105,13 @@ export function createResetManager({
       await clearClientCaches();
     }
 
+    if (clearCaches) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("cachebust", Date.now().toString());
+      window.location.replace(url.toString());
+      return;
+    }
+
     window.location.reload();
   };
 
