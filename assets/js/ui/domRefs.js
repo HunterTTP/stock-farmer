@@ -1,5 +1,12 @@
 export function getDomRefs() {
   return {
+    navBar: document.getElementById("navBar"),
+    navBrand: document.getElementById("navBrand"),
+    navBrandFull: document.getElementById("navBrandFull"),
+    navBrandShort: document.getElementById("navBrandShort"),
+    navBrandIcon: document.getElementById("navBrandIcon"),
+    navActions: document.getElementById("navActions"),
+    userBadge: document.getElementById("userBadge"),
     totalDisplay: document.getElementById("totalDisplay"),
     navToggle: document.getElementById("navToggle"),
     navOffcanvas: document.getElementById("navOffcanvas"),

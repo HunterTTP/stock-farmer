@@ -1,11 +1,12 @@
 <nav class="farm-bg text-white farm-border border-b">
-  <div class="flex flex-wrap items-center gap-3 px-5 py-3 relative">
-    <div class="flex items-center gap-1.5">
-      <a class="text-base font-semibold whitespace-nowrap" href="#">Stock Farmer</a>
-      <img src="images/crops/carrot/carrot-phase-4.png" alt="Carrot" class="h-5 w-5 object-cover" />
-    </div>
+  <div id="navBar" class="flex items-center gap-3 px-5 py-3 relative min-w-0 w-full flex-nowrap">
+    <a id="navBrand" class="flex items-center gap-1.5 text-base font-semibold whitespace-nowrap min-w-0 shrink-0" href="#">
+      <span id="navBrandFull" class="inline-flex">Stock Farmer</span>
+      <span id="navBrandShort" class="hidden">SF</span>
+      <img id="navBrandIcon" src="images/crops/carrot/carrot-phase-4.png" alt="Carrot" class="h-5 w-5 object-cover flex-shrink-0" />
+    </a>
 
-    <div class="ml-auto flex items-center gap-3">
+    <div id="navActions" class="ml-auto flex items-center gap-3 shrink-0">
       <button id="userBadge" type="button" class="flex items-center gap-3 farm-bg-light border farm-border rounded-full px-4 py-2 shadow-lg cursor-pointer focus:outline-none hover:border-opacity-80">
         <svg class="h-5 w-5 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
           <circle cx="12" cy="8" r="4" />

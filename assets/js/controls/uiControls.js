@@ -4,6 +4,7 @@ import { createStructureMenus } from "./ui/structureMenus.js";
 import { createSizeMenus } from "./ui/sizeMenus.js";
 import { createFeedback } from "./ui/feedback.js";
 import { createMenuState } from "./ui/menuState.js";
+import { createNavBrand } from "../ui/navBrand.js";
 export function createUIControls({
   dom,
   state,
@@ -30,6 +31,7 @@ export function createUIControls({
   };
   const menuAPI = {};
   const overlay = createOverlayControls({ dom, uiState });
+  const navBrand = createNavBrand({ dom });
   const { openOffcanvas, closeOffcanvas, toggleOffcanvas, closeConfirmModal, openConfirmModal, updateHideButtonsUI } = overlay;
   const sizeMenus = createSizeMenus({
     dom,
@@ -165,6 +167,7 @@ export function createUIControls({
     updateModeButtonsUI();
     updateHideButtonsUI();
     renderDropdownGroups();
+    navBrand.refresh();
   };
 
   const bindUIEvents = () => {
