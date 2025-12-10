@@ -74,7 +74,7 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
       if (crop) {
         const status = getCropStatus(crop);
         if (status) {
-          return `Planted: ${status.count} | ${status.harvestText}`;
+          return `${status.harvestText}`;
         }
         return `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
       }
@@ -148,17 +148,17 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
     if (dropdown.id === "cropSelect") {
       const cropKeys = Object.keys(crops);
       return cropKeys.map((key, index) => {
-        const crop = crops[key];
-        const status = getCropStatus(crop);
-        const baseMeta = `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
-        const metaLines = [{ text: baseMeta, type: "meta" }];
-        if (status) {
-          metaLines.push({ text: `Planted: ${status.count} | ${status.harvestText}`, type: "status" });
-        }
-        if (!crop.unlocked && crop.unlockCost > 0) {
-          metaLines.push({ text: `+${CROP_UNLOCK_FARMLAND_BONUS} Farmland`, type: "meta" });
-          metaLines.push({ text: `Unlock for ${formatCurrency(crop.unlockCost)}`, type: "unlock" });
-        }
+      const crop = crops[key];
+      const status = getCropStatus(crop);
+      const baseMeta = `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+      const metaLines = [{ text: baseMeta, type: "meta" }];
+      if (status) {
+        metaLines.push({ text: `${status.harvestText}`, type: "status" });
+      }
+      if (!crop.unlocked && crop.unlockCost > 0) {
+        metaLines.push({ text: `+${CROP_UNLOCK_FARMLAND_BONUS} Farmland`, type: "meta" });
+        metaLines.push({ text: `Unlock for ${formatCurrency(crop.unlockCost)}`, type: "unlock" });
+      }
 
         const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
         const hasMoney = state.totalMoney >= (crop.unlockCost || 0);

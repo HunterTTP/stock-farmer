@@ -124,7 +124,11 @@ export function createToolbarRenderer({ ctx, COLORS, state, hudState, layoutMana
     }
 
     if (meta) {
-      const metaIsStatus = dropdown.id === "cropSelect" && typeof meta === "string" && meta.startsWith("Planted:");
+      const metaIsStatus =
+        dropdown.id === "cropSelect" &&
+        typeof meta === "string" &&
+        meta !== "" &&
+        !meta.startsWith("Sells for");
       const metaColor = metaIsStatus ? COLORS.accent : COLORS.textSecondary;
       const isMobile = layout.breakpoint === "mobile";
       const lineHeight = layout.fontSize + (isMobile ? 6 : 2);
