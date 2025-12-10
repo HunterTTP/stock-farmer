@@ -1,6 +1,6 @@
 export const BASE_FARMLAND_LIMIT = 4;
 export const FARMLAND_DOLLARS_PER_TILE = 1000;
-export const CROP_UNLOCK_FARMLAND_BONUS = 2;
+export const CROP_UNLOCK_FARMLAND_BONUS = 3;
 
 export function getBuildingFarmlandBoost(struct = null) {
   if (!struct) return 0;
