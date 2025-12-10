@@ -2,7 +2,7 @@ export const MODE_ORDER = ["plant", "landscape", "build", "trade"];
 
 export const LAYOUT = {
   mobile: { modeButtonSize: 46, minModeButtonSize: 44, maxModeButtonSize: 78, gap: 10, padding: 10, fontSize: 14, iconSize: 22, toolbarPadding: 8, toolbarMaxWidth: 680 },
-  tablet: { modeButtonSize: 52, minModeButtonSize: 50, maxModeButtonSize: 86, gap: 12, padding: 14, fontSize: 13, iconSize: 25, toolbarPadding: 10, toolbarMaxWidth: 1100 },
+  tablet: { modeButtonSize: 52, minModeButtonSize: 50, maxModeButtonSize: 86, gap: 12, padding: 14, fontSize: 17, iconSize: 25, toolbarPadding: 10, toolbarMaxWidth: 1100 },
   desktop: { modeButtonSize: 48, minModeButtonSize: 44, maxModeButtonSize: 72, gap: 24, padding: 12, fontSize: 18, iconSize: 23, toolbarPadding: 14, toolbarMaxWidth: 1400 },
 };
 
