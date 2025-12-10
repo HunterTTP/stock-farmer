@@ -1,6 +1,7 @@
 import { hexToRgba, darkenHex } from "../utils/colorUtils.js";
 
 export const DEFAULT_ACCENT = "#87FF85";
+const DEFAULT_THEME_COLOR = "#000000";
 
 let palette = buildPalette(DEFAULT_ACCENT);
 const listeners = new Set();
@@ -47,7 +48,7 @@ function applyPalette(nextPalette) {
     root.style.setProperty("--accent-contrast", palette.accentContrast);
     root.style.setProperty("--accent-dimmed", palette.accentDimmed);
     const metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) metaTheme.setAttribute("content", palette.accent);
+    if (metaTheme) metaTheme.setAttribute("content", DEFAULT_THEME_COLOR);
     listeners.forEach((cb) => cb({ ...palette }));
 }
 
