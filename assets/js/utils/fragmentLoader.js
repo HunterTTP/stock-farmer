@@ -7,6 +7,7 @@ const FRAGMENTS = [
     { id: "logout-modal", path: "fragments/logout-modal.html", target: "body", position: "beforeend" },
     { id: "canvas-area", path: "fragments/canvas-area.html", target: "body", position: "beforeend" },
     { id: "trade-modal", path: "fragments/trade-modal.html", target: "body", position: "beforeend" },
+    { id: "under-construction-modal", path: "fragments/under-construction-modal.html", target: "body", position: "beforeend" },
 ];
 
 async function loadFragment(fragment) {

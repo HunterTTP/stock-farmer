@@ -209,6 +209,19 @@ export function createUIControls({
       });
     }
 
+    const closeUnderConstruction = () => {
+      if (dom.underConstructionModal) {
+        dom.underConstructionModal.classList.add("hidden");
+        document.body.classList.remove("overflow-hidden");
+      }
+    };
+    if (dom.underConstructionClose) {
+      dom.underConstructionClose.addEventListener("click", closeUnderConstruction);
+    }
+    if (dom.underConstructionConfirm) {
+      dom.underConstructionConfirm.addEventListener("click", closeUnderConstruction);
+    }
+
     if (dom.clearCacheBtn && clearCache) {
       dom.clearCacheBtn.addEventListener("click", () => {
         openConfirmModal("Clear all cached data? If you are not logged in your progress will be lost.", clearCache, "Clear Cache", null, {

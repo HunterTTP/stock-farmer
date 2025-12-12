@@ -36,8 +36,6 @@ export function getDomRefs() {
     landscapeSelectImage: document.getElementById("landscapeSelectImage"),
     landscapeSelectMenu: document.getElementById("landscapeSelectMenu"),
     resetFarmBtn: document.getElementById("resetFarmBtn"),
-
-
     clearCacheBtn: document.getElementById("clearCacheBtn"),
     resetSettingsBtn: document.getElementById("resetSettingsBtn"),
     installBtn: document.getElementById("installBtn"),
@@ -53,5 +51,8 @@ export function getDomRefs() {
     moneyCheatCard: document.getElementById("moneyCheatCard"),
     moneyCheatInput: document.getElementById("moneyCheatInput"),
     moneyCheatApply: document.getElementById("moneyCheatApply"),
+    underConstructionModal: document.getElementById("underConstructionModal"),
+    underConstructionClose: document.getElementById("underConstructionClose"),
+    underConstructionConfirm: document.getElementById("underConstructionConfirm"),
   };
 }

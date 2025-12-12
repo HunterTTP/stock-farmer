@@ -141,9 +141,9 @@ export function createHudInteractions({
       state.activeMode = "trade";
       hudState.openMenuKey = null;
       state.needsRender = true;
-      const tradeModal = document.getElementById("tradeModal");
-      if (tradeModal) {
-        tradeModal.classList.remove("hidden");
+      const underConstructionModal = document.getElementById("underConstructionModal");
+      if (underConstructionModal) {
+        underConstructionModal.classList.remove("hidden");
         document.body.classList.add("overflow-hidden");
       }
       return;
