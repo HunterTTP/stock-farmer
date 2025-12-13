@@ -1,7 +1,8 @@
-import { FARMLAND_SATURATED, getFarmlandType, getPlotGrowTimeMs } from "../utils/helpers.js";
+import { FARMLAND_SATURATED, getFarmlandType } from "../utils/helpers.js";
 import { getStageBreakpoints, getGrowthPhase } from "../utils/growthStages.js";
+import { getGrowSpeedMultiplier, getPlotProgress, getEffectiveGrowTimeMs } from "../logic/growSpeed.js";
 
-export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud, tickHydration }) {
+export function createRenderer({ canvas, ctx, state, world, config, crops, buildings, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud, tickHydration }) {
   const buildingImageCache = new Map();
   const getLandscapeAsset = (id) => (id && landscapeAssets ? landscapeAssets[id] : null);
 
@@ -145,13 +146,13 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
 
         const plot = world.plots.get(key);
         if (!plot) continue;
+        const multiplier = getGrowSpeedMultiplier(world, buildings, key);
         const crop = crops[plot.cropKey];
         if (!crop || !crop.images.length) continue;
 
-        const growTimeMs = getPlotGrowTimeMs(plot, crop);
-        const elapsed = now - plot.plantedAt;
-        const progress = growTimeMs > 0 ? Math.min(1, elapsed / growTimeMs) : 1;
+        const progress = getPlotProgress(plot, crop, multiplier, now);
         const isReady = progress >= 1;
+        const effectiveGrowTimeMs = getEffectiveGrowTimeMs(crop, multiplier);
 
         const quadSize = tileScreenSize / 2;
         const positions = [
@@ -162,7 +163,7 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         ];
         positions.forEach(([qx, qy, quadIndex]) => {
           const quadKey = `${key}:${quadIndex}`;
-          const breakpoints = getStageBreakpoints(quadKey, plot.cropKey, plot.plantedAt, growTimeMs);
+          const breakpoints = getStageBreakpoints(quadKey, plot.cropKey, plot.plantedAt, effectiveGrowTimeMs);
           const phaseIndex = getGrowthPhase(progress, breakpoints, isReady);
           const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
           ctx.drawImage(img, qx, qy, quadSize, quadSize);

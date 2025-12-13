@@ -1,4 +1,4 @@
-import { getBuildingFarmlandBoost, getFarmlandUsage } from "../../logic/farmlandLimits.js";
+import { getBuildingGrowSpeedBoost, getBuildingPlacedCount, getFarmlandUsage } from "../../logic/farmlandLimits.js";
 
 export function createStructureMenus({
   dom,
@@ -47,7 +47,9 @@ export function createStructureMenus({
     };
 
     const renderRow = (item) => {
-      const farmlandBoost = item.id === "sell" ? 0 : getBuildingFarmlandBoost(item);
+      const growSpeedBoost = item.id === "sell" ? 0 : getBuildingGrowSpeedBoost(item);
+      const maxPlaced = item.id === "sell" ? 0 : (Number.isFinite(item.maxPlaced) ? item.maxPlaced : 1);
+      const placed = item.id === "sell" ? 0 : getBuildingPlacedCount(item.id, world.structures);
       const row = document.createElement("button");
       row.type = "button";
       row.className = "w-full px-3 py-2 rounded-lg flex items-center gap-3 text-left border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition";
@@ -77,13 +79,13 @@ export function createStructureMenus({
       metaWrap.className = "flex flex-col gap-0.5";
       const meta = document.createElement("div");
       meta.className = "text-[11px] text-neutral-400 truncate";
-      meta.textContent = item.id === "sell" ? "Remove and refund" : `${item.width}x${item.height} | ${formatCurrency(item.cost || 0)}`;
+      meta.textContent = item.id === "sell" ? "Remove and refund" : `${formatCurrency(item.cost || 0)} · ${placed}/${maxPlaced}`;
       metaWrap.appendChild(meta);
-      if (farmlandBoost > 0) {
-        const farmlandMeta = document.createElement("div");
-        farmlandMeta.className = "text-[11px] text-neutral-400 truncate";
-        farmlandMeta.textContent = `+${farmlandBoost} Farmland each`;
-        metaWrap.appendChild(farmlandMeta);
+      if (growSpeedBoost > 0) {
+        const growSpeedMeta = document.createElement("div");
+        growSpeedMeta.className = "text-[11px] text-neutral-400 truncate";
+        growSpeedMeta.textContent = `+${growSpeedBoost}% Crop Grow Speed`;
+        metaWrap.appendChild(growSpeedMeta);
       }
       text.appendChild(title);
       text.appendChild(metaWrap);

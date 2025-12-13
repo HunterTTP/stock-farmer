@@ -1,26 +1,7 @@
-import { getPlotGrowTimeMs } from "../../utils/helpers.js";
 import { clampMoney } from "../../state/stateUtils.js";
 
 export function buildCropOperations(context) {
   const { state, world, crops, config, onMoneyChanged, renderCropOptions, saveState, currentSizeOption, openConfirmModal } = context;
-
-  function recomputeLastPlantedForCrop(cropKey) {
-    const crop = crops[cropKey];
-    if (!crop) return;
-    let latest = null;
-    let latestGrowMs = null;
-    world.plots.forEach((plot) => {
-      if (plot?.cropKey !== cropKey) return;
-      const plantedAt = Number(plot?.plantedAt);
-      if (!Number.isFinite(plantedAt)) return;
-      if (latest === null || plantedAt > latest) {
-        latest = plantedAt;
-        latestGrowMs = getPlotGrowTimeMs(plot, crop);
-      }
-    });
-    crop.lastPlantedAt = latest;
-    crop.lastPlantedGrowMs = Number.isFinite(latestGrowMs) ? latestGrowMs : null;
-  }
 
   function harvestPlot(key) {
     const plot = world.plots.get(key);
@@ -34,7 +15,7 @@ export function buildCropOperations(context) {
     onMoneyChanged();
     world.plots.delete(key);
     state.needsRender = true;
-    recomputeLastPlantedForCrop(crop.id);
+    renderCropOptions();
     saveState();
   }
 
@@ -45,7 +26,6 @@ export function buildCropOperations(context) {
     if (crop && typeof crop.placed === "number" && crop.placed > 0) crop.placed -= 1;
     world.plots.delete(key);
     state.needsRender = true;
-    if (crop) recomputeLastPlantedForCrop(crop.id);
     renderCropOptions();
     saveState();
   }
@@ -86,7 +66,6 @@ export function buildCropOperations(context) {
     collectCropDestroyTargets,
     destroyPlot,
     harvestPlot,
-    recomputeLastPlantedForCrop,
     promptDestroyCrops,
   };
 }

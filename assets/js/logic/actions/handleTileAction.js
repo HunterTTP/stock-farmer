@@ -1,10 +1,11 @@
-import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getCropGrowTimeMs, getFarmlandType, getPlotGrowTimeMs, setFarmlandType } from "../../utils/helpers.js";
-import { checkRemovalWouldBreakLimit, formatFarmlandLimitError, getFarmlandUsage } from "../farmlandLimits.js";
+import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getFarmlandType, setFarmlandType } from "../../utils/helpers.js";
+import { getFarmlandUsage } from "../farmlandLimits.js";
 import { clampMoney } from "../../state/stateUtils.js";
+import { getGrowSpeedMultiplier, getEffectiveGrowTimeMs } from "../growSpeed.js";
 
 export function buildActionHandler(context, helpers, determineActionForTile, cropOps) {
-  const { state, world, config, crops, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
-  const { harvestPlot, destroyPlot, recomputeLastPlantedForCrop } = cropOps;
+  const { state, world, config, crops, buildings, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
+  const { harvestPlot, destroyPlot } = cropOps;
   const { removeStructure, getStructureAtKey, getPlacementSource, canPlaceStructure } = helpers;
 
   ensureFarmlandStates(world);
@@ -63,23 +64,6 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     hydrationTimers.delete(targetKey);
   };
 
-  const applyPlotMultiplier = (targetKey, multiplier) => {
-    const plot = world.plots.get(targetKey);
-    if (!plot || multiplier <= 0) return;
-    const crop = crops[plot.cropKey];
-    const baseGrowMs = getCropGrowTimeMs(crop);
-    const prevTotal = getPlotGrowTimeMs(plot, crop) || baseGrowMs;
-    if (!baseGrowMs || baseGrowMs <= 0 || !prevTotal || prevTotal <= 0) return;
-    const now = Date.now();
-    const elapsed = Math.max(0, now - plot.plantedAt);
-    const progress = Math.min(1, elapsed / prevTotal);
-    const newTotal = baseGrowMs / multiplier;
-    const newElapsed = progress * newTotal;
-    plot.growTimeMs = newTotal;
-    plot.growMultiplier = multiplier;
-    plot.plantedAt = now - newElapsed;
-  };
-
   const applySaturationToFarmland = (targetKey) => {
     if (!targetKey || !world.filled.has(targetKey)) {
       clearFarmlandType(world, targetKey);
@@ -88,10 +72,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
     }
     cancelHydrationTimer(targetKey);
     if (getFarmlandType(world, targetKey) === FARMLAND_SATURATED) return;
-    applyPlotMultiplier(targetKey, 1.25);
     setFarmlandType(world, targetKey, FARMLAND_SATURATED);
-    const plot = world.plots.get(targetKey);
-    if (plot) recomputeLastPlantedForCrop(plot.cropKey);
     renderCropOptions();
     state.needsRender = true;
     saveState();
@@ -122,8 +103,8 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
       if (targetState === FARMLAND_SATURATED) {
         applySaturationToFarmland(targetKey);
       } else {
-        applyPlotMultiplier(targetKey, 1.0);
         setFarmlandType(world, targetKey, FARMLAND);
+        renderCropOptions();
         state.needsRender = true;
         saveState();
       }
@@ -223,7 +204,8 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const crop = crops[existingPlot.cropKey];
         if (!crop) return { success: false, reason: "Unknown crop" };
         const plantedAt = Number(existingPlot.plantedAt);
-        const growMs = getPlotGrowTimeMs(existingPlot, crop);
+        const multiplier = getGrowSpeedMultiplier(world, buildings, key);
+        const growMs = getEffectiveGrowTimeMs(crop, multiplier);
         const elapsed = Number.isFinite(plantedAt) ? Date.now() - plantedAt : 0;
         if (growMs <= 0 || elapsed >= growMs) {
           harvestPlot(key);
@@ -287,19 +269,11 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
           world.costAnimations.push({ key, value: -plantCost, start: performance.now() });
         }
         const plantedAt = Date.now();
-        const farmlandType = getFarmlandType(world, key);
-        const baseGrowMs = getPlotGrowTimeMs(null, crop);
-        const multiplier = farmlandType === FARMLAND_SATURATED ? 1.25 : 1.0;
-        const growTimeMs = baseGrowMs && baseGrowMs > 0 ? baseGrowMs / multiplier : baseGrowMs;
         world.plots.set(key, {
           cropKey,
           plantedAt,
-          growTimeMs,
-          growMultiplier: multiplier,
         });
         crop.placed += 1;
-        crop.lastPlantedAt = plantedAt;
-        crop.lastPlantedGrowMs = growTimeMs;
         renderCropOptions();
         state.needsRender = true;
         saveState();
@@ -345,6 +319,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         }
         state.totalMoney -= cost;
         onMoneyChanged();
+        renderCropOptions();
         renderLandscapeOptions();
         state.needsRender = true;
         saveState();
@@ -354,18 +329,13 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const kind = resolvedAction?.kind === "landscape" ? "landscape" : "building";
         const structKey = resolvedAction?.structKey || getStructureAtKey(key);
         if (!structKey) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
-        if (kind === "building") {
-          const { wouldBreakLimit, overBy, nextLimit } = checkRemovalWouldBreakLimit(world.structures, [structKey], state, world, crops);
-          if (wouldBreakLimit) {
-            return { success: false, reason: formatFarmlandLimitError(overBy, nextLimit) || "Reduce farmland first" };
-          }
-        }
         const { success, refund } = removeStructure(structKey, kind);
         if (!success) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
         if (refund > 0) {
           state.totalMoney = clampMoney(state.totalMoney + refund);
           onMoneyChanged();
         }
+        renderCropOptions();
         renderLandscapeOptions();
         state.needsRender = true;
         saveState();

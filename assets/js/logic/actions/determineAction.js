@@ -1,8 +1,8 @@
-import { getPlotGrowTimeMs } from "../../utils/helpers.js";
-import { checkRemovalWouldBreakLimit, formatFarmlandLimitError, getFarmlandUsage } from "../farmlandLimits.js";
+import { getBuildingPlacedCount, getFarmlandUsage } from "../farmlandLimits.js";
+import { getGrowSpeedMultiplier, isPlotReady } from "../growSpeed.js";
 
 export function buildDetermineAction(context, helpers) {
-  const { state, world, config, crops, formatCurrency } = context;
+  const { state, world, config, crops, buildings, formatCurrency } = context;
   const { getStructureAtKey, getStructKind, getPlacementSource, canPlaceStructure } = helpers;
 
   function determineActionForTile(row, col, nowMs = Date.now()) {
@@ -24,12 +24,6 @@ export function buildDetermineAction(context, helpers) {
           return { type: "removeFarmland" };
         }
         if (!struct || getStructKind(struct) !== kind) return { type: "none", reason: `No ${kind} here` };
-        if (kind === "building") {
-          const { wouldBreakLimit, overBy, nextLimit } = checkRemovalWouldBreakLimit(world.structures, [structKey], state, world, crops);
-          if (wouldBreakLimit) {
-            return { type: "none", reason: formatFarmlandLimitError(overBy, nextLimit) || "Reduce farmland first" };
-          }
-        }
         return { type: "destroyStructure", structKey, kind };
       }
       const selection = selectionKey ? getPlacementSource(kind, selectionKey) : null;
@@ -86,15 +80,22 @@ export function buildDetermineAction(context, helpers) {
       }
       const cost = Number.isFinite(selection.cost) ? selection.cost : 0;
       if (cost > state.totalMoney) return { type: "none", reason: `Need ${formatCurrency(cost)}` };
+      if (kind === "building" && buildings && buildings[selectionKey]) {
+        const buildingData = buildings[selectionKey];
+        const maxPlaced = Number.isFinite(buildingData.maxPlaced) ? buildingData.maxPlaced : Infinity;
+        const currentPlaced = getBuildingPlacedCount(selectionKey, world.structures);
+        if (currentPlaced >= maxPlaced) {
+          return { type: "none", reason: `Max ${buildingData.name} placed (${maxPlaced})` };
+        }
+      }
       return { type: "placeStructure", structureId: selection.id, kind, row, col };
     }
 
     if (existingStructKey) return { type: "none", reason: "Structure here" };
     if (existingPlot) {
       const crop = crops[existingPlot.cropKey];
-      const plantedAt = Number(existingPlot.plantedAt);
-      const growMs = getPlotGrowTimeMs(existingPlot, crop);
-      if (crop && Number.isFinite(plantedAt) && (growMs <= 0 || nowMs - plantedAt >= growMs)) {
+      const multiplier = getGrowSpeedMultiplier(world, buildings, key);
+      if (crop && isPlotReady(existingPlot, crop, multiplier, nowMs)) {
         return { type: "harvest" };
       }
       return { type: "none", reason: "Already planted" };

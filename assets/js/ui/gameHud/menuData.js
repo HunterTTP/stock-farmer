@@ -1,5 +1,5 @@
-import { getCropGrowTimeMs } from "../../utils/helpers.js";
-import { getBuildingFarmlandBoost, getFarmlandUsage } from "../../logic/farmlandLimits.js";
+import { getBuildingGrowSpeedBoost, getBuildingPlacedCount, getFarmlandUsage } from "../../logic/farmlandLimits.js";
+import { getGrowSpeedMultiplier, getRemainingGrowTimeMs } from "../../logic/growSpeed.js";
 
 export function createMenuData({ state, world, crops, sizes, landscapes, buildings, formatCurrency }) {
   const formatDurationMs = (ms) => {
@@ -33,17 +33,16 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
   const getCropStatus = (crop) => {
     if (!crop) return null;
     if (!crop.placed || crop.placed <= 0) return null;
-    const plantedAt = Number.isFinite(crop.lastPlantedAt) ? crop.lastPlantedAt : null;
-    if (!plantedAt || plantedAt <= 0) return { count: crop.placed, harvestText: "Ready" };
-    const growMs =
-      Number.isFinite(crop.lastPlantedGrowMs) && crop.lastPlantedGrowMs > 0
-        ? crop.lastPlantedGrowMs
-        : getCropGrowTimeMs(crop);
-    if (!growMs || growMs <= 0) return { count: crop.placed, harvestText: "Ready" };
     const nowMs = Date.now();
-    const remainingMs = Math.max(0, growMs - (nowMs - plantedAt));
-    if (remainingMs <= 0) return { count: crop.placed, harvestText: "Ready" };
-    return { count: crop.placed, harvestText: formatDurationMs(remainingMs) };
+    let maxRemaining = 0;
+    world.plots.forEach((plot, key) => {
+      if (plot?.cropKey !== crop.id) return;
+      const multiplier = getGrowSpeedMultiplier(world, buildings, key);
+      const remaining = getRemainingGrowTimeMs(plot, crop, multiplier, nowMs);
+      if (remaining > maxRemaining) maxRemaining = remaining;
+    });
+    if (maxRemaining <= 0) return { count: crop.placed, harvestText: "Ready" };
+    return { count: crop.placed, harvestText: formatDurationMs(maxRemaining) };
   };
 
   const getDropdownLabel = (dropdown) => {
@@ -101,9 +100,11 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
       }
       const building = state.selectedBuildKey ? buildings[state.selectedBuildKey] : null;
       if (building) {
-        const baseMeta = `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
-        const boost = getBuildingFarmlandBoost(building);
-        return boost > 0 ? `${baseMeta} · +${boost} Farmland` : baseMeta;
+        const maxPlaced = Number.isFinite(building.maxPlaced) ? building.maxPlaced : 1;
+        const placed = getBuildingPlacedCount(building.id, world.structures);
+        const baseMeta = `${formatCurrency(building.cost || 0)} · ${placed}/${maxPlaced}`;
+        const boost = getBuildingGrowSpeedBoost(building);
+        return boost > 0 ? `${baseMeta} · +${boost}%` : baseMeta;
       }
       return null;
     }
@@ -268,13 +269,15 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
       ];
 
       const buildList = Object.values(buildings || {}).map((building) => {
-        const baseMeta = `${building.width}x${building.height} | ${formatCurrency(building.cost || 0)}`;
-        const farmlandBoost = getBuildingFarmlandBoost(building);
+        const maxPlaced = Number.isFinite(building.maxPlaced) ? building.maxPlaced : 1;
+        const placed = getBuildingPlacedCount(building.id, world.structures);
+        const baseMeta = `${formatCurrency(building.cost || 0)} · ${placed}/${maxPlaced}`;
+        const growSpeedBoost = getBuildingGrowSpeedBoost(building);
         const metaLines =
-          farmlandBoost > 0
+          growSpeedBoost > 0
             ? [
               { text: baseMeta, type: "meta" },
-              { text: `+${farmlandBoost} Farmland each`, type: "meta" },
+              { text: `+${growSpeedBoost}% Crop Grow Speed`, type: "meta" },
             ]
             : [{ text: baseMeta, type: "meta" }];
         return {

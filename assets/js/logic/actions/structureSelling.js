@@ -1,22 +1,8 @@
-import { checkRemovalWouldBreakLimit, formatFarmlandLimitError } from "../farmlandLimits.js";
 import { clampMoney } from "../../state/stateUtils.js";
 
 export function buildStructureSelling(context, helpers) {
   const { state, world, config, crops, formatCurrency, openConfirmModal, onMoneyChanged, renderLandscapeOptions, saveState } = context;
   const { getStructureAtKey, getStructKind, getPlacementSource, removeStructure } = helpers;
-
-  const canRemoveWithinFarmlandLimit = (structKeys, kind = null) => {
-    const keys = (structKeys || []).filter(Boolean);
-    if ((kind && kind !== "building") || keys.length === 0) return { ok: true, reason: null };
-    const buildingKeys = keys.filter((key) => {
-      const struct = world.structures.get(key);
-      return struct && getStructKind(struct) === "building";
-    });
-    if (buildingKeys.length === 0) return { ok: true, reason: null };
-    const { wouldBreakLimit, overBy, nextLimit } = checkRemovalWouldBreakLimit(world.structures, buildingKeys, state, world, crops);
-    if (!wouldBreakLimit) return { ok: true, reason: null };
-    return { ok: false, reason: formatFarmlandLimitError(overBy, nextLimit) || "Reduce farmland first" };
-  };
 
   function collectStructureSellTargets(baseRow, baseCol, kindOverride = null) {
     const activeKind =
@@ -65,10 +51,6 @@ export function buildStructureSelling(context, helpers) {
   }
 
   function sellStructures(structKeys, kind = null) {
-    const limitCheck = canRemoveWithinFarmlandLimit(structKeys, kind || undefined);
-    if (!limitCheck.ok) {
-      return { sold: 0, totalRefund: 0, reason: limitCheck.reason };
-    }
     const seen = new Set();
     let sold = 0;
     let totalRefund = 0;
@@ -94,17 +76,6 @@ export function buildStructureSelling(context, helpers) {
   }
 
   function promptSellStructures(structKeys, kind = null) {
-    const limitCheck = canRemoveWithinFarmlandLimit(structKeys, kind || undefined);
-    if (!limitCheck.ok) {
-      openConfirmModal(
-        limitCheck.reason || "Reduce farmland first",
-        () => { },
-        kind === "landscape" ? "Cannot Sell Landscape" : "Cannot Sell Building",
-        null,
-        { confirmText: "OK", showCancel: false }
-      );
-      return;
-    }
     const summary = getStructureSellSummary(structKeys, kind || undefined);
     if (!summary.count) return;
     const singleLabel =

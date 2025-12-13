@@ -1,11 +1,37 @@
 export const BASE_FARMLAND_LIMIT = 4;
-export const FARMLAND_DOLLARS_PER_TILE = 1000;
 
-export function getBuildingFarmlandBoost(struct = null) {
+export function getBuildingGrowSpeedBoost(struct = null, buildingsData = null) {
   if (!struct) return 0;
   if (struct.kind && struct.kind !== "building") return 0;
-  const cost = Number.isFinite(struct.cost) ? struct.cost : 0;
-  return Math.max(0, Math.floor(cost / FARMLAND_DOLLARS_PER_TILE));
+  if (Number.isFinite(struct.growSpeedBoost)) return struct.growSpeedBoost;
+  if (buildingsData && struct.id && buildingsData[struct.id]) {
+    const bData = buildingsData[struct.id];
+    if (Number.isFinite(bData.growSpeedBoost)) return bData.growSpeedBoost;
+  }
+  return 0;
+}
+
+export function computeTotalBuildingGrowSpeedBoost(structures = null, buildingsData = null) {
+  let totalBoost = 0;
+  if (structures && typeof structures.forEach === "function") {
+    structures.forEach((struct) => {
+      totalBoost += getBuildingGrowSpeedBoost(struct, buildingsData);
+    });
+  }
+  return totalBoost;
+}
+
+export function getBuildingPlacedCount(buildingId, structures = null) {
+  if (!buildingId || !structures) return 0;
+  let count = 0;
+  if (typeof structures.forEach === "function") {
+    structures.forEach((struct) => {
+      if (struct && struct.id === buildingId && (!struct.kind || struct.kind === "building")) {
+        count += 1;
+      }
+    });
+  }
+  return count;
 }
 
 export function getCropFarmlandBoost(crops = null) {
@@ -21,12 +47,7 @@ export function getCropFarmlandBoost(crops = null) {
 }
 
 export function computeFarmlandLimit(structures = null, crops = null, baseLimit = BASE_FARMLAND_LIMIT) {
-  let limit = baseLimit + getCropFarmlandBoost(crops);
-  if (structures && typeof structures.forEach === "function") {
-    structures.forEach((struct) => {
-      limit += getBuildingFarmlandBoost(struct);
-    });
-  }
+  const limit = baseLimit + getCropFarmlandBoost(crops);
   return Math.max(baseLimit, limit);
 }
 
@@ -41,24 +62,6 @@ export function getFarmlandUsage(state, world, structures = null, crops = null) 
   const placed = getFarmlandPlaced(state, world);
   const limit = computeFarmlandLimit(structures || world?.structures, crops);
   return { placed, limit, remaining: limit - placed };
-}
-
-export function getLimitAfterRemoval(structures = null, keysToRemove = null, crops = null) {
-  const currentLimit = computeFarmlandLimit(structures, crops);
-  if (!structures || !keysToRemove || keysToRemove.length === 0) return currentLimit;
-  const targets = new Set(keysToRemove);
-  let lost = 0;
-  structures.forEach((struct, key) => {
-    if (targets.has(key)) lost += getBuildingFarmlandBoost(struct);
-  });
-  return Math.max(BASE_FARMLAND_LIMIT, currentLimit - lost);
-}
-
-export function checkRemovalWouldBreakLimit(structures, keysToRemove, state, world, crops = null) {
-  const placed = getFarmlandPlaced(state, world);
-  const nextLimit = getLimitAfterRemoval(structures, keysToRemove, crops);
-  const overBy = Math.max(0, placed - nextLimit);
-  return { overBy, nextLimit, wouldBreakLimit: overBy > 0 };
 }
 
 export function formatFarmlandLimitError(overBy, nextLimit = null) {

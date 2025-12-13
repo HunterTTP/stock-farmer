@@ -1,8 +1,8 @@
-import { getPlotGrowTimeMs } from "../../utils/helpers.js";
 import { computeFarmlandLimit, getFarmlandPlaced } from "../farmlandLimits.js";
+import { getGrowSpeedMultiplier, isPlotReady } from "../growSpeed.js";
 
 export function buildPreview(context, determineActionForTile) {
-  const { state, world, config, crops } = context;
+  const { state, world, config, crops, buildings } = context;
 
   function simulateTileActionForPreview(action, key, previewState, nowMs, getFilled, getPlot) {
     if (!action || action.type === "none") return false;
@@ -11,9 +11,8 @@ export function buildPreview(context, determineActionForTile) {
         const existingPlot = getPlot(key);
         const plotCrop = existingPlot ? crops[existingPlot.cropKey] : null;
         if (!existingPlot || !plotCrop) return false;
-        const plantedAt = Number(existingPlot.plantedAt);
-        const growMs = getPlotGrowTimeMs(existingPlot, plotCrop);
-        const ready = Number.isFinite(plantedAt) && (growMs <= 0 || nowMs - plantedAt >= growMs);
+        const multiplier = getGrowSpeedMultiplier(world, buildings, key);
+        const ready = isPlotReady(existingPlot, plotCrop, multiplier, nowMs);
         if (!ready) return false;
         const value = Math.max(0, plotCrop.baseValue);
         previewState.money += value;

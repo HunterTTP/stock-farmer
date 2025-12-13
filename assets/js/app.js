@@ -272,6 +272,7 @@ const renderer = createRenderer({
   world,
   config,
   crops,
+  buildings,
   assets,
   landscapes,
   landscapeAssets,
