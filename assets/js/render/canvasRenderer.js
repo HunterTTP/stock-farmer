@@ -1,4 +1,5 @@
-import { FARMLAND_SATURATED, getFarmlandType, getPlotGrowTimeMs, getStageBreakpoints } from "../utils/helpers.js";
+import { FARMLAND_SATURATED, getFarmlandType, getPlotGrowTimeMs } from "../utils/helpers.js";
+import { getStageBreakpoints, getGrowthPhase } from "../utils/growthStages.js";
 
 export function createRenderer({ canvas, ctx, state, world, config, crops, assets, landscapes, landscapeAssets, currentSizeOption, computeHoverPreview, gameHud, tickHydration }) {
   const buildingImageCache = new Map();
@@ -162,10 +163,7 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         positions.forEach(([qx, qy, quadIndex]) => {
           const quadKey = `${key}:${quadIndex}`;
           const breakpoints = getStageBreakpoints(quadKey, plot.cropKey, plot.plantedAt, growTimeMs);
-          let phaseIndex = 1;
-          if (isReady) phaseIndex = 3;
-          else if (progress >= breakpoints[1]) phaseIndex = 3;
-          else if (progress >= breakpoints[0]) phaseIndex = 2;
+          const phaseIndex = getGrowthPhase(progress, breakpoints, isReady);
           const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
           ctx.drawImage(img, qx, qy, quadSize, quadSize);
         });

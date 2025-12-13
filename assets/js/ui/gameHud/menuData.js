@@ -1,5 +1,5 @@
 import { getCropGrowTimeMs } from "../../utils/helpers.js";
-import { CROP_UNLOCK_FARMLAND_BONUS, getBuildingFarmlandBoost, getFarmlandUsage } from "../../logic/farmlandLimits.js";
+import { getBuildingFarmlandBoost, getFarmlandUsage } from "../../logic/farmlandLimits.js";
 
 export function createMenuData({ state, world, crops, sizes, landscapes, buildings, formatCurrency }) {
   const formatDurationMs = (ms) => {
@@ -148,17 +148,19 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
     if (dropdown.id === "cropSelect") {
       const cropKeys = Object.keys(crops);
       return cropKeys.map((key, index) => {
-      const crop = crops[key];
-      const status = getCropStatus(crop);
-      const baseMeta = `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
-      const metaLines = [{ text: baseMeta, type: "meta" }];
-      if (status) {
-        metaLines.push({ text: `${status.harvestText}`, type: "status" });
-      }
-      if (!crop.unlocked && crop.unlockCost > 0) {
-        metaLines.push({ text: `+${CROP_UNLOCK_FARMLAND_BONUS} Farmland`, type: "meta" });
-        metaLines.push({ text: `Unlock for ${formatCurrency(crop.unlockCost)}`, type: "unlock" });
-      }
+        const crop = crops[key];
+        const status = getCropStatus(crop);
+        const baseMeta = `Sells for ${formatCurrency(crop.baseValue)} - ${formatGrowTime(crop.growMinutes)}`;
+        const metaLines = [{ text: baseMeta, type: "meta" }];
+        if (status) {
+          metaLines.push({ text: `${status.harvestText}`, type: "status" });
+        }
+        if (!crop.unlocked && crop.unlockCost > 0) {
+          if (crop.tilesUnlocked > 0) {
+            metaLines.push({ text: `+${crop.tilesUnlocked} Farmland`, type: "meta" });
+          }
+          metaLines.push({ text: `Unlock for ${formatCurrency(crop.unlockCost)}`, type: "unlock" });
+        }
 
         const prereqsMet = index === 0 || cropKeys.slice(0, index).every((prevKey) => crops[prevKey].unlocked);
         const hasMoney = state.totalMoney >= (crop.unlockCost || 0);
@@ -271,9 +273,9 @@ export function createMenuData({ state, world, crops, sizes, landscapes, buildin
         const metaLines =
           farmlandBoost > 0
             ? [
-                { text: baseMeta, type: "meta" },
-                { text: `+${farmlandBoost} Farmland each`, type: "meta" },
-              ]
+              { text: baseMeta, type: "meta" },
+              { text: `+${farmlandBoost} Farmland each`, type: "meta" },
+            ]
             : [{ text: baseMeta, type: "meta" }];
         return {
           id: building.id,

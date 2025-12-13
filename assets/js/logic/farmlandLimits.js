@@ -1,6 +1,5 @@
 export const BASE_FARMLAND_LIMIT = 4;
 export const FARMLAND_DOLLARS_PER_TILE = 1000;
-export const CROP_UNLOCK_FARMLAND_BONUS = 3;
 
 export function getBuildingFarmlandBoost(struct = null) {
   if (!struct) return 0;
@@ -12,12 +11,13 @@ export function getBuildingFarmlandBoost(struct = null) {
 export function getCropFarmlandBoost(crops = null) {
   if (!crops) return 0;
   const values = Array.isArray(crops) ? crops : Object.values(crops);
-  let count = 0;
+  let total = 0;
   values.forEach((c) => {
-    if (c && c.unlocked) count += 1;
+    if (c && c.unlocked && Number.isFinite(c.tilesUnlocked)) {
+      total += c.tilesUnlocked;
+    }
   });
-  const bonusEligible = Math.max(0, count - 1); // First crop is your starter; bonuses apply after that.
-  return bonusEligible * CROP_UNLOCK_FARMLAND_BONUS;
+  return total;
 }
 
 export function computeFarmlandLimit(structures = null, crops = null, baseLimit = BASE_FARMLAND_LIMIT) {
@@ -51,7 +51,7 @@ export function getLimitAfterRemoval(structures = null, keysToRemove = null, cro
   structures.forEach((struct, key) => {
     if (targets.has(key)) lost += getBuildingFarmlandBoost(struct);
   });
-  return Math.max(BASE_FARMLAND_LIMIT + getCropFarmlandBoost(crops), currentLimit - lost);
+  return Math.max(BASE_FARMLAND_LIMIT, currentLimit - lost);
 }
 
 export function checkRemovalWouldBreakLimit(structures, keysToRemove, state, world, crops = null) {
