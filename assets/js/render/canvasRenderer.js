@@ -152,27 +152,21 @@ export function createRenderer({ canvas, ctx, state, world, config, crops, asset
         const progress = growTimeMs > 0 ? Math.min(1, elapsed / growTimeMs) : 1;
         const isReady = progress >= 1;
 
-        const breakpoints = getStageBreakpoints(key, plot.cropKey, plot.plantedAt, growTimeMs);
-        let phaseIndex = 0;
-        if (isReady) phaseIndex = 3;
-        else if (progress >= breakpoints[1]) phaseIndex = 2;
-        else if (progress >= breakpoints[0]) phaseIndex = 1;
-
-        const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
-        const remainingMs = Math.max(0, growTimeMs - elapsed);
-        const secs = Math.ceil(remainingMs / 1000);
-        const mins = Math.floor(secs / 60);
-        const secPart = secs % 60;
-        const timerText = mins + ":" + secPart.toString().padStart(2, "0");
-
         const quadSize = tileScreenSize / 2;
         const positions = [
-          [x, y],
-          [x + quadSize, y],
-          [x, y + quadSize],
-          [x + quadSize, y + quadSize],
+          [x, y, 0],
+          [x + quadSize, y, 1],
+          [x, y + quadSize, 2],
+          [x + quadSize, y + quadSize, 3],
         ];
-        positions.forEach(([qx, qy]) => {
+        positions.forEach(([qx, qy, quadIndex]) => {
+          const quadKey = `${key}:${quadIndex}`;
+          const breakpoints = getStageBreakpoints(quadKey, plot.cropKey, plot.plantedAt, growTimeMs);
+          let phaseIndex = 1;
+          if (isReady) phaseIndex = 3;
+          else if (progress >= breakpoints[1]) phaseIndex = 3;
+          else if (progress >= breakpoints[0]) phaseIndex = 2;
+          const img = crop.images[phaseIndex] || crop.images[crop.images.length - 1];
           ctx.drawImage(img, qx, qy, quadSize, quadSize);
         });
 

@@ -109,11 +109,11 @@ export function getStageBreakpoints(plotId, cropKey, plantedAt, growTimeMs) {
   const maxFirstMs = 2 * 60 * 1000;
   const maxFirstFraction = totalMs ? Math.min(1, maxFirstMs / totalMs) : 0.25;
   const cappedFirstFraction = Math.min(maxFirstFraction, 0.4);
-  const first = rng() * cappedFirstFraction;
+  const shortPhase = rng() * cappedFirstFraction;
 
-  const minSecond = Math.max(first + 0.1, 0.4);
-  const maxSecond = 0.95;
-  const second = Math.min(maxSecond, minSecond + rng() * (maxSecond - minSecond));
+  const minThird = Math.max(shortPhase + 0.1, 0.4);
+  const maxThird = 0.95;
+  const third = Math.min(maxThird, minThird + rng() * (maxThird - minThird));
 
-  return [first, Math.max(second, first + 0.05)];
+  return [shortPhase, Math.max(third, shortPhase + 0.05)];
 }
