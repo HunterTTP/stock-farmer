@@ -1,5 +1,6 @@
 import { FARMLAND, FARMLAND_SATURATED, clearFarmlandType, ensureFarmlandStates, getCropGrowTimeMs, getFarmlandType, getPlotGrowTimeMs, setFarmlandType } from "../../utils/helpers.js";
 import { checkRemovalWouldBreakLimit, formatFarmlandLimitError, getFarmlandUsage } from "../farmlandLimits.js";
+import { clampMoney } from "../../state/stateUtils.js";
 
 export function buildActionHandler(context, helpers, determineActionForTile, cropOps) {
   const { state, world, config, crops, formatCurrency, onMoneyChanged, renderCropOptions, renderLandscapeOptions, saveState } = context;
@@ -362,7 +363,7 @@ export function buildActionHandler(context, helpers, determineActionForTile, cro
         const { success, refund } = removeStructure(structKey, kind);
         if (!success) return { success: false, reason: kind === "landscape" ? "No landscape here" : "No building here" };
         if (refund > 0) {
-          state.totalMoney += refund;
+          state.totalMoney = clampMoney(state.totalMoney + refund);
           onMoneyChanged();
         }
         renderLandscapeOptions();

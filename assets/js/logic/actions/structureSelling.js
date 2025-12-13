@@ -1,4 +1,5 @@
 import { checkRemovalWouldBreakLimit, formatFarmlandLimitError } from "../farmlandLimits.js";
+import { clampMoney } from "../../state/stateUtils.js";
 
 export function buildStructureSelling(context, helpers) {
   const { state, world, config, crops, formatCurrency, openConfirmModal, onMoneyChanged, renderLandscapeOptions, saveState } = context;
@@ -82,7 +83,7 @@ export function buildStructureSelling(context, helpers) {
     });
     if (sold > 0) {
       if (totalRefund > 0) {
-        state.totalMoney += totalRefund;
+        state.totalMoney = clampMoney(state.totalMoney + totalRefund);
         onMoneyChanged();
       }
       if (typeof renderLandscapeOptions === "function") renderLandscapeOptions();
@@ -97,7 +98,7 @@ export function buildStructureSelling(context, helpers) {
     if (!limitCheck.ok) {
       openConfirmModal(
         limitCheck.reason || "Reduce farmland first",
-        () => {},
+        () => { },
         kind === "landscape" ? "Cannot Sell Landscape" : "Cannot Sell Building",
         null,
         { confirmText: "OK", showCancel: false }

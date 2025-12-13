@@ -5,6 +5,7 @@ import { createSizeMenus } from "./ui/sizeMenus.js";
 import { createFeedback } from "./ui/feedback.js";
 import { createMenuState } from "./ui/menuState.js";
 import { createNavBrand } from "../ui/navBrand.js";
+import { clampMoney } from "../state/stateUtils.js";
 export function createUIControls({
   dom,
   state,
@@ -254,8 +255,7 @@ export function createUIControls({
       const applyMoney = () => {
         const raw = Number(dom.moneyCheatInput.value);
         if (!Number.isFinite(raw)) return;
-        const next = Math.max(0, Math.floor(raw));
-        state.totalMoney = next;
+        state.totalMoney = clampMoney(raw);
         onMoneyChanged();
         saveState();
       };

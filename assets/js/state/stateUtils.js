@@ -47,6 +47,14 @@ function clampShares(value) {
   return Math.max(0, Math.floor(num));
 }
 
+const MAX_MONEY = 999999999999.99;
+
+function clampMoney(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.min(MAX_MONEY, Math.max(0, Math.round(num * 100) / 100));
+}
+
 function normalizeBuildKey(value) {
   if (value === "destroy") return "sell";
   return typeof value === "string" ? value : null;
@@ -89,7 +97,9 @@ export {
   cleanPlotValue,
   cleanStockHoldings,
   cleanStructureValue,
+  clampMoney,
   clampShares,
+  MAX_MONEY,
   isFootprintInBounds,
   isKeyInBounds,
   normalizeBuildKey,

@@ -1,4 +1,5 @@
 import { getPlotGrowTimeMs } from "../../utils/helpers.js";
+import { clampMoney } from "../../state/stateUtils.js";
 
 export function buildCropOperations(context) {
   const { state, world, crops, config, onMoneyChanged, renderCropOptions, saveState, currentSizeOption, openConfirmModal } = context;
@@ -29,7 +30,7 @@ export function buildCropOperations(context) {
     const value = Math.max(0, crop.baseValue);
     world.harvestAnimations.push({ key, value, start: performance.now() });
     if (typeof crop.placed === "number" && crop.placed > 0) crop.placed -= 1;
-    state.totalMoney += value;
+    state.totalMoney = clampMoney(state.totalMoney + value);
     onMoneyChanged();
     world.plots.delete(key);
     state.needsRender = true;

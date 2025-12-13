@@ -111,7 +111,10 @@ const saveAndPushImmediately = async () => {
   return data;
 };
 
-persistence.load();
+const loadResult = persistence.load() || {};
+if (loadResult.moneyClamped) {
+  persistence.save();
+}
 if (!localStorage.getItem(config.saveKey)) {
   applyDefaultSelection(state);
 }
@@ -171,11 +174,11 @@ function resetSettingsOnly() {
   try {
     state.accentColor = DEFAULT_ACCENT;
     setAccentColor(DEFAULT_ACCENT);
-  state.hudDockScale = 1.0;
-  state.hudDropdownScale = 1.0;
-  state.hudFontSize = 1.0;
-  state.hudFontOverrideEnabled = false;
-  state.hudOpacity = 0.95;
+    state.hudDockScale = 1.0;
+    state.hudDropdownScale = 1.0;
+    state.hudFontSize = 1.0;
+    state.hudFontOverrideEnabled = false;
+    state.hudOpacity = 0.95;
     state.scale = state.defaultScale || 1;
     viewport.centerView();
     state.savedScaleFromState = state.scale;

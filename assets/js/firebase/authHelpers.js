@@ -102,7 +102,7 @@ export function createAuthHelpers({ auth, runtime }) {
     }
   };
 
-  const applyStateFromSource = (data, overrideUpdatedAt = null) => {
+  const applyStateFromSource = (data, overrideUpdatedAt = null, triggerCloudSave = null) => {
     if (!runtime?.gameContext || !data) return;
     const resolvedUpdatedAt =
       normalizeTimestamp(overrideUpdatedAt ?? data.updatedAt) || Date.now();
@@ -110,7 +110,7 @@ export function createAuthHelpers({ auth, runtime }) {
       ...injectCurrentViewForLocal(data),
       updatedAt: resolvedUpdatedAt,
     };
-    applyLoadedData(payload, runtime.gameContext);
+    const result = applyLoadedData(payload, runtime.gameContext) || {};
     try {
       const accent = runtime.gameContext.state?.accentColor || DEFAULT_ACCENT;
       setAccentColor(accent);
@@ -124,6 +124,10 @@ export function createAuthHelpers({ auth, runtime }) {
     }
     persistLocalSnapshot(payload);
     if (runtime.gameContext.refreshUI) runtime.gameContext.refreshUI();
+    if (result.moneyClamped && typeof triggerCloudSave === "function") {
+      const correctedData = buildSaveData(runtime.gameContext);
+      triggerCloudSave(correctedData);
+    }
   };
 
   const consumeAuthFlag = () => {

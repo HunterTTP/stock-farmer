@@ -2,6 +2,8 @@ function getSelectedTicker(modalState, tickers, getTickerFn) {
   return getTickerFn(modalState.selectedSymbol) || tickers[0] || null;
 }
 
+import { clampMoney } from "../../state/stateUtils.js";
+
 export function createTradeActions(context) {
   const { state, tickers, modalState, getTicker, fmtCurrency, holdingsMap, getShareCount, sanitizeHoldings, onMoneyChanged, saveState, renderers } = context;
 
@@ -44,7 +46,7 @@ export function createTradeActions(context) {
     if (!lot || !ticker) return;
     const proceeds = lot.shares * ticker.price;
     const value = proceeds;
-    state.totalMoney += proceeds;
+    state.totalMoney = clampMoney(state.totalMoney + proceeds);
     lots.splice(lotIndex, 1);
     if (!lots.length) delete holdings[symbol];
     state.stockHoldings = sanitizeHoldings(holdings);

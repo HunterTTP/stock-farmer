@@ -2,6 +2,8 @@ import {
   cleanPlotValue,
   cleanStockHoldings,
   cleanStructureValue,
+  clampMoney,
+  MAX_MONEY,
   isKeyInBounds,
   normalizeBuildKey,
   normalizeLandscapeKey,
@@ -29,7 +31,12 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
     } else {
       world.hydrationTimers = new Map();
     }
-    if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
+    let moneyClamped = false;
+    if (typeof data.totalMoney === "number") {
+      const originalMoney = data.totalMoney;
+      state.totalMoney = clampMoney(originalMoney);
+      moneyClamped = originalMoney > MAX_MONEY;
+    }
     if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
     if (data.stockHoldings) state.stockHoldings = cleanStockHoldings(data.stockHoldings);
 
@@ -131,7 +138,9 @@ export function loadState({ state, world, crops, sizes, landscapes = {}, config 
 
     state.needsRender = true;
     state.farmlandPlaced = world.filled.size;
+    return { moneyClamped };
   } catch (err) {
     console.error("State load failed", err);
+    return { moneyClamped: false };
   }
 }

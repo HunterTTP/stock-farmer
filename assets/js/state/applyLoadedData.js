@@ -2,6 +2,8 @@ import {
   cleanPlotValue,
   cleanStockHoldings,
   cleanStructureValue,
+  clampMoney,
+  MAX_MONEY,
   isKeyInBounds,
   normalizeBuildKey,
   normalizeLandscapeKey,
@@ -25,7 +27,12 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
     plots: Array.isArray(data.plots) ? data.plots.length : 0,
   });
 
-  if (typeof data.totalMoney === "number") state.totalMoney = data.totalMoney;
+  let moneyClamped = false;
+  if (typeof data.totalMoney === "number") {
+    const originalMoney = data.totalMoney;
+    state.totalMoney = clampMoney(originalMoney);
+    moneyClamped = originalMoney > MAX_MONEY;
+  }
   if (Number.isFinite(data.updatedAt)) state.lastSavedAt = data.updatedAt;
   if (data.stockHoldings) state.stockHoldings = cleanStockHoldings(data.stockHoldings);
 
@@ -157,4 +164,5 @@ export function applyLoadedData(data, { state, world, crops, sizes, landscapes =
     filled: world.filled.size,
     plots: world.plots.size,
   });
+  return { moneyClamped };
 }
